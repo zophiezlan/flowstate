@@ -1,0 +1,147 @@
+"""Configuration loader for tap station"""
+
+import os
+import yaml
+from typing import Dict, Any
+
+
+class Config:
+    """Load and manage configuration from YAML file"""
+
+    def __init__(self, config_path: str = "config.yaml"):
+        """
+        Load configuration from YAML file
+
+        Args:
+            config_path: Path to config.yaml file
+        """
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+
+        with open(config_path, 'r') as f:
+            self._config = yaml.safe_load(f)
+
+    def get(self, key_path: str, default: Any = None) -> Any:
+        """
+        Get configuration value using dot notation
+
+        Args:
+            key_path: Dot-separated path (e.g., "station.device_id")
+            default: Default value if key not found
+
+        Returns:
+            Configuration value or default
+        """
+        keys = key_path.split('.')
+        value = self._config
+
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return default
+
+        return value
+
+    @property
+    def device_id(self) -> str:
+        """Get station device ID"""
+        return self.get('station.device_id', 'unknown')
+
+    @property
+    def stage(self) -> str:
+        """Get station stage name"""
+        return self.get('station.stage', 'UNKNOWN')
+
+    @property
+    def session_id(self) -> str:
+        """Get current session ID"""
+        return self.get('station.session_id', 'default-session')
+
+    @property
+    def database_path(self) -> str:
+        """Get database file path"""
+        return self.get('database.path', 'data/events.db')
+
+    @property
+    def wal_mode(self) -> bool:
+        """Get WAL mode setting"""
+        return self.get('database.wal_mode', True)
+
+    @property
+    def i2c_bus(self) -> int:
+        """Get I2C bus number"""
+        return self.get('nfc.i2c_bus', 1)
+
+    @property
+    def i2c_address(self) -> int:
+        """Get I2C address for PN532"""
+        return self.get('nfc.address', 0x24)
+
+    @property
+    def nfc_timeout(self) -> int:
+        """Get NFC read timeout"""
+        return self.get('nfc.timeout', 2)
+
+    @property
+    def nfc_retries(self) -> int:
+        """Get NFC retry count"""
+        return self.get('nfc.retries', 3)
+
+    @property
+    def debounce_seconds(self) -> float:
+        """Get debounce time in seconds"""
+        return self.get('nfc.debounce_seconds', 1.0)
+
+    @property
+    def buzzer_enabled(self) -> bool:
+        """Check if buzzer is enabled"""
+        return self.get('feedback.buzzer_enabled', False)
+
+    @property
+    def led_enabled(self) -> bool:
+        """Check if LEDs are enabled"""
+        return self.get('feedback.led_enabled', False)
+
+    @property
+    def gpio_buzzer(self) -> int:
+        """Get GPIO pin for buzzer"""
+        return self.get('feedback.gpio.buzzer', 17)
+
+    @property
+    def gpio_led_green(self) -> int:
+        """Get GPIO pin for green LED"""
+        return self.get('feedback.gpio.led_green', 27)
+
+    @property
+    def gpio_led_red(self) -> int:
+        """Get GPIO pin for red LED"""
+        return self.get('feedback.gpio.led_red', 22)
+
+    @property
+    def beep_success(self) -> list:
+        """Get success beep pattern"""
+        return self.get('feedback.beep_success', [0.1])
+
+    @property
+    def beep_duplicate(self) -> list:
+        """Get duplicate beep pattern"""
+        return self.get('feedback.beep_duplicate', [0.1, 0.05, 0.1])
+
+    @property
+    def beep_error(self) -> list:
+        """Get error beep pattern"""
+        return self.get('feedback.beep_error', [0.3])
+
+    @property
+    def log_path(self) -> str:
+        """Get log file path"""
+        return self.get('logging.path', 'logs/tap-station.log')
+
+    @property
+    def log_level(self) -> str:
+        """Get log level"""
+        return self.get('logging.level', 'INFO')
+
+    def __repr__(self) -> str:
+        return f"Config(device={self.device_id}, stage={self.stage}, session={self.session_id})"

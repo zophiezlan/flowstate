@@ -1,0 +1,19 @@
+# NFC Tap Logger Dependencies
+# Python 3.9+ required
+
+# NFC Reader
+py532lib==0.3.0
+
+# Configuration
+PyYAML==6.0.1
+
+# GPIO for buzzer/LED (only needed on Pi)
+RPi.GPIO==0.7.1
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Optional: for development
+black==23.12.1
+flake8==6.1.0

@@ -1,0 +1,66 @@
+# NFC Tap Logger Configuration
+# Copy this to each Pi and customize
+
+station:
+  # Unique ID for this device (station1, station2, etc.)
+  device_id: "station1"
+
+  # Which stage this station logs
+  # Options: QUEUE_JOIN, EXIT (or custom stages for future)
+  stage: "QUEUE_JOIN"
+
+  # Session ID for this deployment (e.g., festival name + date)
+  # All events logged during this session will have this ID
+  session_id: "test-session-2025"
+
+database:
+  # Path to SQLite database
+  path: "data/events.db"
+
+  # Enable WAL mode for crash resistance
+  wal_mode: true
+
+nfc:
+  # I2C bus (usually 1 for Pi Zero 2)
+  i2c_bus: 1
+
+  # I2C address for PN532
+  address: 0x24
+
+  # Read timeout (seconds)
+  timeout: 2
+
+  # Retry attempts on failed read
+  retries: 3
+
+  # Debounce time (seconds) - ignore same card within this window
+  debounce_seconds: 1
+
+feedback:
+  # Enable/disable feedback mechanisms
+  buzzer_enabled: true
+  led_enabled: true
+
+  # GPIO pin assignments (BCM numbering)
+  gpio:
+    buzzer: 17
+    led_green: 27
+    led_red: 22
+
+  # Beep patterns (on/off times in seconds)
+  beep_success: [0.1, 0.1, 0.1]  # Short beep
+  beep_duplicate: [0.1, 0.05, 0.1]  # Double beep
+  beep_error: [0.3]  # Long beep
+
+logging:
+  # Log file path
+  path: "logs/tap-station.log"
+
+  # Log level (DEBUG, INFO, WARNING, ERROR)
+  level: "INFO"
+
+  # Max log file size (MB)
+  max_size_mb: 10
+
+  # Number of backup log files
+  backup_count: 3
