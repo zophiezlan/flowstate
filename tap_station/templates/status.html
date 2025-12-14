@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Status - Token {{ token_id }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .token-id {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .status-card {
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .status-not-checked-in {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+        }
+
+        .status-in-queue {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+        }
+
+        .status-complete {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+        }
+
+        .status-icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+
+        .status-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-message {
+            font-size: 1.1em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .time-info {
+            background: #f7f9fc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .time-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .time-value {
+            color: #333;
+        }
+
+        .wait-time {
+            font-size: 2em;
+            font-weight: bold;
+            color: #10b981;
+            margin: 10px 0;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎪 Festival Check-In</h1>
+
+        <div class="token-id">Token {{ token_id }}</div>
+
+        {% if status.status == 'not_checked_in' %}
+        <div class="status-card status-not-checked-in">
+            <div class="status-icon">👋</div>
+            <div class="status-title">Welcome!</div>
+            <div class="status-message">
+                This token hasn't been checked in yet.<br>
+                Tap your card at the queue station to get started.
+            </div>
+        </div>
+
+        {% elif status.status == 'in_queue' %}
+        <div class="status-card status-in-queue">
+            <div class="status-icon">⏱️</div>
+            <div class="status-title">You're in Queue</div>
+            <div class="status-message">
+                Checked in at {{ status.queue_join_time }}<br>
+                Estimated wait: ~{{ status.estimated_wait }} minutes
+            </div>
+        </div>
+
+        <div class="time-info">
+            <div class="time-row">
+                <span class="time-label">Joined Queue:</span>
+                <span class="time-value">{{ status.queue_join_time }}</span>
+            </div>
+            <div class="time-row">
+                <span class="time-label">Estimated Wait:</span>
+                <span class="time-value">{{ status.estimated_wait }} min</span>
+            </div>
+        </div>
+
+        {% elif status.status == 'complete' %}
+        <div class="status-card status-complete">
+            <div class="status-icon">✅</div>
+            <div class="status-title">Complete!</div>
+            <div class="status-message">
+                Thank you for using our service!
+            </div>
+            {% if status.wait_time_minutes %}
+            <div class="wait-time">{{ status.wait_time_minutes }} minutes</div>
+            <p style="color: #666;">Total wait time</p>
+            {% endif %}
+        </div>
+
+        <div class="time-info">
+            <div class="time-row">
+                <span class="time-label">Joined Queue:</span>
+                <span class="time-value">{{ status.queue_join_time }}</span>
+            </div>
+            <div class="time-row">
+                <span class="time-label">Service Complete:</span>
+                <span class="time-value">{{ status.exit_time }}</span>
+            </div>
+            {% if status.wait_time_minutes %}
+            <div class="time-row">
+                <span class="time-label">Wait Time:</span>
+                <span class="time-value">{{ status.wait_time_minutes }} minutes</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <p class="footer">
+            Session: {{ session }}<br>
+            Questions? Ask a volunteer
+        </p>
+    </div>
+</body>
+</html>

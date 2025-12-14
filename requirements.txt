@@ -14,6 +14,12 @@ RPi.GPIO==0.7.1
 pytest==7.4.3
 pytest-cov==4.1.0
 
+# Web server (for status checking and health checks)
+Flask==3.0.0
+
+# NDEF writing (optional, for NFC Tools app integration)
+# ndeflib==0.3.3  # Uncomment to enable NDEF URL writing
+
 # Optional: for development
 black==23.12.1
 flake8==6.1.0

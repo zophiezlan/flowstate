@@ -10,6 +10,16 @@ This system logs NFC card taps at two stations (queue join and exit) to measure 
 - **Simple**: Dead simple peer workflow, no network required, quick setup
 - **Maintainable**: Clean Python code, well-documented, easy to modify
 
+## 🆕 What's New (v1.1)
+
+Three new features make deployment even easier:
+
+1. **Visual Setup Guide** (`docs/VISUAL_SETUP_GUIDE.md`) - Detailed wiring diagrams and photo placeholders
+2. **NFC Tools App Integration** - Participants can check status with their phones
+3. **Health Check & Web Status** - Monitor stations remotely, show live status
+
+See `docs/NEW_FEATURES.md` for full details!
+
 ## Quick Start
 
 ### 1. Hardware Setup
