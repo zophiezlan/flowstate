@@ -146,7 +146,7 @@ class Database:
         """
         cursor = self.conn.execute("""
             SELECT * FROM events
-            ORDER BY created_at DESC
+            ORDER BY datetime(timestamp) DESC, id DESC
             LIMIT ?
         """, (limit,))
 

@@ -22,6 +22,16 @@ See `docs/NEW_FEATURES.md` for full details!
 
 ## Quick Start
 
+### Prefer phones over Raspberry Pis?
+
+You can now run the tap stations entirely on NFC-capable Android phones:
+
+- Launch the PWA in `mobile_app/` with `python -m http.server 8000 --directory mobile_app`
+- Open the URL on an Android phone (Chrome/Edge) and tap **Start NFC scanning**
+- Export JSONL/CSV and ingest with `python scripts/ingest_mobile_batch.py --input mobile-export.jsonl`
+
+See `docs/MOBILE_APP_SETUP.md` and `docs/MOBILE_ONLY_VERSION.md` for the full mobile workflow.
+
 ### 1. Hardware Setup
 
 **You need:**

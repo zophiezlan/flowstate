@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NFC Tap Logger – Mobile</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>NFC Tap Logger (Mobile)</h1>
+    <p class="subtitle">Offline-first NFC tap station for Android phones</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Station Settings</h2>
+      <form id="settings-form">
+        <div class="field">
+          <label for="session-id">Session ID</label>
+          <input id="session-id" name="sessionId" type="text" placeholder="festival-2025" required />
+        </div>
+        <div class="field">
+          <label for="stage">Stage</label>
+          <select id="stage" name="stage">
+            <option value="QUEUE_JOIN">QUEUE_JOIN</option>
+            <option value="EXIT">EXIT</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="device-id">Device ID</label>
+          <input id="device-id" name="deviceId" type="text" placeholder="phone-1" required />
+        </div>
+        <div class="actions">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" id="clear-cache" class="ghost">Clear stored events</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2>Scanner</h2>
+          <p id="nfc-status" class="muted">NFC idle</p>
+        </div>
+        <div class="pill" id="unsynced-count">0 unsynced</div>
+      </div>
+      <div class="actions stack">
+        <button id="start-scan" class="primary">Start NFC scanning</button>
+        <button id="stop-scan" class="secondary" disabled>Stop scanning</button>
+        <button id="manual-add" class="ghost">Add manual token</button>
+      </div>
+      <div id="status-grid">
+        <div>
+          <p class="muted">Last token</p>
+          <p id="last-token" class="metric">—</p>
+        </div>
+        <div>
+          <p class="muted">Last time</p>
+          <p id="last-time" class="metric">—</p>
+        </div>
+        <div>
+          <p class="muted">Today</p>
+          <p id="total-count" class="metric">0</p>
+        </div>
+        <div>
+          <p class="muted">Unsynced</p>
+          <p id="unsynced-count-inline" class="metric">0</p>
+        </div>
+      </div>
+      <div id="recent-list" class="recent"></div>
+    </section>
+
+    <section class="card">
+      <h2>Export</h2>
+      <p class="muted">Exports only unsynced events. After sending to laptop, mark them as synced to avoid duplicates.</p>
+      <div class="actions stack">
+        <button id="export-json" class="primary">Download JSONL for ingest script</button>
+        <button id="export-csv" class="secondary">Download CSV</button>
+        <button id="mark-synced" class="ghost">Mark all as synced</button>
+      </div>
+    </section>
+
+    <section class="card warning" id="nfc-warning" hidden>
+      <h3>Web NFC not supported</h3>
+      <p>Your browser or device does not support Web NFC. Use Chrome/Edge on Android and enable NFC, or enter tokens manually.</p>
+    </section>
+  </main>
+
+  <div id="toast" hidden></div>
+
+  <dialog id="manual-dialog">
+    <form method="dialog" id="manual-form">
+      <h3>Manual token entry</h3>
+      <label for="manual-token">Token ID</label>
+      <input id="manual-token" name="manualToken" type="text" required placeholder="e.g., 001" />
+      <div class="actions stack">
+        <button type="submit" class="primary">Log token</button>
+        <button type="button" id="close-manual" class="ghost">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

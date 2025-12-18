@@ -1,0 +1,10 @@
+{
+  "name": "NFC Tap Logger (Mobile)",
+  "short_name": "NFC Tap",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#4fd1c5",
+  "description": "Offline-first NFC tap logging station for Android phones",
+  "icons": []
+}
