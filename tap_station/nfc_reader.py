@@ -269,7 +269,9 @@ class NFCReader:
                 return False
 
             # Convert token ID to bytes (pad to 4 bytes)
-            token_bytes = token_id.encode("ascii")[:4].ljust(4, b"\x00")
+            token_bytes = token_id.encode("ascii")[:4]
+            if len(token_bytes) < 4:
+                token_bytes = token_bytes + (b"\x00" * (4 - len(token_bytes)))
 
             if not self._write_ntag_pages(4, token_bytes):
                 logger.error("Failed to write token ID to card")
