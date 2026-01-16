@@ -19,7 +19,7 @@ class FeedbackController:
         gpio_led_red: int = 22,
         beep_success: List[float] = None,
         beep_duplicate: List[float] = None,
-        beep_error: List[float] = None
+        beep_error: List[float] = None,
     ):
         """
         Initialize feedback controller
@@ -56,6 +56,7 @@ class FeedbackController:
 
         try:
             import RPi.GPIO as GPIO
+
             self.GPIO = GPIO
 
             # Use BCM pin numbering
@@ -72,7 +73,9 @@ class FeedbackController:
                 GPIO.setup(self.gpio_led_red, GPIO.OUT)
                 GPIO.output(self.gpio_led_green, GPIO.LOW)
                 GPIO.output(self.gpio_led_red, GPIO.LOW)
-                logger.info(f"LEDs enabled on GPIO {self.gpio_led_green}, {self.gpio_led_red}")
+                logger.info(
+                    f"LEDs enabled on GPIO {self.gpio_led_green}, {self.gpio_led_red}"
+                )
 
         except (ImportError, RuntimeError) as e:
             logger.warning(f"GPIO not available (not on Pi?): {e}")
@@ -90,7 +93,7 @@ class FeedbackController:
             return
 
         for i, duration in enumerate(pattern):
-            # Odd indices = on, even = off
+            # Even indices = on, odd indices = off
             state = self.GPIO.HIGH if i % 2 == 0 else self.GPIO.LOW
             self.GPIO.output(self.gpio_buzzer, state)
             time.sleep(duration)

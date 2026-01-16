@@ -26,7 +26,7 @@ class NFCCardInitializer:
         start_id: int = 1,
         end_id: int = 100,
         base_url: str = None,
-        mock: bool = False
+        mock: bool = False,
     ):
         """
         Initialize card initializer
@@ -62,7 +62,9 @@ class NFCCardInitializer:
         print(f"\n{'=' * 60}")
         print(f"Enhanced Card Initialization with NDEF")
         print(f"{'=' * 60}")
-        print(f"Will initialize {total_cards} cards (ID {self.start_id:03d} to {self.end_id:03d})")
+        print(
+            f"Will initialize {total_cards} cards (ID {self.start_id:03d} to {self.end_id:03d})"
+        )
 
         if self.base_url:
             print(f"NDEF URLs: {self.base_url}/check?token=XXX")
@@ -95,7 +97,11 @@ class NFCCardInitializer:
         Args:
             token_id: Token ID to write (e.g., "001")
         """
-        print(f"\n[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id})...", end='', flush=True)
+        print(
+            f"\n[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id})...",
+            end="",
+            flush=True,
+        )
 
         # Wait for card
         result = self.nfc.wait_for_card(timeout=None)
@@ -111,26 +117,34 @@ class NFCCardInitializer:
         # Write NDEF URL if base_url provided
         if self.base_url:
             url = self.ndef.format_status_url(self.base_url, token_id)
-            print(f"  Writing NDEF URL: {url}...", end='', flush=True)
+            print(f"  Writing NDEF URL: {url}...", end="", flush=True)
 
             ndef_success = self.ndef.write_url(url, token_id)
 
             if ndef_success:
                 print(" ✓")
             else:
-                print(" FAILED (continuing anyway)")
+                print(" FAILED")
+                self.failed_cards.append(token_id)
+                return
         else:
             print("  Skipping NDEF (no URL configured)")
 
         # Record the mapping
-        print(f"  Recording token ID '{token_id}'...", end='', flush=True)
+        print(f"  Recording token ID '{token_id}'...", end="", flush=True)
 
-        self.initialized_cards.append({
-            'token_id': token_id,
-            'uid': uid,
-            'url': self.ndef.format_status_url(self.base_url, token_id) if self.base_url else None,
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-        })
+        self.initialized_cards.append(
+            {
+                "token_id": token_id,
+                "uid": uid,
+                "url": (
+                    self.ndef.format_status_url(self.base_url, token_id)
+                    if self.base_url
+                    else None
+                ),
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        )
         self.current_id += 1
 
         # Save mapping to file
@@ -138,7 +152,7 @@ class NFCCardInitializer:
         print(" ✓")
 
         # Wait for card removal
-        print("  Remove card to continue...", end='', flush=True)
+        print("  Remove card to continue...", end="", flush=True)
         time.sleep(2)  # Give user time to remove card
         print(" OK")
 
@@ -150,11 +164,13 @@ class NFCCardInitializer:
         os.makedirs(os.path.dirname(mapping_file), exist_ok=True)
 
         # Write mapping
-        with open(mapping_file, 'w') as f:
+        with open(mapping_file, "w") as f:
             if self.base_url:
                 f.write("token_id,uid,url,initialized_at\n")
                 for card in self.initialized_cards:
-                    f.write(f"{card['token_id']},{card['uid']},{card['url']},{card['timestamp']}\n")
+                    f.write(
+                        f"{card['token_id']},{card['uid']},{card['url']},{card['timestamp']}\n"
+                    )
             else:
                 f.write("token_id,uid,initialized_at\n")
                 for card in self.initialized_cards:
@@ -195,29 +211,21 @@ class NFCCardInitializer:
 def main():
     """Entry point for enhanced card initialization"""
     parser = argparse.ArgumentParser(
-        description='Initialize NFC cards with token IDs and NDEF URLs'
+        description="Initialize NFC cards with token IDs and NDEF URLs"
     )
     parser.add_argument(
-        '--start',
-        type=int,
-        default=1,
-        help='Starting token ID (default: 1)'
+        "--start", type=int, default=1, help="Starting token ID (default: 1)"
     )
     parser.add_argument(
-        '--end',
-        type=int,
-        default=100,
-        help='Ending token ID (default: 100)'
+        "--end", type=int, default=100, help="Ending token ID (default: 100)"
     )
     parser.add_argument(
-        '--url',
+        "--url",
         type=str,
-        help='Base URL for status checking (e.g., https://festival.example.com)'
+        help="Base URL for status checking (e.g., https://festival.example.com)",
     )
     parser.add_argument(
-        '--mock',
-        action='store_true',
-        help='Use mock NFC reader for testing'
+        "--mock", action="store_true", help="Use mock NFC reader for testing"
     )
 
     args = parser.parse_args()
@@ -229,16 +237,13 @@ def main():
 
     # Validate URL if provided
     if args.url:
-        if not (args.url.startswith('http://') or args.url.startswith('https://')):
+        if not (args.url.startswith("http://") or args.url.startswith("https://")):
             print("Error: URL must start with http:// or https://", file=sys.stderr)
             return 1
 
     try:
         initializer = NFCCardInitializer(
-            start_id=args.start,
-            end_id=args.end,
-            base_url=args.url,
-            mock=args.mock
+            start_id=args.start, end_id=args.end, base_url=args.url, mock=args.mock
         )
         initializer.run()
         return 0
@@ -246,9 +251,10 @@ def main():
     except Exception as e:
         print(f"\nFatal error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

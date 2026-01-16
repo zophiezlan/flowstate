@@ -23,7 +23,9 @@ class Database:
         self.db_path = db_path
 
         # Ensure directory exists
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
 
         # Create database and enable WAL mode
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -37,7 +39,8 @@ class Database:
 
     def _create_tables(self):
         """Create database tables if they don't exist"""
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 token_id TEXT NOT NULL,
@@ -48,18 +51,23 @@ class Database:
                 session_id TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Create index for fast lookups
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_token_stage_session
             ON events(token_id, stage, session_id)
-        """)
+        """
+        )
 
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_session_timestamp
             ON events(session_id, timestamp)
-        """)
+        """
+        )
 
         self.conn.commit()
         logger.info("Database tables initialized")
@@ -71,7 +79,7 @@ class Database:
         stage: str,
         device_id: str,
         session_id: str,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ) -> bool:
         """
         Log an NFC tap event
@@ -99,13 +107,18 @@ class Database:
         timestamp_str = timestamp.isoformat()
 
         try:
-            self.conn.execute("""
+            self.conn.execute(
+                """
                 INSERT INTO events (token_id, uid, stage, timestamp, device_id, session_id)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (token_id, uid, stage, timestamp_str, device_id, session_id))
+            """,
+                (token_id, uid, stage, timestamp_str, device_id, session_id),
+            )
 
             self.conn.commit()
-            logger.info(f"Logged event: token={token_id}, stage={stage}, device={device_id}")
+            logger.info(
+                f"Logged event: token={token_id}, stage={stage}, device={device_id}"
+            )
             return True
 
         except sqlite3.Error as e:
@@ -125,14 +138,17 @@ class Database:
         Returns:
             True if duplicate, False otherwise
         """
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT COUNT(*) as count
             FROM events
             WHERE token_id = ? AND stage = ? AND session_id = ?
-        """, (token_id, stage, session_id))
+        """,
+            (token_id, stage, session_id),
+        )
 
         result = cursor.fetchone()
-        return result['count'] > 0
+        return result["count"] > 0
 
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -144,11 +160,14 @@ class Database:
         Returns:
             List of event dictionaries
         """
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT * FROM events
             ORDER BY datetime(timestamp) DESC, id DESC
             LIMIT ?
-        """, (limit,))
+        """,
+            (limit,),
+        )
 
         return [dict(row) for row in cursor.fetchall()]
 
@@ -165,12 +184,12 @@ class Database:
         if session_id:
             cursor = self.conn.execute(
                 "SELECT COUNT(*) as count FROM events WHERE session_id = ?",
-                (session_id,)
+                (session_id,),
             )
         else:
             cursor = self.conn.execute("SELECT COUNT(*) as count FROM events")
 
-        return cursor.fetchone()['count']
+        return cursor.fetchone()["count"]
 
     def export_to_csv(self, output_path: str, session_id: Optional[str] = None) -> int:
         """
@@ -201,7 +220,7 @@ class Database:
             return 0
 
         # Write CSV
-        with open(output_path, 'w', newline='') as f:
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
 
             # Header

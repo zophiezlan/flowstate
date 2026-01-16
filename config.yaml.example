@@ -1,5 +1,5 @@
 # NFC Tap Logger Configuration
-# Copy this to each Pi and customize
+# Copy this file to config.yaml and customize for your deployment
 
 station:
   # Unique ID for this device (station1, station2, etc.)
@@ -11,7 +11,7 @@ station:
 
   # Session ID for this deployment (e.g., festival name + date)
   # All events logged during this session will have this ID
-  session_id: "test-session-2025"
+  session_id: "my-event-2026"
 
 database:
   # Path to SQLite database
@@ -34,7 +34,7 @@ nfc:
   retries: 3
 
   # Debounce time (seconds) - ignore same card within this window
-  debounce_seconds: 1
+  debounce_seconds: 1.0
 
 feedback:
   # Enable/disable feedback mechanisms
@@ -48,9 +48,10 @@ feedback:
     led_red: 22
 
   # Beep patterns (on/off times in seconds)
-  beep_success: [0.1, 0.1, 0.1] # Short beep
-  beep_duplicate: [0.1, 0.05, 0.1] # Double beep
-  beep_error: [0.3] # Long beep
+  # Format: [on, off, on, off, ...]
+  beep_success: [0.1, 0.1, 0.1]      # Short beep
+  beep_duplicate: [0.1, 0.05, 0.1]   # Double beep
+  beep_error: [0.3]                  # Long beep
 
 logging:
   # Log file path

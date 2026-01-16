@@ -6,6 +6,7 @@ import signal
 import time
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
+import threading
 
 from tap_station.config import Config
 from tap_station.database import Database
@@ -40,8 +41,7 @@ class TapStation:
 
         # Initialize components
         self.db = Database(
-            db_path=self.config.database_path,
-            wal_mode=self.config.wal_mode
+            db_path=self.config.database_path, wal_mode=self.config.wal_mode
         )
 
         if mock_nfc:
@@ -50,7 +50,7 @@ class TapStation:
                 address=self.config.i2c_address,
                 timeout=self.config.nfc_timeout,
                 retries=self.config.nfc_retries,
-                debounce_seconds=self.config.debounce_seconds
+                debounce_seconds=self.config.debounce_seconds,
             )
         else:
             self.nfc = NFCReader(
@@ -58,7 +58,7 @@ class TapStation:
                 address=self.config.i2c_address,
                 timeout=self.config.nfc_timeout,
                 retries=self.config.nfc_retries,
-                debounce_seconds=self.config.debounce_seconds
+                debounce_seconds=self.config.debounce_seconds,
             )
 
         self.feedback = FeedbackController(
@@ -69,8 +69,30 @@ class TapStation:
             gpio_led_red=self.config.gpio_led_red,
             beep_success=self.config.beep_success,
             beep_duplicate=self.config.beep_duplicate,
-            beep_error=self.config.beep_error
+            beep_error=self.config.beep_error,
         )
+
+        self.web_server = None
+        self.web_thread = None
+        if self.config.web_server_enabled:
+            try:
+                from tap_station.web_server import StatusWebServer
+
+                self.web_server = StatusWebServer(self.config, self.db)
+                self.web_thread = threading.Thread(
+                    target=self.web_server.run,
+                    kwargs={
+                        "host": self.config.web_server_host,
+                        "port": self.config.web_server_port,
+                    },
+                    daemon=True,
+                )
+                self.web_thread.start()
+                self.logger.info(
+                    f"Web server started on {self.config.web_server_host}:{self.config.web_server_port}"
+                )
+            except Exception as e:
+                self.logger.error(f"Failed to start web server: {e}", exc_info=True)
 
         # State
         self.running = False
@@ -90,15 +112,15 @@ class TapStation:
 
         # Create formatters
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
         # File handler (rotating)
         file_handler = RotatingFileHandler(
             log_path,
-            maxBytes=10 * 1024 * 1024,  # 10 MB
-            backupCount=3
+            maxBytes=self.config.log_max_size_mb * 1024 * 1024,
+            backupCount=self.config.log_backup_count,
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(log_level)
@@ -164,7 +186,7 @@ class TapStation:
             uid=uid,
             stage=self.config.stage,
             device_id=self.config.device_id,
-            session_id=self.config.session_id
+            session_id=self.config.session_id,
         )
 
         # Provide feedback
@@ -193,11 +215,11 @@ class TapStation:
     def get_stats(self) -> dict:
         """Get current station statistics"""
         return {
-            'device_id': self.config.device_id,
-            'stage': self.config.stage,
-            'session_id': self.config.session_id,
-            'total_events': self.db.get_event_count(self.config.session_id),
-            'recent_events': self.db.get_recent_events(5)
+            "device_id": self.config.device_id,
+            "stage": self.config.stage,
+            "session_id": self.config.session_id,
+            "total_events": self.db.get_event_count(self.config.session_id),
+            "recent_events": self.db.get_recent_events(5),
         }
 
 
@@ -205,24 +227,21 @@ def main():
     """Entry point for tap station service"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='NFC Tap Station Service')
+    parser = argparse.ArgumentParser(description="NFC Tap Station Service")
     parser.add_argument(
-        '--config',
-        default='config.yaml',
-        help='Path to configuration file (default: config.yaml)'
+        "--config",
+        default="config.yaml",
+        help="Path to configuration file (default: config.yaml)",
     )
     parser.add_argument(
-        '--mock-nfc',
-        action='store_true',
-        help='Use mock NFC reader for testing'
+        "--mock-nfc", action="store_true", help="Use mock NFC reader for testing"
     )
-    parser.add_argument(
-        '--stats',
-        action='store_true',
-        help='Show statistics and exit'
-    )
+    parser.add_argument("--stats", action="store_true", help="Show statistics and exit")
 
     args = parser.parse_args()
+
+    # Setup basic logging for CLI mode
+    cli_logger = logging.getLogger(__name__)
 
     try:
         station = TapStation(config_path=args.config, mock_nfc=args.mock_nfc)
@@ -230,14 +249,16 @@ def main():
         if args.stats:
             # Show stats and exit
             stats = station.get_stats()
-            print(f"\nStation Statistics:")
-            print(f"  Device ID: {stats['device_id']}")
-            print(f"  Stage: {stats['stage']}")
-            print(f"  Session: {stats['session_id']}")
-            print(f"  Total Events: {stats['total_events']}")
-            print(f"\nRecent Events:")
-            for event in stats['recent_events']:
-                print(f"  {event['timestamp']} - Token {event['token_id']} at {event['stage']}")
+            cli_logger.info(f"\nStation Statistics:")
+            cli_logger.info(f"  Device ID: {stats['device_id']}")
+            cli_logger.info(f"  Stage: {stats['stage']}")
+            cli_logger.info(f"  Session: {stats['session_id']}")
+            cli_logger.info(f"  Total Events: {stats['total_events']}")
+            cli_logger.info(f"\nRecent Events:")
+            for event in stats["recent_events"]:
+                cli_logger.info(
+                    f"  {event['timestamp']} - Token {event['token_id']} at {event['stage']}"
+                )
             return 0
 
         # Run station
@@ -245,16 +266,14 @@ def main():
         return 0
 
     except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        print(f"Please create a config file at: {args.config}", file=sys.stderr)
+        cli_logger.error(f"Error: {e}")
+        cli_logger.error(f"Please create a config file at: {args.config}")
         return 1
 
     except Exception as e:
-        print(f"Fatal error: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
+        cli_logger.error(f"Fatal error: {e}", exc_info=True)
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

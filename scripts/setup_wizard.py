@@ -59,7 +59,11 @@ def test_nfc_reader():
 
         print("✓ NFC reader initialized successfully!")
 
-        response = get_input("\nWould you like to test card reading? (y/n)", default="y", options=["y", "n"])
+        response = get_input(
+            "\nWould you like to test card reading? (y/n)",
+            default="y",
+            options=["y", "n"],
+        )
 
         if response == "y":
             print("\nPlease tap an NFC card on the reader (15 second timeout)...")
@@ -103,7 +107,9 @@ def test_buzzer():
         print("You should hear a short beep...")
         feedback.success()
 
-        response = get_input("Did you hear the beep? (y/n)", default="y", options=["y", "n"])
+        response = get_input(
+            "Did you hear the beep? (y/n)", default="y", options=["y", "n"]
+        )
 
         feedback.cleanup()
 
@@ -128,56 +134,39 @@ def test_buzzer():
 def create_config(device_id, stage, session_id, buzzer_enabled):
     """Create configuration file with correct nested schema"""
     config = {
-        'station': {
-            'device_id': device_id,
-            'stage': stage,
-            'session_id': session_id
+        "station": {"device_id": device_id, "stage": stage, "session_id": session_id},
+        "database": {"path": "data/events.db", "wal_mode": True},
+        "nfc": {
+            "i2c_bus": 1,
+            "address": 0x24,
+            "timeout": 2,
+            "retries": 3,
+            "debounce_seconds": 1.0,
         },
-        'database': {
-            'path': 'data/events.db',
-            'wal_mode': True
+        "feedback": {
+            "buzzer_enabled": buzzer_enabled,
+            "led_enabled": False,
+            "gpio": {"buzzer": 17, "led_green": 27, "led_red": 22},
+            "beep_success": [0.1],
+            "beep_duplicate": [0.1, 0.05, 0.1],
+            "beep_error": [0.3],
         },
-        'nfc': {
-            'i2c_bus': 1,
-            'address': 0x24,
-            'timeout': 2,
-            'retries': 3,
-            'debounce_seconds': 1.0
-        },
-        'feedback': {
-            'buzzer_enabled': buzzer_enabled,
-            'led_enabled': False,
-            'gpio': {
-                'buzzer': 17,
-                'led_green': 27,
-                'led_red': 22
-            },
-            'beep_success': [0.1],
-            'beep_duplicate': [0.1, 0.05, 0.1],
-            'beep_error': [0.3]
-        },
-        'logging': {
-            'path': 'logs/tap-station.log',
-            'level': 'INFO'
-        },
-        'web_server': {
-            'enabled': True,
-            'port': 5000,
-            'host': '0.0.0.0'
-        }
+        "logging": {"path": "logs/tap-station.log", "level": "INFO"},
+        "web_server": {"enabled": True, "port": 8080, "host": "0.0.0.0"},
     }
 
-    config_path = Path('config.yaml')
+    config_path = Path("config.yaml")
 
     # Backup existing config
     if config_path.exists():
-        backup_path = Path('config.yaml.backup')
+        backup_path = Path("config.yaml.backup")
         print(f"Backing up existing config to {backup_path}")
         import shutil
+
         shutil.copy(config_path, backup_path)
 
     # Write new config
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     print(f"✓ Configuration saved to {config_path}")
@@ -202,21 +191,23 @@ def main():
 
     print("Each tap station needs a unique device ID and stage name.")
     print("\nExample setup:")
-    print("  Station 1 (queue entrance): device_id='station-1', stage='join'")
-    print("  Station 2 (queue exit):     device_id='station-2', stage='exit'")
+    print("  Station 1 (queue entrance): device_id='station-1', stage='QUEUE_JOIN'")
+    print("  Station 2 (queue exit):     device_id='station-2', stage='EXIT'")
 
     device_id = get_input("\nEnter device ID (e.g., 'station-1')", default="station-1")
 
-    stage_options = ["join", "exit", "checkpoint"]
+    stage_options = ["QUEUE_JOIN", "EXIT", "CHECKPOINT"]
     print(f"\nAvailable stages: {', '.join(stage_options)}")
-    stage = get_input("Enter stage", default="join", options=stage_options + [""])
+    stage = get_input("Enter stage", default="QUEUE_JOIN", options=stage_options + [""])
 
     if not stage:
         stage = get_input("Enter custom stage name")
 
     print("\nSession ID groups data from a single event.")
     print("Use the same session ID for all stations at the same event.")
-    session_id = get_input("Enter session ID (e.g., 'event-2026-01-16')", default="event-2026-01-16")
+    session_id = get_input(
+        "Enter session ID (e.g., 'event-2026-01-16')", default="event-2026-01-16"
+    )
 
     print("\n" + "─" * 60)
     print("Configuration Summary:")
@@ -249,7 +240,9 @@ def main():
     # Step 3: Test Buzzer
     print_step(3, 5, "Buzzer Test (Optional)")
 
-    test_buzzer_prompt = get_input("Test buzzer? (y/n)", default="y", options=["y", "n"])
+    test_buzzer_prompt = get_input(
+        "Test buzzer? (y/n)", default="y", options=["y", "n"]
+    )
 
     buzzer_enabled = False
     if test_buzzer_prompt == "y":
@@ -271,7 +264,7 @@ def main():
 
     # Check directories
     dirs_ok = True
-    required_dirs = ['data', 'logs', 'backups']
+    required_dirs = ["data", "logs", "backups"]
     for dir_name in required_dirs:
         dir_path = Path(dir_name)
         if not dir_path.exists():
@@ -282,6 +275,7 @@ def main():
     # Check database can be created
     try:
         from tap_station.database import Database
+
         db = Database("data/test.db", wal_mode=True)
         db.close()
         os.remove("data/test.db")
@@ -320,5 +314,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

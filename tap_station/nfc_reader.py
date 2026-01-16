@@ -17,7 +17,7 @@ class NFCReader:
         address: int = 0x24,
         timeout: int = 2,
         retries: int = 3,
-        debounce_seconds: float = 1.0
+        debounce_seconds: float = 1.0,
     ):
         """
         Initialize NFC reader
@@ -47,7 +47,11 @@ class NFCReader:
             from pn532pi import Pn532, Pn532I2c
 
             # Initialize I2C interface
-            i2c = Pn532I2c(self.i2c_bus)
+            try:
+                i2c = Pn532I2c(self.i2c_bus, self.address)
+            except TypeError:
+                # Fallback for libraries that don't accept address argument
+                i2c = Pn532I2c(self.i2c_bus)
             self.pn532 = Pn532(i2c)
 
             # Begin communication
@@ -58,8 +62,12 @@ class NFCReader:
             if not versiondata:
                 raise RuntimeError("Failed to communicate with PN532")
 
-            logger.info(f"PN532 reader initialized on I2C bus {self.i2c_bus}, address 0x{self.address:02x}")
-            logger.info(f"Firmware version: {(versiondata >> 24) & 0xFF}.{(versiondata >> 16) & 0xFF}")
+            logger.info(
+                f"PN532 reader initialized on I2C bus {self.i2c_bus}, address 0x{self.address:02x}"
+            )
+            logger.info(
+                f"Firmware version: {(versiondata >> 24) & 0xFF}.{(versiondata >> 16) & 0xFF}"
+            )
 
             # Configure for reading MiFare cards
             self.pn532.SAMConfig()
@@ -89,7 +97,7 @@ class NFCReader:
 
                 if success and uid_bytes:
                     # Convert bytearray to hex string
-                    uid_hex = ''.join(['{:02X}'.format(b) for b in uid_bytes])
+                    uid_hex = "".join(["{:02X}".format(b) for b in uid_bytes])
 
                     # Check debounce
                     if self._should_debounce(uid_hex):
@@ -139,7 +147,7 @@ class NFCReader:
 
     def _read_token_id(self, uid_bytes: bytes) -> Optional[str]:
         """
-        Try to read token ID from card NDEF data
+        Try to read token ID from card (supports NDEF and legacy formats)
 
         Args:
             uid_bytes: Card UID bytes
@@ -148,15 +156,50 @@ class NFCReader:
             Token ID string if found, None otherwise
         """
         try:
-            # Try to read NDEF message from card
-            # This is a simplified implementation - actual NDEF reading
-            # would require more complex logic
-            #
-            # For now, we'll use the card's UID as fallback
-            # Cards can be initialized with token IDs written to NDEF records
+            if not self.pn532:
+                return None
 
-            # TODO: Implement NDEF reading if needed
-            # For v1.0, using UID as token ID is acceptable
+            read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
+            if not read_page:
+                return None
+
+            # Read first ~96 bytes (pages 4-27) to cover NDEF records
+            # Each read_page usually returns 16 bytes (4 pages)
+            raw_data = bytearray()
+            for page in range(4, 28, 4):
+                try:
+                    chunk = read_page(page)
+                    if chunk:
+                        raw_data.extend(bytes(chunk))
+                    else:
+                        break
+                except Exception:
+                    break
+
+            if not raw_data:
+                return None
+
+            # 1. Search for "Token {id}" pattern (Standard NDEF format)
+            # This searches the raw dump so it works regardless of NDEF structure
+            try:
+                text = raw_data.decode("utf-8", errors="ignore")
+                import re
+
+                match = re.search(r"Token\s+([A-Za-z0-9]+)", text)
+                if match:
+                    return match.group(1)
+            except Exception:
+                pass
+
+            # 2. Legacy Fallback (Plain ASCII at page 4)
+            # Only if it doesn't look like NDEF (header 0x03)
+            # Legacy cards start immediately with the ID (e.g. "001")
+            if len(raw_data) >= 4 and raw_data[0] != 0x03:
+                token = (
+                    raw_data[:4].decode("ascii", errors="ignore").strip("\x00").strip()
+                )
+                if token and len(token) >= 1:
+                    return token
 
             return None
 
@@ -175,6 +218,10 @@ class NFCReader:
             True if successful, False otherwise
         """
         try:
+            if not self.pn532:
+                logger.error("PN532 reader not initialized")
+                return False
+
             # Read card first to ensure it's present
             success, uid_bytes = self.pn532.readPassiveTargetID(cardbaudrate=0x00)
 
@@ -182,19 +229,29 @@ class NFCReader:
                 logger.error("No card present to write")
                 return False
 
-            # Write token ID to card memory
-            # For NTAG215, we can write to user memory pages
-            # Page 4 onwards is user memory (4 bytes per page)
-
             # Convert token ID to bytes (pad to 4 bytes)
-            token_bytes = token_id.encode('ascii')[:4].ljust(4, b'\x00')
+            token_bytes = token_id.encode("ascii")[:4].ljust(4, b"\x00")
 
-            # Write to page 4 (first user page)
-            # This is a simplified write - actual implementation would
-            # use proper NDEF formatting
+            if not self._write_ntag_pages(4, token_bytes):
+                logger.error("Failed to write token ID to card")
+                return False
 
-            # Note: py532lib's write_mifare requires specific commands
-            # For now, this is a placeholder
+            # Verify readback if possible
+            read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
+            if read_page:
+                raw = read_page(4)
+                if raw:
+                    read_token = (
+                        bytes(raw)
+                        .decode("ascii", errors="ignore")
+                        .strip("\x00")
+                        .strip()
+                    )
+                    if read_token and read_token != token_id:
+                        logger.error(
+                            f"Token ID verification mismatch: wrote {token_id}, read {read_token}"
+                        )
+                        return False
 
             logger.info(f"Wrote token ID '{token_id}' to card")
             return True
@@ -202,6 +259,63 @@ class NFCReader:
         except Exception as e:
             logger.error(f"Failed to write token ID: {e}")
             return False
+
+    def write_ndef_tlv(self, tlv_bytes: bytes) -> bool:
+        """
+        Write NDEF TLV bytes to card user memory starting at page 4
+
+        Args:
+            tlv_bytes: Full NDEF TLV payload
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if not self.pn532:
+                logger.error("PN532 reader not initialized")
+                return False
+
+            # NTAG215 user memory is 504 bytes (pages 4-129)
+            if len(tlv_bytes) > 504:
+                logger.error("NDEF message too large for NTAG215")
+                return False
+
+            return self._write_ntag_pages(4, tlv_bytes)
+
+        except Exception as e:
+            logger.error(f"Failed to write NDEF TLV: {e}")
+            return False
+
+    def _write_ntag_pages(self, start_page: int, data: bytes) -> bool:
+        """
+        Write arbitrary bytes to NTAG user memory (4 bytes per page)
+
+        Args:
+            start_page: Page to start writing (usually 4)
+            data: Raw bytes to write (will be padded to 4-byte pages)
+
+        Returns:
+            True if all pages written, False otherwise
+        """
+        write_page = getattr(self.pn532, "mifareultralight_WritePage", None)
+        if not write_page:
+            logger.error("PN532 library does not support mifareultralight_WritePage")
+            return False
+
+        padded = data
+        if len(padded) % 4 != 0:
+            padded = padded.ljust((len(padded) + 3) // 4 * 4, b"\x00")
+
+        page = start_page
+        for offset in range(0, len(padded), 4):
+            chunk = padded[offset : offset + 4]
+            result = write_page(page, chunk)
+            if result is False:
+                logger.error(f"Failed to write page {page}")
+                return False
+            page += 1
+
+        return True
 
     def reset_reader(self):
         """
@@ -270,7 +384,9 @@ class NFCReader:
 
             time.sleep(0.2)
 
-    def wait_for_card(self, timeout: Optional[float] = None) -> Optional[Tuple[str, str]]:
+    def wait_for_card(
+        self, timeout: Optional[float] = None
+    ) -> Optional[Tuple[str, str]]:
         """
         Wait for a card to be presented
 
@@ -305,11 +421,11 @@ class MockNFCReader(NFCReader):
 
     def __init__(self, *args, **kwargs):
         """Initialize mock reader (skip PN532 setup)"""
-        self.i2c_bus = kwargs.get('i2c_bus', 1)
-        self.address = kwargs.get('address', 0x24)
-        self.timeout = kwargs.get('timeout', 2)
-        self.retries = kwargs.get('retries', 3)
-        self.debounce_seconds = kwargs.get('debounce_seconds', 1.0)
+        self.i2c_bus = kwargs.get("i2c_bus", 1)
+        self.address = kwargs.get("address", 0x24)
+        self.timeout = kwargs.get("timeout", 2)
+        self.retries = kwargs.get("retries", 3)
+        self.debounce_seconds = kwargs.get("debounce_seconds", 1.0)
 
         self.pn532 = None
         self.last_uid = None

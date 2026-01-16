@@ -35,77 +35,46 @@ class NDEFWriter:
             True if successful, False otherwise
         """
         try:
-            # Try to import ndeflib if available
             try:
                 import ndef
-                return self._write_url_with_ndeflib(url, token_id)
             except ImportError:
-                logger.warning("ndeflib not installed, using basic implementation")
-                return self._write_url_basic(url, token_id)
+                logger.warning("ndeflib not installed; cannot write NDEF URLs")
+                return False
+
+            records = [ndef.UriRecord(url)]
+
+            if token_id:
+                records.append(ndef.TextRecord(f"Token {token_id}"))
+
+            message = b"".join(ndef.message_encoder(records))
+            tlv = self._wrap_ndef_tlv(message)
+
+            return self.nfc.write_ndef_tlv(tlv)
 
         except Exception as e:
             logger.error(f"Failed to write NDEF URL: {e}")
             return False
 
-    def _write_url_with_ndeflib(self, url: str, token_id: str = None) -> bool:
-        """Write URL using ndeflib library"""
-        import ndef
-
-        try:
-            # Create NDEF message with URL record
-            records = []
-
-            # Add URL record
-            uri_record = ndef.UriRecord(url)
-            records.append(uri_record)
-
-            # Optionally add text record with token ID
-            if token_id:
-                text_record = ndef.TextRecord(f"Token {token_id}")
-                records.append(text_record)
-
-            message = ndef.Message(records)
-
-            # Write to card
-            # Note: Actual writing requires lower-level PN532 commands
-            # This is a placeholder for the interface
-            logger.info(f"Would write NDEF: {url} (Token: {token_id})")
-
-            # For now, we'll simulate success
-            # In production with real hardware, implement actual NDEF writing
-            return True
-
-        except Exception as e:
-            logger.error(f"ndeflib write failed: {e}")
-            return False
-
-    def _write_url_basic(self, url: str, token_id: str = None) -> bool:
+    def _wrap_ndef_tlv(self, message: bytes) -> bytes:
         """
-        Basic NDEF URL writing without ndeflib
+        Wrap an NDEF message in an NDEF TLV block
 
-        NDEF URL Record Format (simplified):
-        - NDEF Message header
-        - Record header (TNF=0x01, Type="U")
-        - URL with prefix byte
+        Args:
+            message: Raw NDEF message bytes
+
+        Returns:
+            TLV bytes ready to write to tag memory
         """
-        try:
-            # NTAG215 memory layout:
-            # Pages 0-3: UID, lock bytes, capability container (read-only)
-            # Pages 4-129: User memory (504 bytes)
-            # Pages 130-134: Lock bytes, config
-
-            # Simplified NDEF message for URL
-            # This would require low-level PN532 write commands
-
-            logger.info(f"Basic NDEF write: {url} (Token: {token_id})")
-
-            # For mock/testing, return success
-            # In production, implement actual page writes
-            return True
-
-        except Exception as e:
-            logger.error(f"Basic NDEF write failed: {e}")
-            return False
+        length = len(message)
+        if length <= 0xFE:
+            tlv = bytes([0x03, length]) + message + bytes([0xFE])
+        else:
+            tlv = (
+                bytes([0x03, 0xFF, (length >> 8) & 0xFF, length & 0xFF])
+                + message
+                + bytes([0xFE])
+            )
+        return tlv
 
     def write_text(self, text: str) -> bool:
         """
@@ -120,13 +89,14 @@ class NDEFWriter:
         try:
             try:
                 import ndef
-                text_record = ndef.TextRecord(text)
-                message = ndef.Message([text_record])
-                logger.info(f"Would write NDEF text: {text}")
-                return True
             except ImportError:
-                logger.warning("ndeflib not installed")
+                logger.warning("ndeflib not installed; cannot write NDEF text")
                 return False
+
+            records = [ndef.TextRecord(text)]
+            message = b"".join(ndef.message_encoder(records))
+            tlv = self._wrap_ndef_tlv(message)
+            return self.nfc.write_ndef_tlv(tlv)
 
         except Exception as e:
             logger.error(f"Failed to write NDEF text: {e}")
@@ -144,7 +114,7 @@ class NDEFWriter:
             Complete URL
         """
         # Remove trailing slash from base URL
-        base_url = base_url.rstrip('/')
+        base_url = base_url.rstrip("/")
 
         # Format URL
         url = f"{base_url}/check?token={token_id}"
@@ -163,7 +133,7 @@ class MockNDEFWriter(NDEFWriter):
 
     def write_url(self, url: str, token_id: str = None) -> bool:
         """Mock write URL - always succeeds"""
-        self.written_urls.append({'url': url, 'token_id': token_id})
+        self.written_urls.append({"url": url, "token_id": token_id})
         logger.info(f"Mock NDEF URL write: {url} (Token: {token_id})")
         return True
 

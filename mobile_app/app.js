@@ -2,6 +2,7 @@ const settingsForm = document.getElementById("settings-form");
 const sessionInput = document.getElementById("session-id");
 const stageSelect = document.getElementById("stage");
 const deviceInput = document.getElementById("device-id");
+const piUrlInput = document.getElementById("pi-url");
 const startBtn = document.getElementById("start-scan");
 const stopBtn = document.getElementById("stop-scan");
 const manualBtn = document.getElementById("manual-add");
@@ -16,6 +17,7 @@ const lastToken = document.getElementById("last-token");
 const lastTime = document.getElementById("last-time");
 const totalCount = document.getElementById("total-count");
 const recentList = document.getElementById("recent-list");
+const syncPiBtn = document.getElementById("sync-pi");
 const exportJsonBtn = document.getElementById("export-json");
 const exportCsvBtn = document.getElementById("export-csv");
 const markSyncedBtn = document.getElementById("mark-synced");
@@ -41,7 +43,10 @@ class MobileStore {
 
       request.onupgradeneeded = () => {
         const db = request.result;
-        const store = db.createObjectStore("events", { keyPath: "id", autoIncrement: true });
+        const store = db.createObjectStore("events", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
         store.createIndex("synced", "synced");
         store.createIndex("timestamp", "timestampMs");
       };
@@ -116,6 +121,7 @@ function saveSettings() {
     sessionId: sessionInput.value.trim(),
     stage: stageSelect.value,
     deviceId: deviceInput.value.trim(),
+    piUrl: piUrlInput.value.trim().replace(/\/$/, ""),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   showToast("Settings saved");
@@ -131,6 +137,7 @@ function loadSettings() {
     if (settings.sessionId) sessionInput.value = settings.sessionId;
     if (settings.stage) stageSelect.value = settings.stage;
     if (settings.deviceId) deviceInput.value = settings.deviceId;
+    if (settings.piUrl) piUrlInput.value = settings.piUrl;
   } catch (e) {
     console.warn("Could not parse saved settings", e);
   }
@@ -150,7 +157,11 @@ function vibrate(pattern = [60]) {
 
 function formatTime(ms) {
   const dt = new Date(ms);
-  return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return dt.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 async function updateStats() {
@@ -195,7 +206,9 @@ function deriveToken(event) {
     }
   }
   if (!token && event.serialNumber) {
-    token = event.serialNumber.replace(/[^A-Za-z0-9]/g, "").slice(-8) || "UNKNOWN";
+    token =
+      event.serialNumber.replace(/[^A-Za-z0-9]/g, "").substring(0, 8) ||
+      "UNKNOWN";
   }
   return token || "UNKNOWN";
 }
@@ -242,7 +255,8 @@ async function startScanning() {
     reader = new NDEFReader();
     await reader.scan({ signal: controller.signal });
     reader.onreading = (evt) => handleTap(evt, "nfc");
-    reader.onreadingerror = () => (nfcStatus.textContent = "Scan error, retrying...");
+    reader.onreadingerror = () =>
+      (nfcStatus.textContent = "Scan error, retrying...");
     startBtn.disabled = true;
     stopBtn.disabled = false;
     nfcStatus.textContent = "Scanning... tap a card";
@@ -272,13 +286,20 @@ async function downloadFile(filename, content, type = "text/plain") {
   URL.revokeObjectURL(url);
 }
 
-async function exportJsonl() {
+async function syncToPi() {
+  const settings = saveSettings();
+  if (!settings.piUrl) {
+    showToast("Please set Pi Station URL in settings");
+    return;
+  }
+
   const events = await store.getUnsyncedEvents();
   if (!events.length) {
     showToast("No unsynced events");
     return;
   }
-  const lines = events.map((evt) => JSON.stringify({
+
+  const payload = events.map((evt) => ({
     token_id: evt.tokenId,
     uid: evt.uid,
     stage: evt.stage,
@@ -287,7 +308,60 @@ async function exportJsonl() {
     timestamp_ms: evt.timestampMs,
     source: evt.source || "mobile-web-nfc-v1",
   }));
-  await downloadFile(`mobile-export-${Date.now()}.jsonl`, lines.join("\n"), "application/x-ndjson");
+
+  syncPiBtn.disabled = true;
+  syncPiBtn.textContent = "Syncing...";
+
+  try {
+    const response = await fetch(`${settings.piUrl}/api/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result.status === "ok") {
+      const count = await store.markAllSynced();
+      updateStats();
+      showToast(`Synced ${count} events!`);
+    } else {
+      throw new Error(result.error || "Unknown error");
+    }
+  } catch (err) {
+    console.error("Sync failed", err);
+    showToast(`Sync failed: ${err.message}`);
+  } finally {
+    syncPiBtn.disabled = false;
+    syncPiBtn.textContent = "Sync to Pi Station";
+  }
+}
+
+async function exportJsonl() {
+  const events = await store.getUnsyncedEvents();
+  if (!events.length) {
+    showToast("No unsynced events");
+    return;
+  }
+  const lines = events.map((evt) =>
+    JSON.stringify({
+      token_id: evt.tokenId,
+      uid: evt.uid,
+      stage: evt.stage,
+      session_id: evt.sessionId,
+      device_id: evt.deviceId,
+      timestamp_ms: evt.timestampMs,
+      source: evt.source || "mobile-web-nfc-v1",
+    })
+  );
+  await downloadFile(
+    `mobile-export-${Date.now()}.jsonl`,
+    lines.join("\n"),
+    "application/x-ndjson"
+  );
   showToast("JSONL downloaded");
 }
 
@@ -298,22 +372,32 @@ async function exportCsv() {
     return;
   }
   const header = "token_id,uid,stage,session_id,device_id,timestamp_ms";
-  const rows = events.map(
-    (evt) =>
-      [evt.tokenId, evt.uid, evt.stage, evt.sessionId, evt.deviceId, evt.timestampMs]
-        .map((v) => `${v}`.replace(/"/g, '""'))
-        .map((v) => (v.includes(",") ? `"${v}"` : v))
-        .join(",")
+  const rows = events.map((evt) =>
+    [
+      evt.tokenId,
+      evt.uid,
+      evt.stage,
+      evt.sessionId,
+      evt.deviceId,
+      evt.timestampMs,
+    ]
+      .map((v) => `${v}`.replace(/"/g, '""'))
+      .map((v) => (v.includes(",") ? `"${v}"` : v))
+      .join(",")
   );
-  await downloadFile(`mobile-export-${Date.now()}.csv`, [header, ...rows].join("\n"), "text/csv");
+  await downloadFile(
+    `mobile-export-${Date.now()}.csv`,
+    [header, ...rows].join("\n"),
+    "text/csv"
+  );
   showToast("CSV downloaded");
 }
 
 function initServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js").catch((err) =>
-      console.warn("Service worker registration failed", err)
-    );
+    navigator.serviceWorker
+      .register("service-worker.js")
+      .catch((err) => console.warn("Service worker registration failed", err));
   }
 }
 
@@ -322,6 +406,7 @@ settingsForm.addEventListener("submit", (e) => {
   saveSettings();
 });
 
+syncPiBtn.addEventListener("click", syncToPi);
 startBtn.addEventListener("click", startScanning);
 stopBtn.addEventListener("click", stopScanning);
 manualBtn.addEventListener("click", () => {
@@ -333,7 +418,14 @@ manualForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const token = manualTokenInput.value.trim();
   if (!token) return;
-  await handleTap({ tokenId: token, serialNumber: `manual-${token}`, timestampMs: Date.now() }, "manual");
+  await handleTap(
+    {
+      tokenId: token,
+      serialNumber: `manual-${token}`,
+      timestampMs: Date.now(),
+    },
+    "manual"
+  );
   manualDialog.close();
 });
 

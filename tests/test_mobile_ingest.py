@@ -8,14 +8,26 @@ from scripts.ingest_mobile_batch import _load_events, ingest_events
 from tap_station.database import Database
 
 
+import os
+
+
 def _temp_db_path():
     fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)  # Close the file descriptor so we can delete the file
     Path(path).unlink()  # Database class will recreate
     return Path(path)
 
 
 def test_load_events_jsonl(tmp_path):
-    data = [{"token_id": "001", "uid": "A1", "stage": "QUEUE_JOIN", "session_id": "s1", "timestamp_ms": 1712000}]
+    data = [
+        {
+            "token_id": "001",
+            "uid": "A1",
+            "stage": "QUEUE_JOIN",
+            "session_id": "s1",
+            "timestamp_ms": 1712000,
+        }
+    ]
     jsonl = tmp_path / "events.jsonl"
     jsonl.write_text("\n".join(json.dumps(item) for item in data))
 
@@ -78,12 +90,23 @@ def test_load_events_csv(tmp_path):
 def test_ingest_handles_mixed_timestamp_formats(tmp_path):
     db_path = _temp_db_path()
     events = [
-        {"token_id": "020", "uid": "U20", "stage": "EXIT", "session_id": "fest", "timestamp": "2024-01-01T00:00:01+00:00"},
-        {"token_id": "021", "uid": "U21", "stage": "EXIT", "session_id": "fest", "timestamp_ms": "1712000"},
+        {
+            "token_id": "020",
+            "uid": "U20",
+            "stage": "EXIT",
+            "session_id": "fest",
+            "timestamp": "2024-01-01T00:00:01+00:00",
+        },
+        {
+            "token_id": "021",
+            "uid": "U21",
+            "stage": "EXIT",
+            "session_id": "fest",
+            "timestamp_ms": "1712000",
+        },
     ]
 
     summary = ingest_events(events, db_path)
     assert summary["inserted"] == 2
     with Database(str(db_path), wal_mode=True) as db:
         assert db.get_event_count("fest") == 2
-

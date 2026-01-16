@@ -22,6 +22,7 @@ from tap_station.feedback import FeedbackController
 
 class ErrorType:
     """Error type categorization"""
+
     TIMEOUT = "timeout"
     IO_ERROR = "io_error"
     CARD_REMOVED = "card_removed"
@@ -32,8 +33,16 @@ class ErrorType:
 class CardInitializer:
     """Initialize NFC cards with sequential token IDs"""
 
-    def __init__(self, start_id: int = 1, end_id: int = 100, mock: bool = False, auto_mode: bool = False,
-                 enable_audio: bool = True, resume: bool = False, verify: bool = False):
+    def __init__(
+        self,
+        start_id: int = 1,
+        end_id: int = 100,
+        mock: bool = False,
+        auto_mode: bool = False,
+        enable_audio: bool = True,
+        resume: bool = False,
+        verify: bool = False,
+    ):
         """
         Initialize card initializer
 
@@ -58,10 +67,14 @@ class CardInitializer:
 
         # Resume from last card if requested
         if resume and self.existing_cards:
-            last_id = max(int(card['token_id']) for card in self.existing_cards.values())
+            last_id = max(
+                int(card["token_id"]) for card in self.existing_cards.values()
+            )
             if last_id >= self.start_id:
                 self.current_id = last_id + 1
-                print(f"Resuming from card {self.current_id:03d} (last completed: {last_id:03d})")
+                print(
+                    f"Resuming from card {self.current_id:03d} (last completed: {last_id:03d})"
+                )
 
         # Initialize NFC reader
         if mock:
@@ -78,7 +91,7 @@ class CardInitializer:
                 led_enabled=False,  # No LEDs during init
                 beep_success=[0.1],  # Short beep
                 beep_duplicate=[0.1, 0.05, 0.1],  # Double beep
-                beep_error=[0.3]  # Long beep
+                beep_error=[0.3],  # Long beep
             )
             if enable_audio:
                 print("Audio feedback enabled")
@@ -102,15 +115,15 @@ class CardInitializer:
             return existing
 
         try:
-            with open(mapping_path, 'r') as f:
+            with open(mapping_path, "r") as f:
                 # Skip header
                 next(f)
                 for line in f:
-                    parts = line.strip().split(',')
+                    parts = line.strip().split(",")
                     if len(parts) >= 2:
                         token_id = parts[0]
                         uid = parts[1]
-                        existing[uid] = {'token_id': token_id, 'uid': uid}
+                        existing[uid] = {"token_id": token_id, "uid": uid}
         except Exception as e:
             print(f"Warning: Could not load existing cards: {e}")
 
@@ -124,7 +137,7 @@ class CardInitializer:
         completed = self.current_id - self.start_id
         progress = completed / total if total > 0 else 0
         filled = int(width * progress)
-        bar = '█' * filled + '░' * (width - filled)
+        bar = "█" * filled + "░" * (width - filled)
         percent = int(progress * 100)
         return f"[{bar}] {percent}%"
 
@@ -164,7 +177,9 @@ class CardInitializer:
         print(f"\n{'=' * 60}")
         print(f"Card Initialization")
         print(f"{'=' * 60}")
-        print(f"Will initialize {total_cards} cards (ID {self.start_id:03d} to {self.end_id:03d})")
+        print(
+            f"Will initialize {total_cards} cards (ID {self.start_id:03d} to {self.end_id:03d})"
+        )
 
         if self.auto_mode:
             print(f"\nMode: AUTOMATIC (will proceed between cards automatically)")
@@ -223,7 +238,9 @@ class CardInitializer:
             is_retry: Whether this is a retry attempt
         """
         retry_label = " (RETRY)" if is_retry else ""
-        print(f"[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id}){retry_label}...")
+        print(
+            f"[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id}){retry_label}..."
+        )
 
         # Wait for card with no timeout
         try:
@@ -248,37 +265,37 @@ class CardInitializer:
 
         # Check for duplicates
         if uid in self.existing_cards:
-            existing_token = self.existing_cards[uid]['token_id']
+            existing_token = self.existing_cards[uid]["token_id"]
             print(f"  ⚠ DUPLICATE! This card is already token ID {existing_token}")
             if self.feedback:
                 self.feedback.duplicate()
-            self.duplicate_cards.append({
-                'new_token_id': token_id,
-                'existing_token_id': existing_token,
-                'uid': uid
-            })
+            self.duplicate_cards.append(
+                {
+                    "new_token_id": token_id,
+                    "existing_token_id": existing_token,
+                    "uid": uid,
+                }
+            )
 
             # Ask user what to do
             response = input("  Skip this card? (y/n): ").strip().lower()
-            if response == 'y':
+            if response == "y":
                 print("  Skipping duplicate card")
                 return
             else:
                 print(f"  Overwriting token ID {existing_token} → {token_id}")
 
         # Write token ID to card
-        print(f"  Writing token ID '{token_id}'...", end='', flush=True)
+        print(f"  Writing token ID '{token_id}'...", end="", flush=True)
 
-        # For now, we just record the mapping
-        # In a real implementation, you'd write NDEF data here
-        success = True  # self.nfc.write_token_id(token_id)
+        success = self.nfc.write_token_id(token_id)
 
         if success:
             print(" SUCCESS ✓")
 
             # Verify if requested
             if self.verify:
-                print("  Verifying card...", end='', flush=True)
+                print("  Verifying card...", end="", flush=True)
                 time.sleep(0.3)  # Brief delay before re-reading
 
                 try:
@@ -289,19 +306,29 @@ class CardInitializer:
                             print(" VERIFIED ✓")
                         else:
                             print(f" MISMATCH! (got {verify_uid})")
-                            self._record_failure(token_id, ErrorType.WRITE_FAILED, f"Verification mismatch: {uid} != {verify_uid}")
+                            self._record_failure(
+                                token_id,
+                                ErrorType.WRITE_FAILED,
+                                f"Verification mismatch: {uid} != {verify_uid}",
+                            )
                             if self.feedback:
                                 self.feedback.error()
                             return
                     else:
                         print(" TIMEOUT (could not re-read)")
-                        self._record_failure(token_id, ErrorType.CARD_REMOVED, "Card removed before verification")
+                        self._record_failure(
+                            token_id,
+                            ErrorType.CARD_REMOVED,
+                            "Card removed before verification",
+                        )
                         if self.feedback:
                             self.feedback.error()
                         return
                 except Exception as e:
                     print(f" ERROR: {e}")
-                    self._record_failure(token_id, ErrorType.UNKNOWN, f"Verification error: {e}")
+                    self._record_failure(
+                        token_id, ErrorType.UNKNOWN, f"Verification error: {e}"
+                    )
                     if self.feedback:
                         self.feedback.error()
                     return
@@ -310,14 +337,16 @@ class CardInitializer:
             if self.feedback:
                 self.feedback.success()
 
-            self.initialized_cards.append({
-                'token_id': token_id,
-                'uid': uid,
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-            })
+            self.initialized_cards.append(
+                {
+                    "token_id": token_id,
+                    "uid": uid,
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            )
 
             # Update existing cards dict
-            self.existing_cards[uid] = {'token_id': token_id, 'uid': uid}
+            self.existing_cards[uid] = {"token_id": token_id, "uid": uid}
 
             # Save mapping to file
             self._save_mapping()
@@ -327,7 +356,7 @@ class CardInitializer:
             self.current_id += 1
 
             # Wait for card removal with actual detection
-            print("  Please remove card...", end='', flush=True)
+            print("  Please remove card...", end="", flush=True)
             removed = self.nfc.wait_for_card_removal(timeout=15.0)
 
             if removed:
@@ -340,16 +369,18 @@ class CardInitializer:
                 if self.auto_mode:
                     # In auto mode, visual countdown
                     for i in range(3, 0, -1):
-                        print(f"  Next card in: {i}...", end='\r', flush=True)
+                        print(f"  Next card in: {i}...", end="\r", flush=True)
                         time.sleep(1)
-                    print(" " * 40, end='\r')  # Clear countdown line
+                    print(" " * 40, end="\r")  # Clear countdown line
                 else:
                     # In manual mode, wait for user confirmation
                     input("  Press Enter when ready with next card...")
 
             else:
                 print(" TIMEOUT (card still present)")
-                print(f"  ⚠ Card successfully written as token {token_id}, but not removed")
+                print(
+                    f"  ⚠ Card successfully written as token {token_id}, but not removed"
+                )
                 print(f"  ⚠ Please remove card manually before continuing")
                 if self.feedback:
                     self.feedback.error()
@@ -360,16 +391,20 @@ class CardInitializer:
             print(" FAILED ✗")
             if self.feedback:
                 self.feedback.error()
-            self._record_failure(token_id, ErrorType.WRITE_FAILED, "Write operation failed")
+            self._record_failure(
+                token_id, ErrorType.WRITE_FAILED, "Write operation failed"
+            )
 
     def _record_failure(self, token_id: str, error_type: str, error_msg: str):
         """Record a failed card initialization"""
-        self.failed_cards.append({
-            'token_id': token_id,
-            'error_type': error_type,
-            'error_msg': error_msg,
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-        })
+        self.failed_cards.append(
+            {
+                "token_id": token_id,
+                "error_type": error_type,
+                "error_msg": error_msg,
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        )
 
     def _retry_failed_cards(self):
         """Offer to retry all failed cards"""
@@ -383,13 +418,13 @@ class CardInitializer:
 
         # Show what failed and why
         for fail in self.failed_cards:
-            error_type = fail['error_type']
-            token_id = fail['token_id']
+            error_type = fail["error_type"]
+            token_id = fail["token_id"]
             print(f"  {token_id}: {self._format_error_type(error_type)}")
 
         response = input(f"\nRetry these cards now? (y/n): ").strip().lower()
 
-        if response != 'y':
+        if response != "y":
             print("Skipping retry")
             return
 
@@ -401,7 +436,7 @@ class CardInitializer:
         print(f"\nRetrying {len(failed_copy)} card(s)...")
 
         for i, fail in enumerate(failed_copy, 1):
-            token_id = fail['token_id']
+            token_id = fail["token_id"]
             print(f"\n[{i}/{len(failed_copy)}] Retrying token ID: {token_id}")
 
             # Temporarily set current_id for progress display
@@ -426,7 +461,7 @@ class CardInitializer:
             ErrorType.IO_ERROR: "I/O Error (reader communication issue)",
             ErrorType.CARD_REMOVED: "Card removed early",
             ErrorType.WRITE_FAILED: "Write failed",
-            ErrorType.UNKNOWN: "Unknown error"
+            ErrorType.UNKNOWN: "Unknown error",
         }
         return error_descriptions.get(error_type, error_type)
 
@@ -444,13 +479,13 @@ class CardInitializer:
 
         # Add/update with newly initialized cards
         for card in self.initialized_cards:
-            all_cards[card['uid']] = card
+            all_cards[card["uid"]] = card
 
         # Write all cards to file
-        with open(self.mapping_file, 'w') as f:
+        with open(self.mapping_file, "w") as f:
             f.write("token_id,uid,initialized_at\n")
-            for card in sorted(all_cards.values(), key=lambda x: x['token_id']):
-                timestamp = card.get('timestamp', 'unknown')
+            for card in sorted(all_cards.values(), key=lambda x: x["token_id"]):
+                timestamp = card.get("timestamp", "unknown")
                 f.write(f"{card['token_id']},{card['uid']},{timestamp}\n")
 
     def _print_summary(self):
@@ -483,10 +518,10 @@ class CardInitializer:
             # Group by error type
             error_groups = {}
             for fail in self.failed_cards:
-                error_type = fail['error_type']
+                error_type = fail["error_type"]
                 if error_type not in error_groups:
                     error_groups[error_type] = []
-                error_groups[error_type].append(fail['token_id'])
+                error_groups[error_type].append(fail["token_id"])
 
             for error_type, token_ids in error_groups.items():
                 error_desc = self._format_error_type(error_type)
@@ -495,7 +530,9 @@ class CardInitializer:
         if duplicate_count > 0:
             print(f"\nDuplicate cards detected:")
             for dup in self.duplicate_cards:
-                print(f"  Token {dup['new_token_id']} → Already exists as {dup['existing_token_id']} (UID: {dup['uid']})")
+                print(
+                    f"  Token {dup['new_token_id']} → Already exists as {dup['existing_token_id']} (UID: {dup['uid']})"
+                )
 
         # Show overall progress
         total_cards = self.end_id - self.start_id + 1
@@ -518,13 +555,13 @@ class CardInitializer:
 
     def _generate_report(self) -> str:
         """Generate detailed initialization report"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = f"data/init_report_{timestamp}.txt"
 
         try:
             os.makedirs(os.path.dirname(report_file), exist_ok=True)
 
-            with open(report_file, 'w') as f:
+            with open(report_file, "w") as f:
                 f.write("=" * 60 + "\n")
                 f.write("Card Initialization Report\n")
                 f.write("=" * 60 + "\n\n")
@@ -555,7 +592,9 @@ class CardInitializer:
                     f.write("Token ID | UID              | Timestamp\n")
                     f.write("-" * 60 + "\n")
                     for card in self.initialized_cards:
-                        f.write(f"{card['token_id']:8} | {card['uid']:16} | {card['timestamp']}\n")
+                        f.write(
+                            f"{card['token_id']:8} | {card['uid']:16} | {card['timestamp']}\n"
+                        )
 
                 # Failed cards
                 if self.failed_cards:
@@ -566,17 +605,21 @@ class CardInitializer:
                     # Group by error type
                     error_groups = {}
                     for fail in self.failed_cards:
-                        error_type = fail['error_type']
+                        error_type = fail["error_type"]
                         if error_type not in error_groups:
                             error_groups[error_type] = []
                         error_groups[error_type].append(fail)
 
                     for error_type, failures in error_groups.items():
                         f.write(f"\n{self._format_error_type(error_type)}:\n")
-                        f.write("Token ID | Error Message                    | Timestamp\n")
+                        f.write(
+                            "Token ID | Error Message                    | Timestamp\n"
+                        )
                         f.write("-" * 60 + "\n")
                         for fail in failures:
-                            f.write(f"{fail['token_id']:8} | {fail['error_msg']:32} | {fail['timestamp']}\n")
+                            f.write(
+                                f"{fail['token_id']:8} | {fail['error_msg']:32} | {fail['timestamp']}\n"
+                            )
 
                 # Duplicates
                 if self.duplicate_cards:
@@ -586,7 +629,9 @@ class CardInitializer:
                     f.write("New ID | Existing ID | UID\n")
                     f.write("-" * 60 + "\n")
                     for dup in self.duplicate_cards:
-                        f.write(f"{dup['new_token_id']:6} | {dup['existing_token_id']:11} | {dup['uid']}\n")
+                        f.write(
+                            f"{dup['new_token_id']:6} | {dup['existing_token_id']:11} | {dup['uid']}\n"
+                        )
 
                 # Recommendations
                 f.write("\n" + "=" * 60 + "\n")
@@ -597,13 +642,15 @@ class CardInitializer:
                     f.write("Failed cards detected:\n")
                     error_groups = {}
                     for fail in self.failed_cards:
-                        error_type = fail['error_type']
+                        error_type = fail["error_type"]
                         if error_type not in error_groups:
                             error_groups[error_type] = []
                         error_groups[error_type].append(fail)
 
                     if ErrorType.TIMEOUT in error_groups:
-                        f.write("- Timeout errors: Check NFC reader position and card placement\n")
+                        f.write(
+                            "- Timeout errors: Check NFC reader position and card placement\n"
+                        )
                     if ErrorType.IO_ERROR in error_groups:
                         f.write("- I/O errors: Check I2C connection and power supply\n")
                         f.write("  Run: sudo i2cdetect -y 1\n")
@@ -622,43 +669,31 @@ class CardInitializer:
 
 def main():
     """Entry point for card initialization"""
-    parser = argparse.ArgumentParser(description='Initialize NFC cards with token IDs')
+    parser = argparse.ArgumentParser(description="Initialize NFC cards with token IDs")
     parser.add_argument(
-        '--start',
-        type=int,
-        default=1,
-        help='Starting token ID (default: 1)'
+        "--start", type=int, default=1, help="Starting token ID (default: 1)"
     )
     parser.add_argument(
-        '--end',
-        type=int,
-        default=100,
-        help='Ending token ID (default: 100)'
+        "--end", type=int, default=100, help="Ending token ID (default: 100)"
     )
     parser.add_argument(
-        '--mock',
-        action='store_true',
-        help='Use mock NFC reader for testing'
+        "--mock", action="store_true", help="Use mock NFC reader for testing"
     )
     parser.add_argument(
-        '--auto',
-        action='store_true',
-        help='Automatic mode: proceed between cards without user confirmation'
+        "--auto",
+        action="store_true",
+        help="Automatic mode: proceed between cards without user confirmation",
     )
     parser.add_argument(
-        '--resume',
-        action='store_true',
-        help='Resume from last completed card'
+        "--resume", action="store_true", help="Resume from last completed card"
     )
     parser.add_argument(
-        '--no-audio',
-        action='store_true',
-        help='Disable audio feedback (buzzer)'
+        "--no-audio", action="store_true", help="Disable audio feedback (buzzer)"
     )
     parser.add_argument(
-        '--verify',
-        action='store_true',
-        help='Verify each card after writing (re-read to confirm)'
+        "--verify",
+        action="store_true",
+        help="Verify each card after writing (re-read to confirm)",
     )
 
     args = parser.parse_args()
@@ -676,7 +711,7 @@ def main():
             auto_mode=args.auto,
             enable_audio=not args.no_audio,
             resume=args.resume,
-            verify=args.verify
+            verify=args.verify,
         )
         initializer.run()
         return 0
@@ -684,9 +719,10 @@ def main():
     except Exception as e:
         print(f"\nFatal error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
