@@ -37,6 +37,27 @@ def check_i2c():
     """Check if I2C is enabled and working"""
     print_header("I2C Bus Check")
 
+    # Check if I2C device exists
+    i2c_device_exists = os.path.exists('/dev/i2c-1') or os.path.exists('/dev/i2c-0')
+
+    if not i2c_device_exists:
+        print_result("I2C device exists", False, "/dev/i2c-1 not found")
+        print("\n  ⚠ I2C is not enabled or system needs reboot")
+        print("\n  To fix this issue:")
+        print("    1. Run the I2C setup script:")
+        print("       bash scripts/enable_i2c.sh")
+        print("\n    2. Or manually enable I2C:")
+        print("       - Edit /boot/config.txt or /boot/firmware/config.txt")
+        print("       - Add line: dtparam=i2c_arm=on")
+        print("       - Reboot: sudo reboot")
+        print("\n    3. After reboot, run this verification again")
+        print("\n  For detailed troubleshooting, see docs/HARDWARE.md")
+        return False
+
+    # Determine which I2C bus to use
+    i2c_bus = 1 if os.path.exists('/dev/i2c-1') else 0
+    print_result("I2C device exists", True, f"/dev/i2c-{i2c_bus}")
+
     # Check if i2c_dev module is loaded
     try:
         result = subprocess.run(['lsmod'], capture_output=True, text=True)
@@ -66,7 +87,7 @@ def check_i2c():
     # Scan I2C bus for devices
     try:
         result = subprocess.run(
-            ['i2cdetect', '-y', '1'],
+            ['i2cdetect', '-y', str(i2c_bus)],
             capture_output=True,
             text=True
         )
@@ -76,20 +97,26 @@ def check_i2c():
         print_result("PN532 detected at 0x24", pn532_found)
 
         if not pn532_found:
-            print("  Check PN532 wiring:")
+            print("\n  ✗ PN532 NFC reader not found on I2C bus")
+            print("\n  Check PN532 wiring:")
             print("    VCC → 3.3V (Pin 1)")
             print("    GND → GND (Pin 6)")
             print("    SDA → GPIO 2 (Pin 3)")
             print("    SCL → GPIO 3 (Pin 5)")
+            print("\n  Check PN532 mode:")
+            print("    - Ensure PN532 is set to I2C mode (not SPI/UART)")
+            print("    - Check jumpers/switches on the module")
             print("\n  I2C scan output:")
             print(result.stdout)
+            print("\n  Run I2C setup script for troubleshooting:")
+            print("    bash scripts/enable_i2c.sh")
             return False
 
         return True
 
     except Exception as e:
         print_result("Scan I2C bus", False, str(e))
-        print("  Try: sudo i2cdetect -y 1")
+        print(f"  Try: sudo i2cdetect -y {i2c_bus}")
         return False
 
 
@@ -97,11 +124,21 @@ def check_nfc_reader():
     """Check if PN532 NFC reader is working"""
     print_header("NFC Reader Check")
 
+    # Check if I2C device exists first
+    if not os.path.exists('/dev/i2c-1') and not os.path.exists('/dev/i2c-0'):
+        print_result("NFC reader test", False, "I2C device not found")
+        print("  ⚠ Cannot test NFC reader without I2C enabled")
+        print("  Fix I2C issues first (see I2C Bus Check section above)")
+        return False
+
+    # Determine which I2C bus to use
+    i2c_bus = 1 if os.path.exists('/dev/i2c-1') else 0
+
     try:
         from tap_station.nfc_reader import NFCReader
 
-        print("Initializing PN532 reader...")
-        reader = NFCReader(i2c_bus=1, address=0x24)
+        print(f"Initializing PN532 reader on I2C bus {i2c_bus}...")
+        reader = NFCReader(i2c_bus=i2c_bus, address=0x24)
         print_result("PN532 initialized", True)
 
         print("\nWaiting for NFC card (tap within 10 seconds)...")
@@ -123,7 +160,21 @@ def check_nfc_reader():
         return False
 
     except Exception as e:
-        print_result("NFC reader test", False, str(e))
+        error_msg = str(e)
+        print_result("NFC reader test", False, error_msg)
+
+        # Provide specific guidance for common errors
+        if "No such file or directory" in error_msg and "/dev/i2c" in error_msg:
+            print("\n  ⚠ I2C device not accessible")
+            print("  Run: bash scripts/enable_i2c.sh")
+        elif "Failed to communicate with PN532" in error_msg:
+            print("\n  ⚠ PN532 not responding")
+            print("  Check wiring and ensure PN532 is in I2C mode")
+        elif "Permission denied" in error_msg:
+            print("\n  ⚠ Permission issue")
+            print("  Add user to i2c group: sudo usermod -a -G i2c $USER")
+            print("  Then log out and back in")
+
         return False
 
 

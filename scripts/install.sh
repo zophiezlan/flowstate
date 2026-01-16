@@ -59,13 +59,28 @@ sudo apt-get install -y \
 # Enable I2C
 echo ""
 echo "Step 3: Enabling I2C..."
-if ! grep -q "^dtparam=i2c_arm=on" /boot/config.txt; then
-    echo "Enabling I2C in /boot/config.txt"
-    echo "dtparam=i2c_arm=on" | sudo tee -a /boot/config.txt
-    I2C_ENABLED=1
+
+# Find config file location (varies by Raspberry Pi OS version)
+CONFIG_FILE=""
+if [ -f /boot/firmware/config.txt ]; then
+    CONFIG_FILE="/boot/firmware/config.txt"
+elif [ -f /boot/config.txt ]; then
+    CONFIG_FILE="/boot/config.txt"
 else
-    echo "I2C already enabled"
+    echo "Warning: Could not find config.txt"
+    echo "You may need to enable I2C manually"
     I2C_ENABLED=0
+fi
+
+if [ -n "$CONFIG_FILE" ]; then
+    if ! grep -q "^dtparam=i2c_arm=on" "$CONFIG_FILE"; then
+        echo "Enabling I2C in $CONFIG_FILE"
+        echo "dtparam=i2c_arm=on" | sudo tee -a "$CONFIG_FILE"
+        I2C_ENABLED=1
+    else
+        echo "I2C already enabled in $CONFIG_FILE"
+        I2C_ENABLED=0
+    fi
 fi
 
 # Load I2C kernel module

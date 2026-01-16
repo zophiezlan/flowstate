@@ -48,6 +48,81 @@ START: Card tapped, no beep
 
 ---
 
+## Problem: I2C Not Working / /dev/i2c-1 Not Found
+
+```
+START: Error "No such file or directory: '/dev/i2c-1'"
+    ↓
+[Check if I2C device exists]
+    Run: ls -la /dev/i2c*
+    ↓
+    ├─ /dev/i2c-1 exists → Device exists ✓
+    │                      ↓
+    │   [Check permissions]
+    │       Run: groups
+    │       ├─ "i2c" shown → Permissions OK ✓
+    │       │                └─ Problem is with PN532, see above
+    │       └─ "i2c" NOT shown → Permission issue
+    │           └─ FIX: sudo usermod -a -G i2c $USER
+    │                  Log out and back in
+    │                  Try again
+    │
+    └─ NO /dev/i2c* → I2C NOT enabled
+                      ↓
+        [Enable I2C automatically]
+            Run: bash scripts/enable_i2c.sh
+            ├─ Script will guide you
+            └─ Will prompt for reboot
+                ↓
+        [Or enable I2C manually]
+            ├─ Find config file:
+            │   • /boot/firmware/config.txt (newer Pi OS)
+            │   • /boot/config.txt (older Pi OS)
+            │
+            ├─ Edit config:
+            │   sudo nano /boot/firmware/config.txt
+            │   Add line: dtparam=i2c_arm=on
+            │   Save and exit
+            │
+            ├─ Load kernel module:
+            │   sudo modprobe i2c_dev
+            │   echo "i2c-dev" | sudo tee -a /etc/modules
+            │
+            └─ REBOOT (required!):
+                sudo reboot
+                ↓
+        [After reboot, verify]
+            Run: ls -la /dev/i2c*
+            Should see: /dev/i2c-1
+            ↓
+            Run: sudo i2cdetect -y 1
+            Should show "24" for PN532
+            ↓
+            Run: python scripts/verify_hardware.py
+            All I2C checks should pass ✓
+```
+
+**Common I2C Issues:**
+
+1. **Just installed, never rebooted**
+   - Solution: `sudo reboot` (required after enabling I2C)
+
+2. **/dev/i2c-0 exists but not /dev/i2c-1**
+   - Some Pi models use bus 0
+   - Update config.yaml: `i2c_bus: 0`
+   - Or update code to use bus 0
+
+3. **Permission denied errors**
+   - Add user to i2c group
+   - Log out and back in (required!)
+
+4. **I2C enabled but PN532 not detected**
+   - Check wiring (see Problem: No Beep When Card Tapped)
+   - Check PN532 is in I2C mode (jumpers/switches)
+   - Try: `sudo i2cdetect -y 0` (alternate bus)
+
+---
+
 ## Problem: Service Won't Start
 
 ```

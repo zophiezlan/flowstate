@@ -82,6 +82,11 @@ This will:
 sudo reboot
 ```
 
+**Troubleshooting I2C:** If you encounter I2C issues, see [I2C Setup Guide](docs/I2C_SETUP.md) or run:
+```bash
+bash scripts/enable_i2c.sh
+```
+
 ### 3. Verify Hardware
 
 After reboot, verify everything is working:
@@ -311,6 +316,27 @@ pytest tests/test_integration.py -v
 
 ## Troubleshooting
 
+### I2C Not Working / /dev/i2c-1 Not Found
+
+If you see errors like `No such file or directory: '/dev/i2c-1'`:
+
+```bash
+# Run the I2C setup script
+bash scripts/enable_i2c.sh
+```
+
+This script will:
+- Check if I2C is enabled
+- Enable I2C if needed
+- Verify the I2C device exists
+- Scan for the PN532 reader
+- Provide detailed troubleshooting if issues are found
+
+**Important:** After enabling I2C, you MUST reboot:
+```bash
+sudo reboot
+```
+
 ### PN532 Not Detected
 
 ```bash
@@ -322,6 +348,7 @@ Should show device at `0x24`. If not:
 - Check wiring (VCC to 3.3V, NOT 5V)
 - Verify PN532 is in I2C mode (check jumpers)
 - Try `sudo i2cdetect -y 0` (some Pis use bus 0)
+- Run `bash scripts/enable_i2c.sh` for detailed troubleshooting
 
 ### Card Read Fails
 
@@ -486,6 +513,8 @@ See `docs/` folder for detailed information:
 - `CONTEXT.md`: Why this exists
 - `REQUIREMENTS.md`: What it needs to do
 - `HARDWARE.md`: Hardware specs and wiring
+- `I2C_SETUP.md`: I2C setup and troubleshooting guide
+- `TROUBLESHOOTING_FLOWCHART.md`: Step-by-step problem solving
 - `WORKFLOWS.md`: How people use it
 
 ### Issues
