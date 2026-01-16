@@ -147,6 +147,237 @@ class StatusWebServer:
                 logger.error(f"API stats failed: {e}")
                 return jsonify({'error': str(e)}), 500
 
+        @self.app.route('/dashboard')
+        def dashboard():
+            """Live monitoring dashboard for events"""
+            return render_template('dashboard.html',
+                                 device_id=self.config.device_id,
+                                 stage=self.config.stage,
+                                 session=self.config.session_id)
+
+        @self.app.route('/api/dashboard')
+        def api_dashboard():
+            """
+            API endpoint for dashboard data
+
+            Returns:
+                JSON with comprehensive dashboard statistics
+            """
+            try:
+                stats = self._get_dashboard_stats()
+                return jsonify(stats), 200
+
+            except Exception as e:
+                logger.error(f"API dashboard failed: {e}")
+                return jsonify({'error': str(e)}), 500
+
+    def _get_dashboard_stats(self) -> dict:
+        """
+        Get comprehensive dashboard statistics
+
+        Returns:
+            Dictionary with all dashboard data
+        """
+        session_id = self.config.session_id
+
+        # Today's events
+        cursor = self.db.conn.execute("""
+            SELECT COUNT(*) as count
+            FROM events
+            WHERE session_id = ? AND date(timestamp) = date('now')
+        """, (session_id,))
+        today_events = cursor.fetchone()['count']
+
+        # Last hour events
+        cursor = self.db.conn.execute("""
+            SELECT COUNT(*) as count
+            FROM events
+            WHERE session_id = ? AND timestamp > datetime('now', '-1 hour')
+        """, (session_id,))
+        last_hour_events = cursor.fetchone()['count']
+
+        # People currently in queue (joined but not exited)
+        cursor = self.db.conn.execute("""
+            SELECT COUNT(DISTINCT q.token_id) as count
+            FROM events q
+            LEFT JOIN events e
+                ON q.token_id = e.token_id
+                AND q.session_id = e.session_id
+                AND e.stage = 'EXIT'
+            WHERE q.stage = 'QUEUE_JOIN'
+                AND q.session_id = ?
+                AND e.id IS NULL
+        """, (session_id,))
+        in_queue = cursor.fetchone()['count']
+
+        # Completed journeys today
+        cursor = self.db.conn.execute("""
+            SELECT COUNT(*) as count
+            FROM events q
+            JOIN events e
+                ON q.token_id = e.token_id
+                AND q.session_id = e.session_id
+            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = 'EXIT'
+                AND q.session_id = ?
+                AND date(e.timestamp) = date('now')
+        """, (session_id,))
+        completed_today = cursor.fetchone()['count']
+
+        # Average wait time (last 20 completed)
+        avg_wait = self._calculate_avg_wait_time(limit=20)
+
+        # Recent completions with wait times
+        recent_completions = self._get_recent_completions(limit=10)
+
+        # Activity by hour (last 12 hours)
+        hourly_activity = self._get_hourly_activity(hours=12)
+
+        # Recent events feed
+        recent_events = self._get_recent_events_feed(limit=15)
+
+        return {
+            'device_id': self.config.device_id,
+            'stage': self.config.stage,
+            'session_id': session_id,
+            'timestamp': datetime.now().isoformat(),
+            'stats': {
+                'today_events': today_events,
+                'last_hour_events': last_hour_events,
+                'in_queue': in_queue,
+                'completed_today': completed_today,
+                'avg_wait_minutes': avg_wait,
+                'throughput_per_hour': last_hour_events / 2 if last_hour_events > 0 else 0  # Rough estimate
+            },
+            'recent_completions': recent_completions,
+            'hourly_activity': hourly_activity,
+            'recent_events': recent_events
+        }
+
+    def _calculate_avg_wait_time(self, limit=20) -> int:
+        """Calculate average wait time from recent completions"""
+        try:
+            cursor = self.db.conn.execute("""
+                SELECT
+                    q.timestamp as queue_time,
+                    e.timestamp as exit_time
+                FROM events q
+                JOIN events e
+                    ON q.token_id = e.token_id
+                    AND q.session_id = e.session_id
+                WHERE q.stage = 'QUEUE_JOIN'
+                    AND e.stage = 'EXIT'
+                    AND q.session_id = ?
+                ORDER BY e.timestamp DESC
+                LIMIT ?
+            """, (self.config.session_id, limit))
+
+            journeys = cursor.fetchall()
+
+            if not journeys:
+                return 0
+
+            total_wait = 0
+            for journey in journeys:
+                queue_dt = datetime.fromisoformat(journey['queue_time'])
+                exit_dt = datetime.fromisoformat(journey['exit_time'])
+                wait_minutes = (exit_dt - queue_dt).total_seconds() / 60
+                total_wait += wait_minutes
+
+            return int(total_wait / len(journeys))
+
+        except Exception as e:
+            logger.warning(f"Failed to calculate avg wait time: {e}")
+            return 0
+
+    def _get_recent_completions(self, limit=10) -> list:
+        """Get recent completed journeys with wait times"""
+        try:
+            cursor = self.db.conn.execute("""
+                SELECT
+                    q.token_id,
+                    q.timestamp as queue_time,
+                    e.timestamp as exit_time
+                FROM events q
+                JOIN events e
+                    ON q.token_id = e.token_id
+                    AND q.session_id = e.session_id
+                WHERE q.stage = 'QUEUE_JOIN'
+                    AND e.stage = 'EXIT'
+                    AND q.session_id = ?
+                ORDER BY e.timestamp DESC
+                LIMIT ?
+            """, (self.config.session_id, limit))
+
+            completions = []
+            for row in cursor.fetchall():
+                queue_dt = datetime.fromisoformat(row['queue_time'])
+                exit_dt = datetime.fromisoformat(row['exit_time'])
+                wait_minutes = int((exit_dt - queue_dt).total_seconds() / 60)
+
+                completions.append({
+                    'token_id': row['token_id'],
+                    'exit_time': exit_dt.strftime('%H:%M'),
+                    'wait_minutes': wait_minutes
+                })
+
+            return completions
+
+        except Exception as e:
+            logger.warning(f"Failed to get recent completions: {e}")
+            return []
+
+    def _get_hourly_activity(self, hours=12) -> list:
+        """Get activity counts by hour"""
+        try:
+            cursor = self.db.conn.execute("""
+                SELECT
+                    strftime('%H:00', timestamp) as hour,
+                    COUNT(*) as count
+                FROM events
+                WHERE session_id = ?
+                    AND timestamp > datetime('now', ? || ' hours')
+                GROUP BY hour
+                ORDER BY hour
+            """, (self.config.session_id, -hours))
+
+            return [{'hour': row['hour'], 'count': row['count']} for row in cursor.fetchall()]
+
+        except Exception as e:
+            logger.warning(f"Failed to get hourly activity: {e}")
+            return []
+
+    def _get_recent_events_feed(self, limit=15) -> list:
+        """Get recent events for activity feed"""
+        try:
+            cursor = self.db.conn.execute("""
+                SELECT
+                    token_id,
+                    stage,
+                    timestamp,
+                    device_id
+                FROM events
+                WHERE session_id = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """, (self.config.session_id, limit))
+
+            events = []
+            for row in cursor.fetchall():
+                dt = datetime.fromisoformat(row['timestamp'])
+                events.append({
+                    'token_id': row['token_id'],
+                    'stage': row['stage'],
+                    'time': dt.strftime('%H:%M:%S'),
+                    'device_id': row['device_id']
+                })
+
+            return events
+
+        except Exception as e:
+            logger.warning(f"Failed to get recent events: {e}")
+            return []
+
     def _get_token_status(self, token_id: str) -> dict:
         """
         Get status for a token from database
