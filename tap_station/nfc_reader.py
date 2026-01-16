@@ -271,7 +271,9 @@ class NFCReader:
             # Convert token ID to bytes (pad to 4 bytes)
             token_bytes = token_id.encode("ascii")[:4]
             if len(token_bytes) < 4:
-                token_bytes = token_bytes + (b"\x00" * (4 - len(token_bytes)))
+                # Pad with null bytes to reach 4 bytes
+                pad_length = 4 - len(token_bytes)
+                token_bytes = token_bytes + bytes(pad_length)
 
             if not self._write_ntag_pages(4, token_bytes):
                 logger.error("Failed to write token ID to card")
@@ -343,10 +345,15 @@ class NFCReader:
             logger.error("PN532 library does not support mifareultralight_WritePage")
             return False
 
+        # Ensure data is bytes type (not bytearray or other types)
+        if not isinstance(data, bytes):
+            data = bytes(data)
+
         # Pad data to 4-byte boundary
         if len(data) % 4 != 0:
             pad_length = ((len(data) + 3) // 4) * 4 - len(data)
-            padded = data + (b"\x00" * pad_length)
+            # Ensure both operands are bytes for concatenation
+            padded = data + bytes(pad_length)  # Create zero bytes
         else:
             padded = data
 
