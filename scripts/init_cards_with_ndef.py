@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import time
 import argparse
+from pathlib import Path
 from tap_station.nfc_reader import NFCReader, MockNFCReader
 from tap_station.ndef_writer import NDEFWriter, MockNDEFWriter
 
@@ -41,6 +42,20 @@ class NFCCardInitializer:
         self.end_id = end_id
         self.base_url = base_url
         self.current_id = start_id
+        self.mapping_file = "data/card_mapping.csv"
+
+        # Load existing cards for duplicate detection
+        self.existing_cards = self._load_existing_cards()
+
+        # Validate NDEF library if URL provided
+        if base_url and not mock:
+            try:
+                import ndef
+            except ImportError:
+                raise RuntimeError(
+                    "ndeflib is required for NDEF writing but not installed.\n"
+                    "Install it with: pip install ndeflib"
+                )
 
         # Initialize NFC reader
         if mock:
@@ -54,6 +69,33 @@ class NFCCardInitializer:
 
         self.initialized_cards = []
         self.failed_cards = []
+        self.duplicate_cards = []
+
+    def _load_existing_cards(self) -> dict:
+        """Load existing card mappings from CSV"""
+        existing = {}
+        mapping_path = Path(self.mapping_file)
+
+        if not mapping_path.exists():
+            return existing
+
+        try:
+            with open(mapping_path, "r") as f:
+                # Skip header
+                next(f)
+                for line in f:
+                    parts = line.strip().split(",")
+                    if len(parts) >= 2:
+                        token_id = parts[0]
+                        uid = parts[1]
+                        existing[uid] = {"token_id": token_id, "uid": uid}
+        except Exception as e:
+            print(f"Warning: Could not load existing cards: {e}")
+
+        if existing:
+            print(f"Loaded {len(existing)} existing card(s) from {self.mapping_file}")
+
+        return existing
 
     def run(self):
         """Run card initialization process"""
@@ -114,6 +156,26 @@ class NFCCardInitializer:
         uid, _ = result
         print(f" Card detected (UID: {uid})")
 
+        # Check for duplicates
+        if uid in self.existing_cards:
+            existing_token = self.existing_cards[uid]["token_id"]
+            print(f"  ⚠ DUPLICATE! This card is already token ID {existing_token}")
+            self.duplicate_cards.append(
+                {
+                    "new_token_id": token_id,
+                    "existing_token_id": existing_token,
+                    "uid": uid,
+                }
+            )
+
+            # Ask user what to do
+            response = input("  Skip this card? (y/n): ").strip().lower()
+            if response == "y":
+                print("  Skipping duplicate card")
+                return
+            else:
+                print(f"  Overwriting token ID {existing_token} → {token_id}")
+
         # Write NDEF URL if base_url provided
         if self.base_url:
             url = self.ndef.format_status_url(self.base_url, token_id)
@@ -145,6 +207,10 @@ class NFCCardInitializer:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
         )
+
+        # Update existing cards dict to detect duplicates in this session
+        self.existing_cards[uid] = {"token_id": token_id, "uid": uid}
+
         self.current_id += 1
 
         # Save mapping to file
@@ -157,30 +223,43 @@ class NFCCardInitializer:
         print(" OK")
 
     def _save_mapping(self):
-        """Save UID to token ID mapping to CSV file"""
+        """Save UID to token ID mapping to CSV file (atomic write)"""
         mapping_file = "data/card_mapping.csv"
 
         # Ensure directory exists
         os.makedirs(os.path.dirname(mapping_file), exist_ok=True)
 
-        # Write mapping
-        with open(mapping_file, "w") as f:
-            if self.base_url:
-                f.write("token_id,uid,url,initialized_at\n")
-                for card in self.initialized_cards:
-                    f.write(
-                        f"{card['token_id']},{card['uid']},{card['url']},{card['timestamp']}\n"
-                    )
-            else:
-                f.write("token_id,uid,initialized_at\n")
-                for card in self.initialized_cards:
-                    f.write(f"{card['token_id']},{card['uid']},{card['timestamp']}\n")
+        # Write to temp file first (atomic operation)
+        temp_file = mapping_file + ".tmp"
+        try:
+            with open(temp_file, "w") as f:
+                if self.base_url:
+                    f.write("token_id,uid,url,initialized_at\n")
+                    for card in self.initialized_cards:
+                        f.write(
+                            f"{card['token_id']},{card['uid']},{card['url']},{card['timestamp']}\n"
+                        )
+                else:
+                    f.write("token_id,uid,initialized_at\n")
+                    for card in self.initialized_cards:
+                        f.write(
+                            f"{card['token_id']},{card['uid']},{card['timestamp']}\n"
+                        )
+
+            # Atomic rename (replace old file)
+            os.replace(temp_file, mapping_file)
+        except Exception as e:
+            # Clean up temp file if it exists
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise e
 
     def _print_summary(self):
         """Print initialization summary"""
         total_attempted = len(self.initialized_cards) + len(self.failed_cards)
         success_count = len(self.initialized_cards)
         fail_count = len(self.failed_cards)
+        duplicate_count = len(self.duplicate_cards)
 
         print(f"\n{'=' * 60}")
         print(f"Initialization Summary")
@@ -188,6 +267,7 @@ class NFCCardInitializer:
         print(f"Total attempted: {total_attempted}")
         print(f"Successful:      {success_count} ✓")
         print(f"Failed:          {fail_count} ✗")
+        print(f"Duplicates:      {duplicate_count} ⚠")
 
         if self.base_url:
             print(f"\nNDEF URLs written: {success_count}")
@@ -195,6 +275,13 @@ class NFCCardInitializer:
 
         if fail_count > 0:
             print(f"\nFailed token IDs: {', '.join(self.failed_cards)}")
+
+        if duplicate_count > 0:
+            print(f"\nDuplicate cards detected:")
+            for dup in self.duplicate_cards:
+                print(
+                    f"  Token {dup['new_token_id']} → Already exists as {dup['existing_token_id']} (UID: {dup['uid']})"
+                )
 
         print(f"\nCard mapping saved to: data/card_mapping.csv")
 

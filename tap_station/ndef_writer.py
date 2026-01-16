@@ -22,6 +22,18 @@ class NDEFWriter:
             nfc_reader: NFCReader instance
         """
         self.nfc = nfc_reader
+        self._ndef_available = None  # Cache library availability
+
+    def _check_ndef_library(self):
+        """Check if ndeflib is available (cached check)"""
+        if self._ndef_available is None:
+            try:
+                import ndef
+
+                self._ndef_available = True
+            except ImportError:
+                self._ndef_available = False
+        return self._ndef_available
 
     def write_url(self, url: str, token_id: str = None) -> bool:
         """
@@ -33,13 +45,18 @@ class NDEFWriter:
 
         Returns:
             True if successful, False otherwise
+
+        Raises:
+            RuntimeError: If ndeflib is not installed
         """
+        if not self._check_ndef_library():
+            raise RuntimeError(
+                "ndeflib is required for NDEF writing but not installed.\n"
+                "Install it with: pip install ndeflib"
+            )
+
         try:
-            try:
-                import ndef
-            except ImportError:
-                logger.warning("ndeflib not installed; cannot write NDEF URLs")
-                return False
+            import ndef
 
             records = [ndef.UriRecord(url)]
 
@@ -85,13 +102,18 @@ class NDEFWriter:
 
         Returns:
             True if successful, False otherwise
+
+        Raises:
+            RuntimeError: If ndeflib is not installed
         """
+        if not self._check_ndef_library():
+            raise RuntimeError(
+                "ndeflib is required for NDEF writing but not installed.\n"
+                "Install it with: pip install ndeflib"
+            )
+
         try:
-            try:
-                import ndef
-            except ImportError:
-                logger.warning("ndeflib not installed; cannot write NDEF text")
-                return False
+            import ndef
 
             records = [ndef.TextRecord(text)]
             message = b"".join(ndef.message_encoder(records))

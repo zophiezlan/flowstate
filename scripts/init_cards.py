@@ -16,6 +16,8 @@ import time
 import argparse
 from datetime import datetime
 from pathlib import Path
+import subprocess
+import shutil
 from tap_station.nfc_reader import NFCReader, MockNFCReader
 from tap_station.feedback import FeedbackController
 
@@ -28,6 +30,63 @@ class ErrorType:
     CARD_REMOVED = "card_removed"
     WRITE_FAILED = "write_failed"
     UNKNOWN = "unknown"
+
+
+def check_service_status():
+    """Check if tap-station service is running"""
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "tap-station"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.stdout.strip() == "active"
+    except Exception:
+        return False
+
+
+def stop_service():
+    """Stop the tap-station service"""
+    try:
+        print("Stopping tap-station service...")
+        result = subprocess.run(
+            ["sudo", "systemctl", "stop", "tap-station"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            time.sleep(1)  # Give it a moment to fully stop
+            print("✓ Service stopped")
+            return True
+        else:
+            print(f"✗ Failed to stop service: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"✗ Error stopping service: {e}")
+        return False
+
+
+def start_service():
+    """Start the tap-station service"""
+    try:
+        print("\nRestarting tap-station service...")
+        result = subprocess.run(
+            ["sudo", "systemctl", "start", "tap-station"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            print("✓ Service restarted")
+            return True
+        else:
+            print(f"✗ Failed to restart service: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"✗ Error restarting service: {e}")
+        return False
 
 
 class CardInitializer:
@@ -301,19 +360,32 @@ class CardInitializer:
                 try:
                     verify_result = self.nfc.wait_for_card(timeout=5)
                     if verify_result:
-                        verify_uid, _ = verify_result
-                        if verify_uid == uid:
-                            print(" VERIFIED ✓")
-                        else:
-                            print(f" MISMATCH! (got {verify_uid})")
+                        verify_uid, verify_token = verify_result
+                        # Check both UID and token ID match
+                        if verify_uid != uid:
+                            print(f" UID MISMATCH! (got {verify_uid})")
                             self._record_failure(
                                 token_id,
                                 ErrorType.WRITE_FAILED,
-                                f"Verification mismatch: {uid} != {verify_uid}",
+                                f"Verification UID mismatch: {uid} != {verify_uid}",
                             )
                             if self.feedback:
                                 self.feedback.error()
                             return
+                        elif verify_token != token_id:
+                            print(
+                                f" TOKEN MISMATCH! (wrote {token_id}, read {verify_token})"
+                            )
+                            self._record_failure(
+                                token_id,
+                                ErrorType.WRITE_FAILED,
+                                f"Verification token mismatch: wrote {token_id}, read {verify_token}",
+                            )
+                            if self.feedback:
+                                self.feedback.error()
+                            return
+                        else:
+                            print(" VERIFIED ✓")
                     else:
                         print(" TIMEOUT (could not re-read)")
                         self._record_failure(
@@ -351,16 +423,16 @@ class CardInitializer:
             # Save mapping to file
             self._save_mapping()
 
-            # CRITICAL: Increment current_id NOW since write succeeded
-            # This prevents duplicate token IDs if card removal times out
-            self.current_id += 1
-
             # Wait for card removal with actual detection
             print("  Please remove card...", end="", flush=True)
             removed = self.nfc.wait_for_card_removal(timeout=15.0)
 
             if removed:
                 print(" OK ✓")
+
+                # CRITICAL: Only increment current_id AFTER successful removal
+                # This prevents skipping token IDs if removal times out
+                self.current_id += 1
 
                 # Reset reader to clear state
                 self.nfc.reset_reader()
@@ -384,8 +456,9 @@ class CardInitializer:
                 print(f"  ⚠ Please remove card manually before continuing")
                 if self.feedback:
                     self.feedback.error()
-                # Note: We DON'T call _record_failure() here because the write succeeded
-                # The token ID has been used, so we've already incremented current_id
+                # Increment here too since write succeeded - token ID has been used
+                self.current_id += 1
+                # Don't record as failure since write was successful
 
         else:
             print(" FAILED ✗")
@@ -466,7 +539,7 @@ class CardInitializer:
         return error_descriptions.get(error_type, error_type)
 
     def _save_mapping(self):
-        """Save UID to token ID mapping to CSV file"""
+        """Save UID to token ID mapping to CSV file (atomic write)"""
         # Ensure directory exists
         os.makedirs(os.path.dirname(self.mapping_file), exist_ok=True)
 
@@ -481,12 +554,22 @@ class CardInitializer:
         for card in self.initialized_cards:
             all_cards[card["uid"]] = card
 
-        # Write all cards to file
-        with open(self.mapping_file, "w") as f:
-            f.write("token_id,uid,initialized_at\n")
-            for card in sorted(all_cards.values(), key=lambda x: x["token_id"]):
-                timestamp = card.get("timestamp", "unknown")
-                f.write(f"{card['token_id']},{card['uid']},{timestamp}\n")
+        # Write to temp file first (atomic operation)
+        temp_file = self.mapping_file + ".tmp"
+        try:
+            with open(temp_file, "w") as f:
+                f.write("token_id,uid,initialized_at\n")
+                for card in sorted(all_cards.values(), key=lambda x: x["token_id"]):
+                    timestamp = card.get("timestamp", "unknown")
+                    f.write(f"{card['token_id']},{card['uid']},{timestamp}\n")
+
+            # Atomic rename (replace old file)
+            os.replace(temp_file, self.mapping_file)
+        except Exception as e:
+            # Clean up temp file if it exists
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise e
 
     def _print_summary(self):
         """Print initialization summary"""
@@ -695,6 +778,11 @@ def main():
         action="store_true",
         help="Verify each card after writing (re-read to confirm)",
     )
+    parser.add_argument(
+        "--no-service-check",
+        action="store_true",
+        help="Skip service status check and management",
+    )
 
     args = parser.parse_args()
 
@@ -702,6 +790,30 @@ def main():
     if args.start < 1 or args.end < args.start:
         print("Error: Invalid token ID range", file=sys.stderr)
         return 1
+
+    # Check if systemctl is available
+    has_systemctl = shutil.which("systemctl") is not None
+    service_was_running = False
+
+    # Check and manage service (unless in mock mode or disabled)
+    if not args.mock and not args.no_service_check and has_systemctl:
+        if check_service_status():
+            service_was_running = True
+            print("\n⚠️  WARNING: tap-station service is currently running")
+            print("   The service must be stopped to initialize cards.\n")
+
+            response = input("Stop the service now? [Y/n]: ").strip().lower()
+            if response in ("", "y", "yes"):
+                if not stop_service():
+                    print("\nCannot proceed without stopping the service.")
+                    print(
+                        "You can manually stop it with: sudo systemctl stop tap-station"
+                    )
+                    return 1
+            else:
+                print("\nCannot initialize cards while service is running.")
+                print("Please stop it manually: sudo systemctl stop tap-station")
+                return 1
 
     try:
         initializer = CardInitializer(
@@ -713,14 +825,31 @@ def main():
             resume=args.resume,
             verify=args.verify,
         )
-        initializer.run()
-        return 0
+        result = initializer.run()
+
+        # Restart service if we stopped it
+        if service_was_running and has_systemctl:
+            start_service()
+
+        return result if result is not None else 0
+
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        # Restart service if we stopped it
+        if service_was_running and has_systemctl:
+            start_service()
+        return 130
 
     except Exception as e:
         print(f"\nFatal error: {e}", file=sys.stderr)
         import traceback
 
         traceback.print_exc()
+
+        # Restart service if we stopped it
+        if service_was_running and has_systemctl:
+            start_service()
+
         return 1
 
 

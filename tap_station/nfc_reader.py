@@ -179,8 +179,47 @@ class NFCReader:
             if not raw_data:
                 return None
 
-            # 1. Search for "Token {id}" pattern (Standard NDEF format)
-            # This searches the raw dump so it works regardless of NDEF structure
+            # 1. Try proper NDEF parsing first (most reliable)
+            try:
+                import ndef
+
+                # Find NDEF TLV (Type-Length-Value) block
+                # NDEF message starts with 0x03 (NDEF Message TLV type)
+                if len(raw_data) > 2 and raw_data[0] == 0x03:
+                    # Parse TLV length
+                    if raw_data[1] == 0xFF:
+                        # 3-byte length format
+                        if len(raw_data) > 4:
+                            length = (raw_data[2] << 8) | raw_data[3]
+                            message_data = raw_data[4 : 4 + length]
+                        else:
+                            message_data = None
+                    else:
+                        # 1-byte length format
+                        length = raw_data[1]
+                        message_data = raw_data[2 : 2 + length]
+
+                    if message_data:
+                        # Parse NDEF message
+                        try:
+                            records = list(ndef.message_decoder(message_data))
+                            # Look for TextRecord with "Token XXX" pattern
+                            for record in records:
+                                if isinstance(record, ndef.TextRecord):
+                                    text = record.text
+                                    import re
+
+                                    match = re.search(r"Token\s+([A-Za-z0-9]+)", text)
+                                    if match:
+                                        return match.group(1)
+                        except Exception as e:
+                            logger.debug(f"NDEF parsing failed: {e}")
+            except ImportError:
+                # ndeflib not available, fall through to other methods
+                pass
+
+            # 2. Search for "Token {id}" pattern as fallback (less reliable)
+            # This searches the raw dump so it works even with malformed NDEF
             try:
                 text = raw_data.decode("utf-8", errors="ignore")
                 import re
@@ -191,7 +230,7 @@ class NFCReader:
             except Exception:
                 pass
 
-            # 2. Legacy Fallback (Plain ASCII at page 4)
+            # 3. Legacy Fallback (Plain ASCII at page 4)
             # Only if it doesn't look like NDEF (header 0x03)
             # Legacy cards start immediately with the ID (e.g. "001")
             if len(raw_data) >= 4 and raw_data[0] != 0x03:
