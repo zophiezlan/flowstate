@@ -341,9 +341,12 @@ class NFCReader:
             logger.error("PN532 library does not support mifareultralight_WritePage")
             return False
 
-        padded = data
-        if len(padded) % 4 != 0:
-            padded = padded.ljust((len(padded) + 3) // 4 * 4, b"\x00")
+        # Pad data to 4-byte boundary
+        if len(data) % 4 != 0:
+            pad_length = ((len(data) + 3) // 4) * 4 - len(data)
+            padded = data + (b"\x00" * pad_length)
+        else:
+            padded = data
 
         page = start_page
         for offset in range(0, len(padded), 4):
