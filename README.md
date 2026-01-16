@@ -70,17 +70,25 @@ bash scripts/install.sh
 ```
 
 This will:
-- Install system dependencies (Python, I2C tools)
+- Install system dependencies (Python, I2C tools, build tools)
 - Enable I2C interface
 - Create virtual environment
-- Install Python packages
+- Install Python packages (pn532pi, PyYAML, RPi.GPIO, Flask, etc.)
 - Configure systemd service
-- Set up directories
+- Set up directories (data, logs, backups)
+- Create initial configuration
 
 **Important:** Reboot after installation if I2C was just enabled:
 ```bash
 sudo reboot
 ```
+
+**After Installation:** Verify your setup:
+```bash
+bash scripts/verify_deployment.sh
+```
+
+**Fresh Deployment?** See the [Fresh Deployment Guide](docs/FRESH_DEPLOYMENT_GUIDE.md) for complete step-by-step instructions.
 
 **Troubleshooting I2C:** If you encounter I2C issues, see [I2C Setup Guide](docs/I2C_SETUP.md) or run:
 ```bash
@@ -510,11 +518,20 @@ Better setup:
 ### Documentation
 
 See `docs/` folder for detailed information:
-- `CONTEXT.md`: Why this exists
-- `REQUIREMENTS.md`: What it needs to do
-- `HARDWARE.md`: Hardware specs and wiring
+
+**Getting Started:**
+- `FRESH_DEPLOYMENT_GUIDE.md`: Complete guide for fresh Raspberry Pi setup
+- `POST_INSTALL_CHECKLIST.md`: Verification checklist after installation
+- `QUICKSTART.md`: 15-minute quick start guide
+- `HARDWARE.md`: Hardware specs and wiring diagrams
+
+**Troubleshooting:**
 - `I2C_SETUP.md`: I2C setup and troubleshooting guide
 - `TROUBLESHOOTING_FLOWCHART.md`: Step-by-step problem solving
+
+**Additional Info:**
+- `CONTEXT.md`: Why this exists
+- `REQUIREMENTS.md`: What it needs to do
 - `WORKFLOWS.md`: How people use it
 
 ### Issues
