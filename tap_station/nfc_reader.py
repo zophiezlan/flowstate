@@ -378,7 +378,15 @@ class NFCReader:
                     logger.warning(
                         "WritePage rejected bytearray; retrying with list: %s", exc2
                     )
-                    result = write_page(page, list(chunk))
+                    try:
+                        result = write_page(page, list(chunk))
+                    except TypeError as exc3:
+                        # All methods failed - log detailed error
+                        logger.error(
+                            f"All write methods failed for page {page}. "
+                            f"Unpacked: {exc}, Bytearray: {exc2}, List: {exc3}"
+                        )
+                        return False
             if result is False:
                 logger.error(f"Failed to write page {page}")
                 return False
