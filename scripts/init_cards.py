@@ -20,11 +20,20 @@ from tap_station.nfc_reader import NFCReader, MockNFCReader
 from tap_station.feedback import FeedbackController
 
 
+class ErrorType:
+    """Error type categorization"""
+    TIMEOUT = "timeout"
+    IO_ERROR = "io_error"
+    CARD_REMOVED = "card_removed"
+    WRITE_FAILED = "write_failed"
+    UNKNOWN = "unknown"
+
+
 class CardInitializer:
     """Initialize NFC cards with sequential token IDs"""
 
     def __init__(self, start_id: int = 1, end_id: int = 100, mock: bool = False, auto_mode: bool = False,
-                 enable_audio: bool = True, resume: bool = False):
+                 enable_audio: bool = True, resume: bool = False, verify: bool = False):
         """
         Initialize card initializer
 
@@ -35,11 +44,13 @@ class CardInitializer:
             auto_mode: If True, automatically proceed between cards (no user confirmation)
             enable_audio: Enable buzzer feedback
             resume: Resume from last completed card
+            verify: If True, re-read card after write to verify
         """
         self.start_id = start_id
         self.end_id = end_id
         self.current_id = start_id
         self.auto_mode = auto_mode
+        self.verify = verify
         self.mapping_file = "data/card_mapping.csv"
 
         # Load existing cards for duplicate detection and resume
@@ -77,9 +88,10 @@ class CardInitializer:
 
         # Statistics tracking
         self.initialized_cards = []
-        self.failed_cards = []
+        self.failed_cards = []  # List of dicts with token_id, error_type, error_msg
         self.duplicate_cards = []
         self.start_time = None
+        self.retry_count = 0  # Track retry attempts
 
     def _load_existing_cards(self) -> dict:
         """Load existing card mappings from CSV"""
@@ -196,25 +208,39 @@ class CardInitializer:
             print("\n\nStopped by user")
 
         finally:
+            # Offer to retry failed cards
+            if self.failed_cards:
+                self._retry_failed_cards()
+
             self._print_summary()
 
-    def _init_card(self, token_id: str):
+    def _init_card(self, token_id: str, is_retry: bool = False):
         """
         Initialize a single card
 
         Args:
             token_id: Token ID to write (e.g., "001")
+            is_retry: Whether this is a retry attempt
         """
-        print(f"[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id})...")
+        retry_label = " (RETRY)" if is_retry else ""
+        print(f"[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id}){retry_label}...")
 
         # Wait for card with no timeout
-        result = self.nfc.wait_for_card(timeout=None)
+        try:
+            result = self.nfc.wait_for_card(timeout=None)
+        except Exception as e:
+            error_msg = str(e)
+            print(f"  ✗ I/O ERROR: {error_msg}")
+            if self.feedback:
+                self.feedback.error()
+            self._record_failure(token_id, ErrorType.IO_ERROR, error_msg)
+            return
 
         if not result:
             print("  ✗ TIMEOUT (no card detected)")
             if self.feedback:
                 self.feedback.error()
-            self.failed_cards.append(token_id)
+            self._record_failure(token_id, ErrorType.TIMEOUT, "No card detected")
             return
 
         uid, _ = result
@@ -249,6 +275,36 @@ class CardInitializer:
 
         if success:
             print(" SUCCESS ✓")
+
+            # Verify if requested
+            if self.verify:
+                print("  Verifying card...", end='', flush=True)
+                time.sleep(0.3)  # Brief delay before re-reading
+
+                try:
+                    verify_result = self.nfc.wait_for_card(timeout=5)
+                    if verify_result:
+                        verify_uid, _ = verify_result
+                        if verify_uid == uid:
+                            print(" VERIFIED ✓")
+                        else:
+                            print(f" MISMATCH! (got {verify_uid})")
+                            self._record_failure(token_id, ErrorType.WRITE_FAILED, f"Verification mismatch: {uid} != {verify_uid}")
+                            if self.feedback:
+                                self.feedback.error()
+                            return
+                    else:
+                        print(" TIMEOUT (could not re-read)")
+                        self._record_failure(token_id, ErrorType.CARD_REMOVED, "Card removed before verification")
+                        if self.feedback:
+                            self.feedback.error()
+                        return
+                except Exception as e:
+                    print(f" ERROR: {e}")
+                    self._record_failure(token_id, ErrorType.UNKNOWN, f"Verification error: {e}")
+                    if self.feedback:
+                        self.feedback.error()
+                    return
 
             # Success beep
             if self.feedback:
@@ -294,13 +350,81 @@ class CardInitializer:
                 print("  ⚠ Card was not removed in time, skipping...")
                 if self.feedback:
                     self.feedback.error()
-                self.failed_cards.append(token_id)
+                self._record_failure(token_id, ErrorType.CARD_REMOVED, "Card not removed in time")
 
         else:
             print(" FAILED ✗")
             if self.feedback:
                 self.feedback.error()
-            self.failed_cards.append(token_id)
+            self._record_failure(token_id, ErrorType.WRITE_FAILED, "Write operation failed")
+
+    def _record_failure(self, token_id: str, error_type: str, error_msg: str):
+        """Record a failed card initialization"""
+        self.failed_cards.append({
+            'token_id': token_id,
+            'error_type': error_type,
+            'error_msg': error_msg,
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+    def _retry_failed_cards(self):
+        """Offer to retry all failed cards"""
+        if not self.failed_cards:
+            return
+
+        print(f"\n{'=' * 60}")
+        print(f"Failed Cards Retry")
+        print(f"{'=' * 60}")
+        print(f"Found {len(self.failed_cards)} failed card(s)")
+
+        # Show what failed and why
+        for fail in self.failed_cards:
+            error_type = fail['error_type']
+            token_id = fail['token_id']
+            print(f"  {token_id}: {self._format_error_type(error_type)}")
+
+        response = input(f"\nRetry these cards now? (y/n): ").strip().lower()
+
+        if response != 'y':
+            print("Skipping retry")
+            return
+
+        # Retry loop
+        failed_copy = self.failed_cards.copy()
+        self.failed_cards = []  # Clear for retry
+        self.retry_count += 1
+
+        print(f"\nRetrying {len(failed_copy)} card(s)...")
+
+        for i, fail in enumerate(failed_copy, 1):
+            token_id = fail['token_id']
+            print(f"\n[{i}/{len(failed_copy)}] Retrying token ID: {token_id}")
+
+            # Temporarily set current_id for progress display
+            old_current = self.current_id
+            self.current_id = int(token_id)
+
+            self._init_card(token_id, is_retry=True)
+
+            # Restore current_id
+            self.current_id = old_current
+
+        # If still have failures, ask to retry again
+        if self.failed_cards and self.retry_count < 3:
+            self._retry_failed_cards()
+        elif self.failed_cards and self.retry_count >= 3:
+            print(f"\nMax retry attempts ({self.retry_count}) reached")
+
+    def _format_error_type(self, error_type: str) -> str:
+        """Format error type for display"""
+        error_descriptions = {
+            ErrorType.TIMEOUT: "Timeout (no card detected)",
+            ErrorType.IO_ERROR: "I/O Error (reader communication issue)",
+            ErrorType.CARD_REMOVED: "Card removed early",
+            ErrorType.WRITE_FAILED: "Write failed",
+            ErrorType.UNKNOWN: "Unknown error"
+        }
+        return error_descriptions.get(error_type, error_type)
 
     def _save_mapping(self):
         """Save UID to token ID mapping to CSV file"""
@@ -351,7 +475,18 @@ class CardInitializer:
         print(f"Duplicates:      {duplicate_count} ⚠")
 
         if fail_count > 0:
-            print(f"\nFailed token IDs: {', '.join(self.failed_cards)}")
+            print(f"\nFailed Cards by Error Type:")
+            # Group by error type
+            error_groups = {}
+            for fail in self.failed_cards:
+                error_type = fail['error_type']
+                if error_type not in error_groups:
+                    error_groups[error_type] = []
+                error_groups[error_type].append(fail['token_id'])
+
+            for error_type, token_ids in error_groups.items():
+                error_desc = self._format_error_type(error_type)
+                print(f"  {error_desc}: {', '.join(token_ids)}")
 
         if duplicate_count > 0:
             print(f"\nDuplicate cards detected:")
@@ -365,11 +500,120 @@ class CardInitializer:
         print(f"\nOverall progress: {completed}/{total_cards} ({progress_percent}%)")
 
         print(f"\nCard mapping saved to: {self.mapping_file}")
+
+        # Generate report
+        report_path = self._generate_report()
+        if report_path:
+            print(f"Detailed report saved to: {report_path}")
+
         print(f"{'=' * 60}\n")
 
         # Cleanup feedback
         if self.feedback:
             self.feedback.cleanup()
+
+    def _generate_report(self) -> str:
+        """Generate detailed initialization report"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        report_file = f"data/init_report_{timestamp}.txt"
+
+        try:
+            os.makedirs(os.path.dirname(report_file), exist_ok=True)
+
+            with open(report_file, 'w') as f:
+                f.write("=" * 60 + "\n")
+                f.write("Card Initialization Report\n")
+                f.write("=" * 60 + "\n\n")
+
+                f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Token ID Range: {self.start_id:03d} - {self.end_id:03d}\n")
+
+                if self.start_time:
+                    elapsed = (datetime.now() - self.start_time).total_seconds()
+                    elapsed_min = int(elapsed / 60)
+                    elapsed_sec = int(elapsed % 60)
+                    f.write(f"Total Time: {elapsed_min}m {elapsed_sec}s\n")
+
+                f.write("\n" + "=" * 60 + "\n")
+                f.write("Summary Statistics\n")
+                f.write("=" * 60 + "\n\n")
+
+                f.write(f"Successful: {len(self.initialized_cards)}\n")
+                f.write(f"Failed: {len(self.failed_cards)}\n")
+                f.write(f"Duplicates: {len(self.duplicate_cards)}\n")
+                f.write(f"Retry Attempts: {self.retry_count}\n")
+
+                # Successful cards
+                if self.initialized_cards:
+                    f.write("\n" + "=" * 60 + "\n")
+                    f.write("Successful Initializations\n")
+                    f.write("=" * 60 + "\n\n")
+                    f.write("Token ID | UID              | Timestamp\n")
+                    f.write("-" * 60 + "\n")
+                    for card in self.initialized_cards:
+                        f.write(f"{card['token_id']:8} | {card['uid']:16} | {card['timestamp']}\n")
+
+                # Failed cards
+                if self.failed_cards:
+                    f.write("\n" + "=" * 60 + "\n")
+                    f.write("Failed Initializations\n")
+                    f.write("=" * 60 + "\n\n")
+
+                    # Group by error type
+                    error_groups = {}
+                    for fail in self.failed_cards:
+                        error_type = fail['error_type']
+                        if error_type not in error_groups:
+                            error_groups[error_type] = []
+                        error_groups[error_type].append(fail)
+
+                    for error_type, failures in error_groups.items():
+                        f.write(f"\n{self._format_error_type(error_type)}:\n")
+                        f.write("Token ID | Error Message                    | Timestamp\n")
+                        f.write("-" * 60 + "\n")
+                        for fail in failures:
+                            f.write(f"{fail['token_id']:8} | {fail['error_msg']:32} | {fail['timestamp']}\n")
+
+                # Duplicates
+                if self.duplicate_cards:
+                    f.write("\n" + "=" * 60 + "\n")
+                    f.write("Duplicate Cards\n")
+                    f.write("=" * 60 + "\n\n")
+                    f.write("New ID | Existing ID | UID\n")
+                    f.write("-" * 60 + "\n")
+                    for dup in self.duplicate_cards:
+                        f.write(f"{dup['new_token_id']:6} | {dup['existing_token_id']:11} | {dup['uid']}\n")
+
+                # Recommendations
+                f.write("\n" + "=" * 60 + "\n")
+                f.write("Recommendations\n")
+                f.write("=" * 60 + "\n\n")
+
+                if self.failed_cards:
+                    f.write("Failed cards detected:\n")
+                    error_groups = {}
+                    for fail in self.failed_cards:
+                        error_type = fail['error_type']
+                        if error_type not in error_groups:
+                            error_groups[error_type] = []
+                        error_groups[error_type].append(fail)
+
+                    if ErrorType.TIMEOUT in error_groups:
+                        f.write("- Timeout errors: Check NFC reader position and card placement\n")
+                    if ErrorType.IO_ERROR in error_groups:
+                        f.write("- I/O errors: Check I2C connection and power supply\n")
+                        f.write("  Run: sudo i2cdetect -y 1\n")
+                    if ErrorType.CARD_REMOVED in error_groups:
+                        f.write("- Card removed early: Hold cards longer on reader\n")
+
+                if not self.failed_cards and not self.duplicate_cards:
+                    f.write("All cards initialized successfully! ✓\n")
+
+            return report_file
+
+        except Exception as e:
+            print(f"Warning: Could not generate report: {e}")
+            return None
 
 
 def main():
@@ -407,6 +651,11 @@ def main():
         action='store_true',
         help='Disable audio feedback (buzzer)'
     )
+    parser.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify each card after writing (re-read to confirm)'
+    )
 
     args = parser.parse_args()
 
@@ -422,7 +671,8 @@ def main():
             mock=args.mock,
             auto_mode=args.auto,
             enable_audio=not args.no_audio,
-            resume=args.resume
+            resume=args.resume,
+            verify=args.verify
         )
         initializer.run()
         return 0
