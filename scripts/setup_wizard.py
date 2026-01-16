@@ -126,17 +126,40 @@ def test_buzzer():
 
 
 def create_config(device_id, stage, session_id, buzzer_enabled):
-    """Create configuration file"""
+    """Create configuration file with correct nested schema"""
     config = {
-        'device_id': device_id,
-        'stage': stage,
-        'session_id': session_id,
-        'database_path': 'data/events.db',
-        'buzzer_enabled': buzzer_enabled,
-        'led_enabled': False,
-        'gpio_buzzer': 17,
-        'gpio_led_green': 27,
-        'gpio_led_red': 22,
+        'station': {
+            'device_id': device_id,
+            'stage': stage,
+            'session_id': session_id
+        },
+        'database': {
+            'path': 'data/events.db',
+            'wal_mode': True
+        },
+        'nfc': {
+            'i2c_bus': 1,
+            'address': 0x24,
+            'timeout': 2,
+            'retries': 3,
+            'debounce_seconds': 1.0
+        },
+        'feedback': {
+            'buzzer_enabled': buzzer_enabled,
+            'led_enabled': False,
+            'gpio': {
+                'buzzer': 17,
+                'led_green': 27,
+                'led_red': 22
+            },
+            'beep_success': [0.1],
+            'beep_duplicate': [0.1, 0.05, 0.1],
+            'beep_error': [0.3]
+        },
+        'logging': {
+            'path': 'logs/tap-station.log',
+            'level': 'INFO'
+        },
         'web_server': {
             'enabled': True,
             'port': 5000,

@@ -322,6 +322,10 @@ class CardInitializer:
             # Save mapping to file
             self._save_mapping()
 
+            # CRITICAL: Increment current_id NOW since write succeeded
+            # This prevents duplicate token IDs if card removal times out
+            self.current_id += 1
+
             # Wait for card removal with actual detection
             print("  Please remove card...", end='', flush=True)
             removed = self.nfc.wait_for_card_removal(timeout=15.0)
@@ -343,14 +347,14 @@ class CardInitializer:
                     # In manual mode, wait for user confirmation
                     input("  Press Enter when ready with next card...")
 
-                self.current_id += 1
-
             else:
                 print(" TIMEOUT (card still present)")
-                print("  ⚠ Card was not removed in time, skipping...")
+                print(f"  ⚠ Card successfully written as token {token_id}, but not removed")
+                print(f"  ⚠ Please remove card manually before continuing")
                 if self.feedback:
                     self.feedback.error()
-                self._record_failure(token_id, ErrorType.CARD_REMOVED, "Card not removed in time")
+                # Note: We DON'T call _record_failure() here because the write succeeded
+                # The token ID has been used, so we've already incremented current_id
 
         else:
             print(" FAILED ✗")
