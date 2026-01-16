@@ -2,8 +2,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from scripts.ingest_mobile_batch import _load_events, ingest_events
 from tap_station.database import Database
 

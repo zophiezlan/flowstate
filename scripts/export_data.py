@@ -22,7 +22,7 @@ def export_data(
     config_path: str = "config.yaml",
     output_dir: str = ".",
     session_id: str = None,
-    filename: str = None
+    filename: str = None,
 ):
     """
     Export event data to CSV
@@ -45,12 +45,12 @@ def export_data(
 
     # Generate filename with timestamp if not provided
     if filename is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"export_{timestamp}.csv"
 
     # Ensure .csv extension
-    if not filename.endswith('.csv'):
-        filename += '.csv'
+    if not filename.endswith(".csv"):
+        filename += ".csv"
 
     # Build output path
     output_path = Path(output_dir) / filename
@@ -81,13 +81,16 @@ def export_data(
 def print_summary(db: Database, session_id: str):
     """Print summary statistics"""
     # Get event count by stage
-    cursor = db.conn.execute("""
+    cursor = db.conn.execute(
+        """
         SELECT stage, COUNT(*) as count
         FROM events
         WHERE session_id = ?
         GROUP BY stage
         ORDER BY stage
-    """, (session_id,))
+    """,
+        (session_id,),
+    )
 
     stages = cursor.fetchall()
 
@@ -97,24 +100,30 @@ def print_summary(db: Database, session_id: str):
         print(f"  {row['stage']}: {row['count']} events")
 
     # Get unique tokens
-    cursor = db.conn.execute("""
+    cursor = db.conn.execute(
+        """
         SELECT COUNT(DISTINCT token_id) as count
         FROM events
         WHERE session_id = ?
-    """, (session_id,))
+    """,
+        (session_id,),
+    )
 
-    unique_tokens = cursor.fetchone()['count']
+    unique_tokens = cursor.fetchone()["count"]
     print(f"\nUnique tokens: {unique_tokens}")
 
     # Get time range
-    cursor = db.conn.execute("""
+    cursor = db.conn.execute(
+        """
         SELECT MIN(timestamp) as first, MAX(timestamp) as last
         FROM events
         WHERE session_id = ?
-    """, (session_id,))
+    """,
+        (session_id,),
+    )
 
     time_range = cursor.fetchone()
-    if time_range['first']:
+    if time_range["first"]:
         print(f"Time range: {time_range['first']} to {time_range['last']}")
 
     print("-" * 40)
@@ -122,29 +131,25 @@ def print_summary(db: Database, session_id: str):
 
 def main():
     """Entry point for data export"""
-    parser = argparse.ArgumentParser(description='Export event data to CSV')
+    parser = argparse.ArgumentParser(description="Export event data to CSV")
     parser.add_argument(
-        '--config',
-        default='config.yaml',
-        help='Path to configuration file (default: config.yaml)'
+        "--config",
+        default="config.yaml",
+        help="Path to configuration file (default: config.yaml)",
     )
     parser.add_argument(
-        '--output-dir',
-        default='.',
-        help='Output directory (default: current directory)'
+        "--output-dir",
+        default=".",
+        help="Output directory (default: current directory)",
+    )
+    parser.add_argument("--session", help="Session ID filter (default: from config)")
+    parser.add_argument(
+        "--filename", help="Custom output filename (default: export_TIMESTAMP.csv)"
     )
     parser.add_argument(
-        '--session',
-        help='Session ID filter (default: from config)'
-    )
-    parser.add_argument(
-        '--filename',
-        help='Custom output filename (default: export_TIMESTAMP.csv)'
-    )
-    parser.add_argument(
-        '--all-sessions',
-        action='store_true',
-        help='Export all sessions (ignore session filter)'
+        "--all-sessions",
+        action="store_true",
+        help="Export all sessions (ignore session filter)",
     )
 
     args = parser.parse_args()
@@ -158,7 +163,7 @@ def main():
             config_path=args.config,
             output_dir=args.output_dir,
             session_id=session_id,
-            filename=args.filename
+            filename=args.filename,
         )
 
         print(f"\nExport complete!")
@@ -175,9 +180,10 @@ def main():
     except Exception as e:
         print(f"Fatal error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

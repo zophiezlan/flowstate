@@ -14,11 +14,7 @@ def run_command(cmd, check=True):
     """Run a command and return output"""
     try:
         result = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=check
+            cmd, shell=True, capture_output=True, text=True, check=check
         )
         return result.returncode == 0, result.stdout, result.stderr
     except subprocess.CalledProcessError as e:
@@ -27,7 +23,9 @@ def run_command(cmd, check=True):
 
 def is_service_installed():
     """Check if service is installed"""
-    success, _, _ = run_command("systemctl list-unit-files | grep -q tap-station", check=False)
+    success, _, _ = run_command(
+        "systemctl list-unit-files | grep -q tap-station", check=False
+    )
     return success
 
 
@@ -41,8 +39,7 @@ def install_service():
 
     # Copy service file
     success, out, err = run_command(
-        "sudo cp tap-station.service /etc/systemd/system/",
-        check=False
+        "sudo cp tap-station.service /etc/systemd/system/", check=False
     )
 
     if not success:
@@ -155,35 +152,41 @@ def logs_service(lines=50, follow=False):
     else:
         print(f"Last {lines} lines of tap-station logs:")
         print("=" * 60)
-        success, out, err = run_command(f"sudo journalctl -u tap-station -n {lines}", check=False)
+        success, out, err = run_command(
+            f"sudo journalctl -u tap-station -n {lines}", check=False
+        )
         print(out)
 
 
 def main():
     """Entry point"""
-    parser = argparse.ArgumentParser(description='Manage tap-station systemd service')
+    parser = argparse.ArgumentParser(description="Manage tap-station systemd service")
 
-    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Install command
-    subparsers.add_parser('install', help='Install systemd service')
+    subparsers.add_parser("install", help="Install systemd service")
 
     # Enable/disable commands
-    subparsers.add_parser('enable', help='Enable service to start on boot')
-    subparsers.add_parser('disable', help='Disable service from starting on boot')
+    subparsers.add_parser("enable", help="Enable service to start on boot")
+    subparsers.add_parser("disable", help="Disable service from starting on boot")
 
     # Start/stop/restart commands
-    subparsers.add_parser('start', help='Start the service')
-    subparsers.add_parser('stop', help='Stop the service')
-    subparsers.add_parser('restart', help='Restart the service')
+    subparsers.add_parser("start", help="Start the service")
+    subparsers.add_parser("stop", help="Stop the service")
+    subparsers.add_parser("restart", help="Restart the service")
 
     # Status command
-    subparsers.add_parser('status', help='Show service status')
+    subparsers.add_parser("status", help="Show service status")
 
     # Logs command
-    logs_parser = subparsers.add_parser('logs', help='Show service logs')
-    logs_parser.add_argument('-n', '--lines', type=int, default=50, help='Number of lines to show')
-    logs_parser.add_argument('-f', '--follow', action='store_true', help='Follow logs in real-time')
+    logs_parser = subparsers.add_parser("logs", help="Show service logs")
+    logs_parser.add_argument(
+        "-n", "--lines", type=int, default=50, help="Number of lines to show"
+    )
+    logs_parser.add_argument(
+        "-f", "--follow", action="store_true", help="Follow logs in real-time"
+    )
 
     args = parser.parse_args()
 
@@ -193,14 +196,16 @@ def main():
 
     # Execute command
     commands = {
-        'install': install_service,
-        'enable': enable_service,
-        'disable': disable_service,
-        'start': start_service,
-        'stop': stop_service,
-        'restart': restart_service,
-        'status': status_service,
-        'logs': lambda: logs_service(args.lines, args.follow) if args.command == 'logs' else None
+        "install": install_service,
+        "enable": enable_service,
+        "disable": disable_service,
+        "start": start_service,
+        "stop": stop_service,
+        "restart": restart_service,
+        "status": status_service,
+        "logs": lambda: logs_service(args.lines, args.follow)
+        if args.command == "logs"
+        else None,
     }
 
     if args.command in commands:
@@ -211,5 +216,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

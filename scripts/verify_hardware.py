@@ -38,7 +38,7 @@ def check_i2c():
     print_header("I2C Bus Check")
 
     # Check if I2C device exists
-    i2c_device_exists = os.path.exists('/dev/i2c-1') or os.path.exists('/dev/i2c-0')
+    i2c_device_exists = os.path.exists("/dev/i2c-1") or os.path.exists("/dev/i2c-0")
 
     if not i2c_device_exists:
         print_result("I2C device exists", False, "/dev/i2c-1 not found")
@@ -55,13 +55,13 @@ def check_i2c():
         return False
 
     # Determine which I2C bus to use
-    i2c_bus = 1 if os.path.exists('/dev/i2c-1') else 0
+    i2c_bus = 1 if os.path.exists("/dev/i2c-1") else 0
     print_result("I2C device exists", True, f"/dev/i2c-{i2c_bus}")
 
     # Check if i2c_dev module is loaded
     try:
-        result = subprocess.run(['lsmod'], capture_output=True, text=True)
-        i2c_loaded = 'i2c_dev' in result.stdout
+        result = subprocess.run(["lsmod"], capture_output=True, text=True)
+        i2c_loaded = "i2c_dev" in result.stdout
         print_result("I2C kernel module loaded", i2c_loaded)
 
         if not i2c_loaded:
@@ -73,7 +73,7 @@ def check_i2c():
 
     # Check if i2c-tools is installed
     try:
-        result = subprocess.run(['which', 'i2cdetect'], capture_output=True)
+        result = subprocess.run(["which", "i2cdetect"], capture_output=True)
         i2c_tools = result.returncode == 0
         print_result("i2c-tools installed", i2c_tools)
 
@@ -87,13 +87,11 @@ def check_i2c():
     # Scan I2C bus for devices
     try:
         result = subprocess.run(
-            ['i2cdetect', '-y', str(i2c_bus)],
-            capture_output=True,
-            text=True
+            ["i2cdetect", "-y", str(i2c_bus)], capture_output=True, text=True
         )
 
         # Check if 0x24 (PN532) is detected
-        pn532_found = '24' in result.stdout
+        pn532_found = "24" in result.stdout
         print_result("PN532 detected at 0x24", pn532_found)
 
         if not pn532_found:
@@ -125,14 +123,14 @@ def check_nfc_reader():
     print_header("NFC Reader Check")
 
     # Check if I2C device exists first
-    if not os.path.exists('/dev/i2c-1') and not os.path.exists('/dev/i2c-0'):
+    if not os.path.exists("/dev/i2c-1") and not os.path.exists("/dev/i2c-0"):
         print_result("NFC reader test", False, "I2C device not found")
         print("  ⚠ Cannot test NFC reader without I2C enabled")
         print("  Fix I2C issues first (see I2C Bus Check section above)")
         return False
 
     # Determine which I2C bus to use
-    i2c_bus = 1 if os.path.exists('/dev/i2c-1') else 0
+    i2c_bus = 1 if os.path.exists("/dev/i2c-1") else 0
 
     try:
         from tap_station.nfc_reader import NFCReader
@@ -193,6 +191,7 @@ def check_gpio():
 
     try:
         import RPi.GPIO as GPIO
+
         print_result("RPi.GPIO available", True)
 
         # Setup test pins
@@ -213,7 +212,7 @@ def check_gpio():
         GPIO.cleanup()
 
         response = input("Did you hear a beep? (y/n): ").strip().lower()
-        success = response == 'y'
+        success = response == "y"
 
         print_result("GPIO/Buzzer working", success)
 
@@ -240,13 +239,11 @@ def check_battery():
     try:
         # Check for under-voltage
         result = subprocess.run(
-            ['vcgencmd', 'get_throttled'],
-            capture_output=True,
-            text=True
+            ["vcgencmd", "get_throttled"], capture_output=True, text=True
         )
 
-        throttled = result.stdout.strip().split('=')[1]
-        no_throttle = throttled == '0x0'
+        throttled = result.stdout.strip().split("=")[1]
+        no_throttle = throttled == "0x0"
 
         print_result("No under-voltage detected", no_throttle, f"Status: {throttled}")
 
@@ -260,9 +257,7 @@ def check_battery():
 
         # Get temperature
         result = subprocess.run(
-            ['vcgencmd', 'measure_temp'],
-            capture_output=True,
-            text=True
+            ["vcgencmd", "measure_temp"], capture_output=True, text=True
         )
 
         temp = result.stdout.strip()
@@ -294,7 +289,7 @@ def check_database():
             uid="TEST1234",
             stage="TEST",
             device_id="test",
-            session_id="test"
+            session_id="test",
         )
 
         print_result("Database write", success)
@@ -328,11 +323,11 @@ def main():
     results = {}
 
     # Run checks
-    results['I2C'] = check_i2c()
-    results['NFC'] = check_nfc_reader()
-    results['GPIO'] = check_gpio()
-    results['Power'] = check_battery()
-    results['Database'] = check_database()
+    results["I2C"] = check_i2c()
+    results["NFC"] = check_nfc_reader()
+    results["GPIO"] = check_gpio()
+    results["Power"] = check_battery()
+    results["Database"] = check_database()
 
     # Summary
     print_header("Verification Summary")
@@ -360,5 +355,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

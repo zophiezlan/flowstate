@@ -35,7 +35,7 @@ logging:
   level: "DEBUG"
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         config_path = f.name
 
@@ -68,7 +68,7 @@ station:
   device_id: "test"
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         config_path = f.name
 
@@ -99,16 +99,16 @@ station:
     value: 42
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         config_path = f.name
 
     try:
         config = Config(config_path)
 
-        assert config.get('station.device_id') == "test"
-        assert config.get('station.nested.value') == 42
-        assert config.get('nonexistent.key', 'default') == 'default'
+        assert config.get("station.device_id") == "test"
+        assert config.get("station.nested.value") == 42
+        assert config.get("nonexistent.key", "default") == "default"
 
     finally:
         os.unlink(config_path)

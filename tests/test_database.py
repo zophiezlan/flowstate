@@ -10,7 +10,7 @@ from tap_station.database import Database
 @pytest.fixture
 def test_db():
     """Create a temporary test database"""
-    fd, path = tempfile.mkstemp(suffix='.db')
+    fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
 
     db = Database(path, wal_mode=True)
@@ -20,7 +20,7 @@ def test_db():
     os.unlink(path)
 
     # Clean up WAL files
-    for ext in ['-wal', '-shm']:
+    for ext in ["-wal", "-shm"]:
         wal_path = path + ext
         if os.path.exists(wal_path):
             os.unlink(wal_path)
@@ -34,7 +34,7 @@ def test_database_creation(test_db):
     )
     result = cursor.fetchone()
     assert result is not None
-    assert result['name'] == 'events'
+    assert result["name"] == "events"
 
 
 def test_log_event(test_db):
@@ -44,7 +44,7 @@ def test_log_event(test_db):
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="test-session"
+        session_id="test-session",
     )
 
     assert success is True
@@ -62,7 +62,7 @@ def test_duplicate_prevention(test_db):
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="test-session"
+        session_id="test-session",
     )
     assert success1 is True
 
@@ -72,7 +72,7 @@ def test_duplicate_prevention(test_db):
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="test-session"
+        session_id="test-session",
     )
     assert success2 is False
 
@@ -89,7 +89,7 @@ def test_different_stages_allowed(test_db):
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="test-session"
+        session_id="test-session",
     )
     assert success1 is True
 
@@ -99,7 +99,7 @@ def test_different_stages_allowed(test_db):
         uid="1234567890ABCDEF",
         stage="EXIT",
         device_id="station2",
-        session_id="test-session"
+        session_id="test-session",
     )
     assert success2 is True
 
@@ -116,7 +116,7 @@ def test_session_isolation(test_db):
         uid="ABC",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="session1"
+        session_id="session1",
     )
 
     # Log same token/stage in session 2 (should succeed)
@@ -125,7 +125,7 @@ def test_session_isolation(test_db):
         uid="ABC",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="session2"
+        session_id="session2",
     )
     assert success is True
 
@@ -143,7 +143,7 @@ def test_get_recent_events(test_db):
             uid=f"UID{i}",
             stage="QUEUE_JOIN",
             device_id="station1",
-            session_id="test-session"
+            session_id="test-session",
         )
 
     # Get recent events
@@ -151,9 +151,9 @@ def test_get_recent_events(test_db):
 
     assert len(recent) == 3
     # Should be in reverse chronological order
-    assert recent[0]['token_id'] == "004"
-    assert recent[1]['token_id'] == "003"
-    assert recent[2]['token_id'] == "002"
+    assert recent[0]["token_id"] == "004"
+    assert recent[1]["token_id"] == "003"
+    assert recent[2]["token_id"] == "002"
 
 
 def test_export_to_csv(test_db):
@@ -164,18 +164,18 @@ def test_export_to_csv(test_db):
         uid="ABC",
         stage="QUEUE_JOIN",
         device_id="station1",
-        session_id="test-session"
+        session_id="test-session",
     )
     test_db.log_event(
         token_id="001",
         uid="ABC",
         stage="EXIT",
         device_id="station2",
-        session_id="test-session"
+        session_id="test-session",
     )
 
     # Export to CSV
-    fd, csv_path = tempfile.mkstemp(suffix='.csv')
+    fd, csv_path = tempfile.mkstemp(suffix=".csv")
     os.close(fd)
 
     try:
@@ -183,14 +183,14 @@ def test_export_to_csv(test_db):
         assert row_count == 2
 
         # Verify CSV content
-        with open(csv_path, 'r') as f:
+        with open(csv_path, "r") as f:
             lines = f.readlines()
 
         # Should have header + 2 data rows
         assert len(lines) == 3
-        assert 'token_id' in lines[0]
-        assert '001' in lines[1]
-        assert '001' in lines[2]
+        assert "token_id" in lines[0]
+        assert "001" in lines[1]
+        assert "001" in lines[2]
 
     finally:
         os.unlink(csv_path)
@@ -206,10 +206,10 @@ def test_custom_timestamp(test_db):
         stage="QUEUE_JOIN",
         device_id="station1",
         session_id="test-session",
-        timestamp=custom_time
+        timestamp=custom_time,
     )
 
     # Verify timestamp
     recent = test_db.get_recent_events(1)
     assert len(recent) == 1
-    assert custom_time.isoformat() in recent[0]['timestamp']
+    assert custom_time.isoformat() in recent[0]["timestamp"]

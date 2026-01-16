@@ -2,7 +2,7 @@
 
 import os
 import yaml
-from typing import Dict, Any
+from typing import Any
 
 
 class Config:

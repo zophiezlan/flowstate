@@ -50,7 +50,7 @@ class NFCCardInitializer:
         # Validate NDEF library if URL provided
         if base_url and not mock:
             try:
-                import ndef
+                import ndef  # noqa: F401
             except ImportError:
                 raise RuntimeError(
                     "ndeflib is required for NDEF writing but not installed.\n"
@@ -280,7 +280,9 @@ class NFCCardInitializer:
             print(f"\nDuplicate cards detected:")
             for dup in self.duplicate_cards:
                 print(
-                    f"  Token {dup['new_token_id']} → Already exists as {dup['existing_token_id']} (UID: {dup['uid']})"
+                    f"  Token {dup['new_token_id']} → "
+                    f"Already exists as {dup['existing_token_id']} "
+                    f"(UID: {dup['uid']})"
                 )
 
         print(f"\nCard mapping saved to: data/card_mapping.csv")

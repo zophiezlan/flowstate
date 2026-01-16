@@ -89,7 +89,8 @@ class TapStation:
                 )
                 self.web_thread.start()
                 self.logger.info(
-                    f"Web server started on {self.config.web_server_host}:{self.config.web_server_port}"
+                    f"Web server started on "
+                    f"{self.config.web_server_host}:{self.config.web_server_port}"
                 )
             except Exception as e:
                 self.logger.error(f"Failed to start web server: {e}", exc_info=True)
@@ -192,11 +193,11 @@ class TapStation:
         # Provide feedback
         if success:
             self.feedback.success()
-            self.logger.info(f"Event logged successfully")
+            self.logger.info("Event logged successfully")
         else:
             # Duplicate tap
             self.feedback.duplicate()
-            self.logger.info(f"Duplicate tap ignored")
+            self.logger.info("Duplicate tap ignored")
 
     def shutdown(self):
         """Cleanup and shutdown"""
@@ -249,12 +250,12 @@ def main():
         if args.stats:
             # Show stats and exit
             stats = station.get_stats()
-            cli_logger.info(f"\nStation Statistics:")
+            cli_logger.info("\nStation Statistics:")
             cli_logger.info(f"  Device ID: {stats['device_id']}")
             cli_logger.info(f"  Stage: {stats['stage']}")
             cli_logger.info(f"  Session: {stats['session_id']}")
             cli_logger.info(f"  Total Events: {stats['total_events']}")
-            cli_logger.info(f"\nRecent Events:")
+            cli_logger.info("\nRecent Events:")
             for event in stats["recent_events"]:
                 cli_logger.info(
                     f"  {event['timestamp']} - Token {event['token_id']} at {event['stage']}"

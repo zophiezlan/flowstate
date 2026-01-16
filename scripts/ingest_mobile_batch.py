@@ -79,7 +79,14 @@ def ingest_events(events: Iterable[Dict], db_path: Path) -> Dict[str, int]:
     with Database(str(db_path), wal_mode=True) as db:
         for event in events:
             try:
-                token_id, uid, stage, session_id, device_id, timestamp = _normalize_event(event)
+                (
+                    token_id,
+                    uid,
+                    stage,
+                    session_id,
+                    device_id,
+                    timestamp,
+                ) = _normalize_event(event)
                 success = db.log_event(
                     token_id=token_id,
                     uid=uid,
@@ -100,8 +107,14 @@ def ingest_events(events: Iterable[Dict], db_path: Path) -> Dict[str, int]:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, help="Path to JSONL or CSV export from the mobile app")
-    parser.add_argument("--db", default="data/events.db", help="Path to events database (default: data/events.db)")
+    parser.add_argument(
+        "--input", required=True, help="Path to JSONL or CSV export from the mobile app"
+    )
+    parser.add_argument(
+        "--db",
+        default="data/events.db",
+        help="Path to events database (default: data/events.db)",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)

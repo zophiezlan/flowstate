@@ -1,7 +1,6 @@
 """NDEF writing for NFC Tools app integration"""
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class NDEFWriter:
         """Check if ndeflib is available (cached check)"""
         if self._ndef_available is None:
             try:
-                import ndef
+                import ndef  # noqa: F401
 
                 self._ndef_available = True
             except ImportError:

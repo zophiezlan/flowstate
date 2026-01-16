@@ -8,11 +8,9 @@ Provides:
 """
 
 import sys
-import os
 import logging
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, timezone
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +181,8 @@ class StatusWebServer:
                         errors += 1
 
                 logger.info(
-                    f"Ingested {len(events)} events from mobile: +{inserted}, ={duplicates}, !{errors}"
+                    f"Ingested {len(events)} events from mobile: "
+                    f"+{inserted}, ={duplicates}, !{errors}"
                 )
                 return (
                     jsonify(

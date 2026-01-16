@@ -3,7 +3,7 @@
 import time
 import logging
 from typing import Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 import pytest
 import json
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from tap_station.web_server import StatusWebServer
 from tap_station.config import Config
 

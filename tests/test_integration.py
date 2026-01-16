@@ -39,7 +39,7 @@ logging:
   level: "INFO"
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         config_path = f.name
 
@@ -51,13 +51,13 @@ logging:
 @pytest.fixture
 def temp_db():
     """Create temporary database"""
-    fd, path = tempfile.mkstemp(suffix='.db')
+    fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
 
     yield path
 
     # Cleanup
-    for ext in ['', '-wal', '-shm']:
+    for ext in ["", "-wal", "-shm"]:
         file_path = path + ext
         if os.path.exists(file_path):
             os.unlink(file_path)
@@ -69,7 +69,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
     config = Config(temp_config)
 
     # Override database path to use temp
-    config._config['database']['path'] = temp_db
+    config._config["database"]["path"] = temp_db
 
     # Initialize components
     db = Database(temp_db, wal_mode=True)
@@ -91,7 +91,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
             uid=uid,
             stage="QUEUE_JOIN",
             device_id=config.device_id,
-            session_id=config.session_id
+            session_id=config.session_id,
         )
 
         assert success is True
@@ -106,7 +106,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
             uid=uid,
             stage="QUEUE_JOIN",
             device_id=config.device_id,
-            session_id=config.session_id
+            session_id=config.session_id,
         )
 
         assert success is True
@@ -126,7 +126,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
             uid=uid,
             stage="EXIT",
             device_id="station2",
-            session_id=config.session_id
+            session_id=config.session_id,
         )
 
         assert success is True
@@ -136,7 +136,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
         assert total_events == 3  # 2 queue joins + 1 exit
 
         # Export to CSV
-        fd, csv_path = tempfile.mkstemp(suffix='.csv')
+        fd, csv_path = tempfile.mkstemp(suffix=".csv")
         os.close(fd)
 
         try:
@@ -144,13 +144,13 @@ def test_full_card_lifecycle(temp_config, temp_db):
             assert row_count == 3
 
             # Verify CSV content
-            with open(csv_path, 'r') as f:
+            with open(csv_path, "r") as f:
                 content = f.read()
 
-            assert 'QUEUE_JOIN' in content
-            assert 'EXIT' in content
-            assert '001' in content
-            assert '002' in content
+            assert "QUEUE_JOIN" in content
+            assert "EXIT" in content
+            assert "001" in content
+            assert "002" in content
 
         finally:
             os.unlink(csv_path)
@@ -177,7 +177,7 @@ def test_duplicate_detection(temp_db):
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
-            session_id="test"
+            session_id="test",
         )
         assert success1 is True
 
@@ -193,7 +193,7 @@ def test_duplicate_detection(temp_db):
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
-            session_id="test"
+            session_id="test",
         )
         assert success2 is False  # Duplicate detected
 
@@ -220,7 +220,7 @@ def test_multi_station_workflow(temp_db):
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
-            session_id="festival"
+            session_id="festival",
         )
         assert success is True
 
@@ -230,7 +230,7 @@ def test_multi_station_workflow(temp_db):
             uid=uid,
             stage="EXIT",
             device_id="station2",
-            session_id="festival"
+            session_id="festival",
         )
         assert success is True
 
@@ -240,7 +240,7 @@ def test_multi_station_workflow(temp_db):
         assert total == 20  # 10 cards × 2 stations
 
         # Export and verify
-        fd, csv_path = tempfile.mkstemp(suffix='.csv')
+        fd, csv_path = tempfile.mkstemp(suffix=".csv")
         os.close(fd)
 
         try:

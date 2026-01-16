@@ -13,7 +13,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 
@@ -35,10 +35,8 @@ class HealthCheck:
         """Record and print check status"""
         if status:
             symbol = "✓"
-            color = ""
         else:
             symbol = "✗"
-            color = ""
             if level == "error":
                 self.errors.append(name)
             elif level == "warning":
@@ -60,16 +58,19 @@ class HealthCheck:
         if config_exists:
             try:
                 import yaml
+
                 with open("config.yaml") as f:
                     config = yaml.safe_load(f)
 
                 self.check_status("Config file is valid YAML", True)
 
                 # Check required fields
-                required = ['device_id', 'stage', 'session_id']
+                required = ["device_id", "stage", "session_id"]
                 for field in required:
                     has_field = field in config
-                    self.check_status(f"  Has '{field}' field", has_field, level="error")
+                    self.check_status(
+                        f"  Has '{field}' field", has_field, level="error"
+                    )
 
                 # Show current config
                 if all(field in config for field in required):
@@ -85,7 +86,7 @@ class HealthCheck:
         self.print_header("I2C Hardware")
 
         # Check I2C device
-        i2c_exists = os.path.exists('/dev/i2c-1') or os.path.exists('/dev/i2c-0')
+        i2c_exists = os.path.exists("/dev/i2c-1") or os.path.exists("/dev/i2c-0")
         self.check_status("I2C device exists", i2c_exists, level="error")
 
         if not i2c_exists:
@@ -94,24 +95,31 @@ class HealthCheck:
 
         # Check if PN532 detected
         try:
-            i2c_bus = 1 if os.path.exists('/dev/i2c-1') else 0
+            i2c_bus = 1 if os.path.exists("/dev/i2c-1") else 0
             result = subprocess.run(
-                ['i2cdetect', '-y', str(i2c_bus)],
+                ["i2cdetect", "-y", str(i2c_bus)],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
 
-            pn532_found = '24' in result.stdout
+            pn532_found = "24" in result.stdout
             self.check_status("PN532 detected at 0x24", pn532_found, level="error")
 
             if not pn532_found:
                 print("  Check PN532 wiring and I2C mode")
 
         except FileNotFoundError:
-            self.check_status("i2c-tools installed", False, "Run: sudo apt-get install i2c-tools", level="warning")
+            self.check_status(
+                "i2c-tools installed",
+                False,
+                "Run: sudo apt-get install i2c-tools",
+                level="warning",
+            )
         except subprocess.TimeoutExpired:
-            self.check_status("I2C bus responding", False, "I2C bus timeout", level="error")
+            self.check_status(
+                "I2C bus responding", False, "I2C bus timeout", level="error"
+            )
         except Exception as e:
             self.check_status("I2C scan", False, str(e), level="error")
 
@@ -122,11 +130,13 @@ class HealthCheck:
         try:
             from tap_station.nfc_reader import NFCReader
 
-            reader = NFCReader()
+            NFCReader()  # Test initialization
             self.check_status("PN532 initialization", True)
 
         except ImportError:
-            self.check_status("pn532pi installed", False, "Run: pip install pn532pi", level="error")
+            self.check_status(
+                "pn532pi installed", False, "Run: pip install pn532pi", level="error"
+            )
         except Exception as e:
             self.check_status("PN532 initialization", False, str(e), level="error")
 
@@ -136,6 +146,7 @@ class HealthCheck:
 
         try:
             import RPi.GPIO as GPIO
+
             self.check_status("RPi.GPIO available", True)
 
             GPIO.setmode(GPIO.BCM)
@@ -146,7 +157,9 @@ class HealthCheck:
             self.check_status("GPIO access", True)
 
         except ImportError:
-            self.check_status("RPi.GPIO available", False, "Not on Raspberry Pi", level="warning")
+            self.check_status(
+                "RPi.GPIO available", False, "Not on Raspberry Pi", level="warning"
+            )
         except Exception as e:
             self.check_status("GPIO access", False, str(e), level="warning")
 
@@ -166,24 +179,31 @@ class HealthCheck:
             # Try to connect and get event count
             try:
                 from tap_station.database import Database
+
                 db = Database("data/events.db", wal_mode=False)
 
                 event_count = db.get_event_count()
-                self.check_status("Database accessible", True, f"{event_count} events logged")
+                self.check_status(
+                    "Database accessible", True, f"{event_count} events logged"
+                )
 
                 # Get recent events
-                cursor = db.conn.execute("""
+                cursor = db.conn.execute(
+                    """
                     SELECT COUNT(*) FROM events
                     WHERE timestamp > datetime('now', '-1 hour')
-                """)
+                """
+                )
                 recent_count = cursor.fetchone()[0]
                 print(f"  Events in last hour: {recent_count}")
 
                 # Get today's events
-                cursor = db.conn.execute("""
+                cursor = db.conn.execute(
+                    """
                     SELECT COUNT(*) FROM events
                     WHERE date(timestamp) = date('now')
-                """)
+                """
+                )
                 today_count = cursor.fetchone()[0]
                 print(f"  Events today: {today_count}")
 
@@ -197,17 +217,28 @@ class HealthCheck:
         self.print_header("Disk Space")
 
         try:
-            result = subprocess.run(['df', '-h', '.'], capture_output=True, text=True)
-            lines = result.stdout.strip().split('\n')
+            result = subprocess.run(["df", "-h", "."], capture_output=True, text=True)
+            lines = result.stdout.strip().split("\n")
 
             if len(lines) >= 2:
                 parts = lines[1].split()
-                used_percent = int(parts[4].rstrip('%'))
+                used_percent = int(parts[4].rstrip("%"))
 
                 status = used_percent < 90
-                level = "error" if used_percent >= 90 else "warning" if used_percent >= 80 else "info"
+                level = (
+                    "error"
+                    if used_percent >= 90
+                    else "warning"
+                    if used_percent >= 80
+                    else "info"
+                )
 
-                self.check_status("Disk space available", status, f"{parts[3]} free ({parts[4]} used)", level=level)
+                self.check_status(
+                    "Disk space available",
+                    status,
+                    f"{parts[3]} free ({parts[4]} used)",
+                    level=level,
+                )
 
         except Exception as e:
             self.check_status("Disk space check", False, str(e), level="warning")
@@ -218,11 +249,18 @@ class HealthCheck:
 
         # Check under-voltage
         try:
-            result = subprocess.run(['vcgencmd', 'get_throttled'], capture_output=True, text=True)
-            throttled = result.stdout.strip().split('=')[1]
-            no_throttle = throttled == '0x0'
+            result = subprocess.run(
+                ["vcgencmd", "get_throttled"], capture_output=True, text=True
+            )
+            throttled = result.stdout.strip().split("=")[1]
+            no_throttle = throttled == "0x0"
 
-            self.check_status("No under-voltage detected", no_throttle, f"Status: {throttled}", level="warning")
+            self.check_status(
+                "No under-voltage detected",
+                no_throttle,
+                f"Status: {throttled}",
+                level="warning",
+            )
 
             if not no_throttle:
                 print("  Check power supply and USB cable")
@@ -232,8 +270,10 @@ class HealthCheck:
 
         # Check temperature
         try:
-            result = subprocess.run(['vcgencmd', 'measure_temp'], capture_output=True, text=True)
-            temp_str = result.stdout.strip().split('=')[1]
+            result = subprocess.run(
+                ["vcgencmd", "measure_temp"], capture_output=True, text=True
+            )
+            temp_str = result.stdout.strip().split("=")[1]
             temp_c = float(temp_str.rstrip("'C"))
 
             temp_ok = temp_c < 80
@@ -250,20 +290,25 @@ class HealthCheck:
 
         try:
             result = subprocess.run(
-                ['systemctl', 'is-active', 'tap-station'],
+                ["systemctl", "is-active", "tap-station"],
                 capture_output=True,
-                text=True
+                text=True,
             )
 
-            is_active = result.stdout.strip() == 'active'
+            is_active = result.stdout.strip() == "active"
             self.check_status("Service running", is_active, level="info")
 
             if is_active:
                 # Get service uptime
                 result = subprocess.run(
-                    ['systemctl', 'show', 'tap-station', '--property=ActiveEnterTimestamp'],
+                    [
+                        "systemctl",
+                        "show",
+                        "tap-station",
+                        "--property=ActiveEnterTimestamp",
+                    ],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 print(f"  {result.stdout.strip()}")
 
@@ -278,10 +323,7 @@ class HealthCheck:
         """Check log files"""
         self.print_header("Recent Logs")
 
-        log_files = [
-            "logs/tap-station.log",
-            "logs/tap-station-error.log"
-        ]
+        log_files = ["logs/tap-station.log", "logs/tap-station-error.log"]
 
         for log_file in log_files:
             log_path = Path(log_file)
@@ -348,11 +390,9 @@ def main():
     """Entry point for health check"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='System health check dashboard')
+    parser = argparse.ArgumentParser(description="System health check dashboard")
     parser.add_argument(
-        '--quick',
-        action='store_true',
-        help='Quick check (skip optional tests)'
+        "--quick", action="store_true", help="Quick check (skip optional tests)"
     )
 
     args = parser.parse_args()
@@ -364,5 +404,5 @@ def main():
     return 1 if health.errors else 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

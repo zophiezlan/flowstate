@@ -298,7 +298,8 @@ class CardInitializer:
         """
         retry_label = " (RETRY)" if is_retry else ""
         print(
-            f"[{self.current_id}/{self.end_id}] Waiting for card (Token ID: {token_id}){retry_label}..."
+            f"[{self.current_id}/{self.end_id}] "
+            f"Waiting for card (Token ID: {token_id}){retry_label}..."
         )
 
         # Wait for card with no timeout
@@ -379,7 +380,8 @@ class CardInitializer:
                             self._record_failure(
                                 token_id,
                                 ErrorType.WRITE_FAILED,
-                                f"Verification token mismatch: wrote {token_id}, read {verify_token}",
+                                f"Verification token mismatch: "
+                                f"wrote {token_id}, read {verify_token}",
                             )
                             if self.feedback:
                                 self.feedback.error()
@@ -614,7 +616,9 @@ class CardInitializer:
             print(f"\nDuplicate cards detected:")
             for dup in self.duplicate_cards:
                 print(
-                    f"  Token {dup['new_token_id']} → Already exists as {dup['existing_token_id']} (UID: {dup['uid']})"
+                    f"  Token {dup['new_token_id']} → "
+                    f"Already exists as {dup['existing_token_id']} "
+                    f"(UID: {dup['uid']})"
                 )
 
         # Show overall progress
@@ -701,7 +705,9 @@ class CardInitializer:
                         f.write("-" * 60 + "\n")
                         for fail in failures:
                             f.write(
-                                f"{fail['token_id']:8} | {fail['error_msg']:32} | {fail['timestamp']}\n"
+                                f"{fail['token_id']:8} | "
+                                f"{fail['error_msg']:32} | "
+                                f"{fail['timestamp']}\n"
                             )
 
                 # Duplicates
@@ -713,7 +719,9 @@ class CardInitializer:
                     f.write("-" * 60 + "\n")
                     for dup in self.duplicate_cards:
                         f.write(
-                            f"{dup['new_token_id']:6} | {dup['existing_token_id']:11} | {dup['uid']}\n"
+                            f"{dup['new_token_id']:6} | "
+                            f"{dup['existing_token_id']:11} | "
+                            f"{dup['uid']}\n"
                         )
 
                 # Recommendations

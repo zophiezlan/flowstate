@@ -1,6 +1,5 @@
 """Tests for NFC reader"""
 
-import pytest
 import time
 from tap_station.nfc_reader import MockNFCReader
 
