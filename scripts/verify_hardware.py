@@ -141,16 +141,8 @@ def check_nfc_reader():
         reader = NFCReader(i2c_bus=i2c_bus, address=0x24)
         print_result("PN532 initialized", True)
 
-        # Wait for user to be ready with card
-        print("\n" + "=" * 60)
-        print("Ready to test NFC card reading")
-        print("=" * 60)
-        print("\nPlease have an NFC card ready (NTAG215 recommended)")
-        print("You will have 15 seconds to tap the card after pressing Enter")
-        input("\nPress Enter when ready to test card reading...")
-
-        print("\nWaiting for NFC card (tap within 15 seconds)...")
-        result = reader.wait_for_card(timeout=15)
+        print("\nWaiting for NFC card (tap within 10 seconds)...")
+        result = reader.wait_for_card(timeout=10)
 
         if result:
             uid, token_id = result
@@ -160,7 +152,6 @@ def check_nfc_reader():
             print_result("Card read", False, "No card detected within timeout")
             print("  Make sure card is NTAG215")
             print("  Hold card flat against reader antenna")
-            print("  Try again if needed")
             return False
 
     except ImportError:

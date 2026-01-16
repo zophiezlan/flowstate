@@ -203,73 +203,6 @@ class NFCReader:
             logger.error(f"Failed to write token ID: {e}")
             return False
 
-    def reset_reader(self):
-        """
-        Reset the PN532 reader to clear any stuck state
-
-        This is important after reading/writing cards to ensure
-        clean state for the next operation
-        """
-        try:
-            # Reconfigure SAM to reset state
-            self.pn532.SAMConfig()
-            logger.debug("PN532 reader reset")
-
-            # Small delay to let hardware settle
-            time.sleep(0.1)
-
-        except Exception as e:
-            logger.warning(f"Failed to reset reader: {e}")
-
-    def is_card_present(self) -> bool:
-        """
-        Check if a card is currently in the field
-
-        Returns:
-            True if card is present, False otherwise
-        """
-        try:
-            # Quick check without retries
-            success, uid_bytes = self.pn532.readPassiveTargetID(cardbaudrate=0x00)
-            return success and uid_bytes is not None
-
-        except Exception:
-            return False
-
-    def wait_for_card_removal(self, timeout: float = 10.0) -> bool:
-        """
-        Wait for current card to be removed from the field
-
-        Args:
-            timeout: Maximum time to wait in seconds
-
-        Returns:
-            True if card was removed, False if timeout
-        """
-        start_time = datetime.now()
-
-        # First check if there's even a card present
-        if not self.is_card_present():
-            logger.debug("No card present to remove")
-            return True
-
-        logger.debug("Waiting for card removal...")
-
-        while True:
-            if not self.is_card_present():
-                logger.debug("Card removed")
-                # Extra delay to ensure card is fully out of field
-                time.sleep(0.3)
-                return True
-
-            # Check timeout
-            elapsed = (datetime.now() - start_time).total_seconds()
-            if elapsed >= timeout:
-                logger.warning("Card removal timeout")
-                return False
-
-            time.sleep(0.2)
-
     def wait_for_card(self, timeout: Optional[float] = None) -> Optional[Tuple[str, str]]:
         """
         Wait for a card to be presented
@@ -297,7 +230,7 @@ class NFCReader:
                     return None
 
             # Small delay before retry
-            time.sleep(0.2)
+            time.sleep(0.1)
 
 
 class MockNFCReader(NFCReader):
@@ -348,19 +281,4 @@ class MockNFCReader(NFCReader):
     def write_token_id(self, token_id: str) -> bool:
         """Mock write always succeeds"""
         logger.info(f"Mock write: {token_id}")
-        return True
-
-    def reset_reader(self):
-        """Mock reset"""
-        logger.debug("Mock reader reset")
-        time.sleep(0.1)
-
-    def is_card_present(self) -> bool:
-        """Mock card presence check"""
-        return False
-
-    def wait_for_card_removal(self, timeout: float = 10.0) -> bool:
-        """Mock card removal always succeeds"""
-        logger.debug("Mock card removal")
-        time.sleep(0.5)
         return True
