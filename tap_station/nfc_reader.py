@@ -164,12 +164,12 @@ class NFCReader:
                 return None
 
             # Read first ~96 bytes (pages 4-27) to cover NDEF records
-            # Each read_page usually returns 16 bytes (4 pages)
+            # Each read_page returns (success, data) tuple
             raw_data = bytearray()
             for page in range(4, 28, 4):
                 try:
-                    chunk = read_page(page)
-                    if chunk:
+                    success, chunk = read_page(page)
+                    if success and chunk:
                         raw_data.extend(bytes(chunk))
                     else:
                         break
@@ -282,8 +282,8 @@ class NFCReader:
             # Verify readback if possible
             read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
             if read_page:
-                raw = read_page(4)
-                if raw:
+                success, raw = read_page(4)
+                if success and raw:
                     read_token = (
                         bytes(raw)
                         .decode("ascii", errors="ignore")
