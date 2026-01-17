@@ -17,6 +17,7 @@ class ButtonHandler:
         gpio_pin: int = 26,
         hold_time: float = 3.0,
         shutdown_callback=None,
+        shutdown_delay_minutes: int = 1,
     ):
         """
         Initialize button handler
@@ -26,11 +27,14 @@ class ButtonHandler:
             gpio_pin: GPIO pin for button (BCM numbering)
             hold_time: Seconds to hold button for shutdown (default: 3.0)
             shutdown_callback: Optional callback to execute before shutdown
+            shutdown_delay_minutes: Minutes delay before shutdown (default: 1)
+                                   Set to 0 for immediate shutdown
         """
         self.enabled = enabled
         self.gpio_pin = gpio_pin
         self.hold_time = hold_time
         self.shutdown_callback = shutdown_callback
+        self.shutdown_delay_minutes = shutdown_delay_minutes
 
         self.GPIO = None
         self.monitor_thread = None
@@ -73,10 +77,8 @@ class ButtonHandler:
             return
 
         self.running = True
-        # Use non-daemon thread to ensure proper cleanup during shutdown
-        self.monitor_thread = threading.Thread(
-            target=self._monitor_button, daemon=False
-        )
+        # Use daemon thread - main service has signal handlers for proper shutdown
+        self.monitor_thread = threading.Thread(target=self._monitor_button, daemon=True)
         self.monitor_thread.start()
         logger.info("Button monitoring started")
 
@@ -148,15 +150,30 @@ class ButtonHandler:
         # Trigger system shutdown
         try:
             logger.warning("Executing system shutdown command...")
-            # Use shutdown command with 1 minute delay for safety
             # This requires passwordless sudo for /sbin/shutdown
+            if self.shutdown_delay_minutes == 0:
+                # Immediate shutdown
+                shutdown_time = "now"
+                delay_msg = "immediately"
+            else:
+                # Delayed shutdown for safety
+                shutdown_time = f"+{self.shutdown_delay_minutes}"
+                delay_msg = (
+                    f"in {self.shutdown_delay_minutes} minute(s) "
+                    "(cancel with: sudo shutdown -c)"
+                )
+
             subprocess.run(
-                ["sudo", "shutdown", "-h", "+1", "Shutdown triggered by button"],
+                [
+                    "sudo",
+                    "shutdown",
+                    "-h",
+                    shutdown_time,
+                    "Shutdown triggered by button",
+                ],
                 check=True,
             )
-            logger.warning(
-                "Shutdown scheduled in 1 minute (cancel with: sudo shutdown -c)"
-            )
+            logger.warning(f"Shutdown scheduled {delay_msg}")
         except subprocess.CalledProcessError as e:
             logger.error(
                 f"Failed to execute shutdown command: {e}. "
@@ -172,6 +189,8 @@ class ButtonHandler:
             self.running = False
 
             if self.monitor_thread:
+                # Wait up to 2 seconds for thread to finish
+                # This is generous given the 0.1s polling interval
                 self.monitor_thread.join(timeout=2)
 
     def cleanup(self):
