@@ -361,47 +361,56 @@ class NFCReader:
         for offset in range(0, len(padded), 4):
             chunk = padded[offset : offset + 4]
 
-            # Convert chunk to list of integers (most compatible approach)
-            byte_list = [int(b) for b in chunk]
+            # According to pn532pi library docs, the function signature is:
+            # mifareultralight_WritePage(self, page: int, buffer: bytearray) -> bool
+            # So we need to pass: page number and a bytearray
+
+            # First, ensure we have a proper bytearray with exactly 4 bytes
+            if not isinstance(chunk, bytearray):
+                chunk = bytearray(chunk)
+
+            # Ensure exactly 4 bytes
+            if len(chunk) != 4:
+                logger.error(f"Chunk size is {len(chunk)}, expected 4 bytes")
+                return False
+
+            logger.debug(f"Writing page {page}: {chunk.hex()}")
 
             try:
-                # Method 1: Try unpacking as individual integer arguments (most common)
-                # write_page(page, byte0, byte1, byte2, byte3)
-                result = write_page(page, *byte_list)
-            except Exception as exc1:
-                logger.warning(
-                    f"WritePage with unpacked ints failed (page {page}): {exc1}. Trying alternate methods..."
-                )
-                try:
-                    # Method 2: Try passing as bytes object (page, data)
-                    result = write_page(page, chunk)
-                except Exception as exc2:
-                    logger.warning(
-                        f"WritePage with bytes failed (page {page}): {exc2}. Trying bytearray..."
-                    )
-                    try:
-                        # Method 3: Try passing as bytearray
-                        result = write_page(page, bytearray(chunk))
-                    except Exception as exc3:
-                        logger.warning(
-                            f"WritePage with bytearray failed (page {page}): {exc3}. Trying list..."
-                        )
-                        try:
-                            # Method 4: Try passing as list
-                            result = write_page(page, byte_list)
-                        except Exception as exc4:
-                            # All methods failed - log detailed error
-                            logger.error(
-                                f"All write methods failed for page {page}:\n"
-                                f"  1. Unpacked ints (*[{','.join(map(str,byte_list))}]): {exc1}\n"
-                                f"  2. Bytes object: {exc2}\n"
-                                f"  3. Bytearray: {exc3}\n"
-                                f"  4. List: {exc4}"
-                            )
-                            return False
+                # Call with the correct signature: (page: int, buffer: bytearray)
+                result = write_page(page, chunk)
 
-            if result is False:
-                logger.error(f"Failed to write page {page} (write returned False)")
+                logger.debug(f"Write result for page {page}: {result} (type: {type(result)})")
+
+                # Check result - some implementations return None on success, others return True
+                if result is False:
+                    logger.error(f"Failed to write page {page} (write returned False)")
+                    return False
+                elif result is None:
+                    logger.debug(f"Write returned None for page {page} - assuming success")
+                # If result is True or any other truthy value, continue
+
+            except TypeError as e:
+                # This usually means wrong number/type of arguments
+                logger.error(
+                    f"TypeError writing page {page}: {e}\n"
+                    f"  Attempted call: write_page({page}, bytearray({chunk.hex()}))\n"
+                    f"  This suggests the library version may not match the expected signature."
+                )
+
+                # Try fallback method with individual bytes (for older library versions)
+                logger.info("Attempting fallback: individual byte arguments")
+                try:
+                    result = write_page(page, chunk[0], chunk[1], chunk[2], chunk[3])
+                    if result is False:
+                        logger.error(f"Fallback method also failed for page {page}")
+                        return False
+                except Exception as e2:
+                    logger.error(f"Fallback method failed: {e2}")
+                    return False
+
+            except Exception as e:
+                logger.error(f"Unexpected error writing page {page}: {type(e).__name__}: {e}")
                 return False
 
             page += 1
