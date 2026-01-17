@@ -430,6 +430,8 @@ Use dashboard data to set expectations:
 
 The control panel (`/control`) provides a web-based interface for all system management tasks. **This is for tech leads and administrators only.**
 
+**📘 For complete control panel reference**, see [Control Panel Documentation](CONTROL_PANEL.md)
+
 #### What It Provides
 
 **System Status:**
