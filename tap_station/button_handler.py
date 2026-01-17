@@ -151,6 +151,18 @@ class ButtonHandler:
         try:
             logger.warning("Executing system shutdown command...")
             # This requires passwordless sudo for /sbin/shutdown
+
+            # Validate shutdown delay
+            if (
+                not isinstance(self.shutdown_delay_minutes, int)
+                or self.shutdown_delay_minutes < 0
+            ):
+                logger.error(
+                    f"Invalid shutdown_delay_minutes: {self.shutdown_delay_minutes}. "
+                    "Using default of 1 minute."
+                )
+                self.shutdown_delay_minutes = 1
+
             if self.shutdown_delay_minutes == 0:
                 # Immediate shutdown
                 shutdown_time = "now"
@@ -192,6 +204,10 @@ class ButtonHandler:
                 # Wait up to 2 seconds for thread to finish
                 # This is generous given the 0.1s polling interval
                 self.monitor_thread.join(timeout=2)
+                if self.monitor_thread.is_alive():
+                    logger.warning(
+                        "Button monitoring thread did not stop within timeout"
+                    )
 
     def cleanup(self):
         """Cleanup GPIO on shutdown"""

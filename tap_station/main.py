@@ -79,7 +79,7 @@ class TapStation:
                 from tap_station.button_handler import ButtonHandler
 
                 self.button_handler = ButtonHandler(
-                    enabled=True,
+                    enabled=self.config.shutdown_button_enabled,
                     gpio_pin=self.config.shutdown_button_gpio,
                     hold_time=self.config.shutdown_button_hold_time,
                     shutdown_callback=self._shutdown_callback,
