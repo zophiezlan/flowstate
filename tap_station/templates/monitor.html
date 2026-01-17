@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Queue Monitor - {{ session }}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #1a1a1a;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      .header {
+        background: #2a2a2a;
+        padding: 15px 20px;
+        border-bottom: 3px solid #667eea;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        margin-bottom: 5px;
+      }
+
+      .header .session-info {
+        opacity: 0.7;
+        font-size: 13px;
+      }
+
+      .container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .primary-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-big {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .stat-big.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      }
+
+      .stat-big.critical {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        animation: pulse-glow 2s infinite;
+      }
+
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+        }
+        50% {
+          box-shadow: 0 4px 30px rgba(239, 68, 68, 0.8);
+        }
+      }
+
+      .stat-big .label {
+        font-size: 16px;
+        opacity: 0.9;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .stat-big .value {
+        font-size: 72px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 10px;
+      }
+
+      .stat-big .sub {
+        font-size: 18px;
+        opacity: 0.9;
+      }
+
+      .alert-banner {
+        background: #ef4444;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        animation: pulse-alert 2s infinite;
+        display: none;
+      }
+
+      .alert-banner.visible {
+        display: block;
+      }
+
+      @keyframes pulse-alert {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.85;
+        }
+      }
+
+      .secondary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-small {
+        background: #2a2a2a;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .stat-small .label {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+
+      .stat-small .value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #667eea;
+      }
+
+      .stat-small .sub {
+        font-size: 13px;
+        opacity: 0.7;
+        margin-top: 5px;
+      }
+
+      .message-box {
+        background: #2a2a2a;
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 200px;
+      }
+
+      .message-box .icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+      }
+
+      .message-box .message {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .message-box .submessage {
+        font-size: 16px;
+        opacity: 0.7;
+      }
+
+      .footer {
+        background: #2a2a2a;
+        padding: 15px;
+        text-align: center;
+        font-size: 13px;
+        opacity: 0.7;
+        border-top: 1px solid #3a3a3a;
+      }
+
+      .pulse-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #10b981;
+        margin-right: 8px;
+        animation: pulse-dot 2s infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.2);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .primary-stats {
+          grid-template-columns: 1fr;
+        }
+
+        .secondary-stats {
+          grid-template-columns: 1fr;
+        }
+
+        .stat-big .value {
+          font-size: 56px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🎪 Queue Monitor</h1>
+      <div class="session-info">{{ session }} | Live Status</div>
+    </div>
+
+    <div class="container">
+      <div class="alert-banner" id="alert-banner">
+        🚨 URGENT: Queue Critical - Take Action Now
+      </div>
+
+      <div class="primary-stats">
+        <div class="stat-big" id="queue-card">
+          <div class="label">People Waiting</div>
+          <div class="value" id="in-queue">-</div>
+          <div class="sub">in queue now</div>
+        </div>
+
+        <div class="stat-big" id="wait-card">
+          <div class="label">Wait Time</div>
+          <div class="value" id="wait-time">-</div>
+          <div class="sub">minutes (estimated)</div>
+        </div>
+      </div>
+
+      <div class="secondary-stats">
+        <div class="stat-small">
+          <div class="label">Longest Wait</div>
+          <div class="value" id="longest-wait">-</div>
+          <div class="sub">minutes</div>
+        </div>
+
+        <div class="stat-small">
+          <div class="label">Served Today</div>
+          <div class="value" id="completed">-</div>
+          <div class="sub">people</div>
+        </div>
+
+        <div class="stat-small">
+          <div class="label">Per Hour</div>
+          <div class="value" id="throughput">-</div>
+          <div class="sub">rate</div>
+        </div>
+      </div>
+
+      <div class="message-box" id="message-box">
+        <div class="icon">✅</div>
+        <div class="message">All Systems Normal</div>
+        <div class="submessage">Keep up the great work!</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="pulse-dot"></span>
+      Live • Updates every 5 seconds • Last: <span id="last-update">-</span>
+    </div>
+
+    <script>
+      let refreshInterval;
+
+      async function fetchData() {
+        try {
+          const response = await fetch("/api/dashboard");
+          const data = await response.json();
+          updateDisplay(data);
+          document.getElementById("last-update").textContent =
+            new Date().toLocaleTimeString();
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+        }
+      }
+
+      function updateDisplay(data) {
+        const stats = data.stats;
+        const operational = data.operational;
+
+        // Update primary stats
+        document.getElementById("in-queue").textContent = stats.in_queue;
+        document.getElementById("wait-time").textContent =
+          stats.estimated_wait_new || "-";
+        document.getElementById("longest-wait").textContent =
+          stats.longest_wait_current || "0";
+        document.getElementById("completed").textContent =
+          stats.completed_today;
+        document.getElementById("throughput").textContent = Math.round(
+          stats.throughput_per_hour
+        );
+
+        // Update card styling based on queue health
+        const queueCard = document.getElementById("queue-card");
+        const waitCard = document.getElementById("wait-card");
+        const alertBanner = document.getElementById("alert-banner");
+        const messageBox = document.getElementById("message-box");
+
+        const health = operational.queue_health;
+
+        // Reset classes
+        queueCard.className = "stat-big";
+        waitCard.className = "stat-big";
+        alertBanner.className = "alert-banner";
+
+        // Apply health-based styling
+        if (health === "critical") {
+          queueCard.className = "stat-big critical";
+          waitCard.className = "stat-big critical";
+          alertBanner.className = "alert-banner visible";
+          updateMessageBox(
+            "🚨",
+            "CRITICAL QUEUE",
+            "Consider additional resources immediately",
+            "#ef4444"
+          );
+        } else if (health === "warning") {
+          queueCard.className = "stat-big warning";
+          waitCard.className = "stat-big warning";
+          updateMessageBox(
+            "⚠️",
+            "Queue Getting Busy",
+            "Monitor closely and prepare for increased demand",
+            "#f59e0b"
+          );
+        } else if (health === "moderate") {
+          updateMessageBox(
+            "📊",
+            "Moderate Activity",
+            "Service running smoothly",
+            "#3b82f6"
+          );
+        } else {
+          updateMessageBox(
+            "✅",
+            "All Systems Normal",
+            "Keep up the great work!",
+            "#10b981"
+          );
+        }
+      }
+
+      function updateMessageBox(icon, message, submessage, color) {
+        const box = document.getElementById("message-box");
+        box.innerHTML = `
+                <div class="icon">${icon}</div>
+                <div class="message">${message}</div>
+                <div class="submessage">${submessage}</div>
+            `;
+        box.style.borderLeft = `5px solid ${color}`;
+      }
+
+      // Initial load
+      fetchData();
+
+      // Auto-refresh every 5 seconds
+      refreshInterval = setInterval(fetchData, 5000);
+
+      // Cleanup
+      window.addEventListener("beforeunload", () => {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+      });
+    </script>
+  </body>
+</html>

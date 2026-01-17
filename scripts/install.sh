@@ -251,6 +251,30 @@ echo "Systemd service created: $SERVICE_FILE"
 # Reload systemd
 sudo systemctl daemon-reload
 
+# Configure sudoers for passwordless systemctl commands (needed for web control panel)
+echo ""
+echo "Step 10: Configuring passwordless sudo for systemctl..."
+SUDOERS_FILE="/etc/sudoers.d/tap-station"
+if [ ! -f "$SUDOERS_FILE" ]; then
+    sudo tee "$SUDOERS_FILE" > /dev/null << SUDOEOF
+# Allow $USER to control tap-station service without password
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl start tap-station
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl stop tap-station
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl restart tap-station
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl status tap-station
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl daemon-reload
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl enable tap-station
+$USER ALL=(ALL) NOPASSWD: /bin/systemctl disable tap-station
+$USER ALL=(ALL) NOPASSWD: /usr/sbin/i2cdetect
+$USER ALL=(ALL) NOPASSWD: /sbin/reboot
+$USER ALL=(ALL) NOPASSWD: /sbin/shutdown
+SUDOEOF
+    sudo chmod 0440 "$SUDOERS_FILE"
+    echo -e "${GREEN}✓ Sudoers configured for control panel${NC}"
+else
+    echo -e "${YELLOW}Sudoers file already exists (skipped)${NC}"
+fi
+
 # Ask if user wants to enable service
 echo ""
 read -p "Enable tap-station service to start on boot? (y/n) " -n 1 -r

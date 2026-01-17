@@ -171,6 +171,117 @@ Repeat same process as Station 1:
 
 ## Monitoring During Event
 
+### Live Dashboard (Recommended)
+
+Access dashboards on any phone, tablet, or laptop connected to the same network:
+
+```
+# Full analytics dashboard (for coordinators)
+http://<pi-ip-address>:8080/dashboard
+
+# Simplified monitor (for peer workers)
+http://<pi-ip-address>:8080/monitor
+
+# Control panel (for administrators)
+http://<pi-ip-address>:8080/control
+```
+
+**Find your Pi's IP:** Run `hostname -I` on the Pi
+
+**Security Note:** The control panel provides administrative access. In production:
+
+- Keep the Pi on a private network
+- Use firewall rules to restrict access
+- Only share control panel URL with trusted administrators
+
+**What you'll see:**
+
+#### Key Metrics (Top Cards)
+
+| Metric              | What It Means                                       | Action Needed                                                                         |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **In Queue Now**    | People currently waiting for service                | 🟢 <5: Good<br>🟡 5-10: Moderate<br>🟠 10-20: Busy<br>🔴 >20: Critical                |
+| **Est. Wait (New)** | Expected wait time for someone joining now          | Communicate this to new arrivals                                                      |
+| **Longest Wait**    | How long the first person has been waiting          | 🟢 <30min: Good<br>🟡 30-45min: Watch<br>🟠 45-90min: Concerning<br>🔴 >90min: Urgent |
+| **Avg Wait Time**   | Average time from entry to exit (recent)            | Baseline for service speed                                                            |
+| **Completed Today** | Total people served                                 | Celebrate milestones! 🎉                                                              |
+| **Capacity**        | How efficiently you're operating (% of theoretical) | 🟢 <80%: Good buffer<br>🟡 80-90%: Busy<br>🔴 >90%: At capacity                       |
+| **Time in Service** | How long you've been operating today                | Track for shift management                                                            |
+| **Throughput**      | People served per hour                              | Monitor service rate trends                                                           |
+
+#### Alerts Section
+
+Dashboard will show color-coded alerts:
+
+- **🔵 Blue (Info):** Operating near capacity - good to know
+- **🟡 Yellow (Warning):** Queue getting long (>10) or wait times elevated (>45min)
+- **🔴 Red (Critical):** Queue critical (>20) or dangerous wait times (>90min)
+
+**When you see critical alerts:**
+
+1. Consider calling additional volunteers
+2. Check if service process can be streamlined
+3. Communicate wait times to people in queue
+4. Consider limiting new entries temporarily
+
+#### Queue Status Section
+
+Shows everyone currently waiting:
+
+- **Position** in queue (#1, #2, etc.)
+- **Token ID** to identify specific person
+- **Join Time** when they entered queue
+- **Time in Service** how long they've been waiting
+
+**Use this to:**
+
+- Track specific individuals if needed
+- Identify anyone waiting unusually long
+- Estimate position for people asking "how much longer?"
+
+#### Activity Chart
+
+Visual graph showing tap activity over last 12 hours:
+
+- **Peaks** = busy times
+- **Valleys** = slower periods
+- **Trends** = help predict upcoming demand
+
+**Use this to:**
+
+- Plan break times during valleys
+- Prepare for known busy patterns
+- Staff appropriately for anticipated demand
+
+#### Recent Completions
+
+Shows last 10 people who finished service:
+
+- Token ID
+- Exit time
+- Wait time (color-coded: 🟢 <15min, 🟡 15-30min, 🔴 >30min)
+
+**Use this to:**
+
+- See actual service times
+- Verify system is capturing exits
+- Communicate realistic wait times
+
+#### Live Event Feed
+
+Real-time stream of all taps:
+
+- Shows each tap as it happens
+- Green = Queue Join (entry)
+- Red = Exit
+- Device ID shows which station
+
+**Use this to:**
+
+- Verify both stations working
+- Monitor activity in real-time
+- Troubleshoot specific events
+
 ### Visual Checks Every Hour
 
 - [ ] Green activity LED flashing on both Pis (shows running)
@@ -200,6 +311,212 @@ Shows:
 - Stage
 - Total taps logged
 - Status: OK or Error
+
+### Making Operational Decisions
+
+#### Scenario: Queue Length Growing
+
+**Dashboard shows:** In Queue = 12 (🟡 Warning)
+
+**Actions:**
+
+1. ✅ Check avg wait time - is service slowing down?
+2. ✅ Review recent completions - are people exiting normally?
+3. ✅ Consider: Do we need another peer worker?
+4. ✅ Communicate wait times to new arrivals
+5. ✅ Monitor for next 15 minutes
+
+#### Scenario: Wait Times Elevated
+
+**Dashboard shows:** Longest Wait = 50min (🟠), Avg Wait = 35min
+
+**Actions:**
+
+1. ✅ Check capacity utilization - are we operating efficiently?
+2. ✅ Review service process - any bottlenecks?
+3. ✅ Find the person who's been waiting longest (check Queue Status)
+4. ✅ Consider priority service for longest waiters
+5. ✅ Communicate realistic wait times to new arrivals
+
+#### Scenario: Critical Queue
+
+**Dashboard shows:** In Queue = 23 (🔴 Critical), Est. Wait = 65min
+
+**Actions:**
+
+1. 🚨 **Immediate:** Check both stations functioning
+2. 🚨 Call for additional volunteers/resources
+3. 🚨 Communicate honestly: "Wait time currently ~1 hour"
+4. 🚨 Consider: Can service be expedited without compromising safety?
+5. 🚨 May need to temporarily stop accepting new entries
+6. 🚨 Prioritize people who've been waiting longest
+
+#### Scenario: Low Activity
+
+**Dashboard shows:** In Queue = 0-2, Throughput dropping
+
+**Actions:**
+
+1. ✅ Good time for peer worker breaks
+2. ✅ Restock supplies
+3. ✅ Check equipment (while not busy)
+4. ✅ Prepare for next rush (monitor activity chart for patterns)
+
+#### Scenario: System Issues
+
+**Dashboard shows:** No new events for 10+ minutes (but people are around)
+
+**Actions:**
+
+1. ⚠️ Check both stations visually
+2. ⚠️ Test tap a card at each station
+3. ⚠️ Check power banks (lights still on?)
+4. ⚠️ If one station down: redistribute workflow
+5. ⚠️ If both down: Switch to manual logging immediately
+6. ⚠️ Don't troubleshoot during event - document for later
+
+### Dashboard Best Practices
+
+**🔄 Refresh Rate:** Dashboard auto-refreshes every 5 seconds
+
+**📱 Access:** Anyone can view, use tablet/phone mounted in visible location
+
+**👥 Who Should Monitor:**
+
+- Lead coordinator: Watch full dashboard
+- Peer workers: Don't need constant monitoring, check periodically
+- Tech support: Monitor for system health issues
+
+**⏰ Check Frequency:**
+
+- 🟢 Quiet times: Every 15-20 minutes
+- 🟡 Moderate: Every 10 minutes
+- 🟠 Busy: Every 5 minutes or keep visible
+- 🔴 Critical: Continuous monitoring
+
+**📊 Key Indicators for Quick Glance:**
+
+1. **Queue card color:**
+   - Green = All good
+   - Yellow/Orange = Pay attention
+   - Red = Take action
+2. **Alerts section:** Any red alerts = immediate attention
+3. **Activity chart:** Trending up or down?
+
+### Communicating With Participants
+
+Use dashboard data to set expectations:
+
+**At Entry (Station 1):**
+
+- "Current wait time is approximately [EST. WAIT] minutes"
+- "We're serving about [THROUGHPUT] people per hour"
+- If queue is long: "Queue is longer than usual, estimated [EST. WAIT] min wait"
+
+**During Wait:**
+
+- If someone asks: Check their position in Queue Status
+- "You're #[POSITION] in queue, should be another [ESTIMATE] minutes"
+
+**Managing Expectations:**
+
+- ✅ Be honest about wait times
+- ✅ Under-promise, over-deliver
+- ✅ Update if situation changes
+- ❌ Don't guarantee specific times
+- ❌ Don't blame technology
+
+### Control Panel (Administrators Only)
+
+The control panel (`/control`) provides a web-based interface for all system management tasks. **This is for tech leads and administrators only.**
+
+#### What It Provides
+
+**System Status:**
+
+- Real-time service status (running/stopped)
+- Total events logged
+- System uptime
+- Database size
+
+**Service Management:**
+
+- Start/stop/restart the tap-station service
+- View detailed service status and logs
+- No SSH required for basic operations
+
+**Diagnostics & Verification:**
+
+- **Verify Hardware** - Test NFC reader connection
+- **Verify Deployment** - Run full system checks
+- **Health Check** - Check system health
+- **I2C Devices** - Scan for connected I2C devices
+
+**Data Operations:**
+
+- **Export Data** - Export events to CSV
+- **Backup Database** - Create timestamped backup
+- **View Recent Events** - See last 20 events
+- **Database Stats** - View statistics
+
+**System Control (Use with Caution!):**
+
+- **Reboot System** - Restart the Raspberry Pi
+- **Shutdown System** - Power off (requires physical restart)
+- **View Logs** - Show recent system logs
+- **Disk Usage** - Check storage space
+
+**Development Tools:**
+
+- **Dev Reset** - Reset I2C and NFC reader
+- **Test Card Read** - Test reading an NFC card
+- **Run Tests** - Execute test suite
+- **Git Status** - Check repository status
+
+#### When to Use Control Panel
+
+**Pre-Event:**
+
+- Verify hardware before deployment
+- Run full system checks
+- Test card reading
+
+**During Event:**
+
+- Monitor service status
+- Restart service if issues occur
+- View recent events to verify logging
+- Export data for interim analysis
+
+**Post-Event:**
+
+- Export final data
+- Create database backup
+- View logs for troubleshooting
+- Shutdown system safely
+
+#### Best Practices
+
+✅ **Do:**
+
+- Bookmark control panel URL for quick access
+- Test commands in pre-event setup
+- Export data regularly
+- Use during downtime, not during active service
+
+❌ **Don't:**
+
+- Restart system during active service hours
+- Share control panel URL with untrained volunteers
+- Shutdown system without ensuring data is saved
+- Make changes during critical queue situations
+
+**If Something Goes Wrong:**
+
+- Use control panel to view logs
+- Check service status
+- Restart service if needed
+- Fall back to manual logging if issues persist
 
 ### Power Management
 

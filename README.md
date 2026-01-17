@@ -20,7 +20,10 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 
 - **🚀 [Setup Guide](docs/SETUP.md)** - Hardware wiring & software installation
 - **📱 [Mobile App Guide](docs/MOBILE.md)** - Use Android phones instead of Raspberry Pis
-- **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow for peers & operators
+- **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
+- **✅ [Pre-Deployment Checklist](docs/PRE_DEPLOYMENT_CHECKLIST.md)** - Ensure you're ready before your event
+- **📊 [Live Dashboard](#live-monitoring)** - Real-time queue tracking & operational metrics
+- **🎛️ [Control Panel](docs/CONTROL_PANEL.md)** - Web-based system administration
 - **🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
 - **💻 [Contributing](CONTRIBUTING.md)** - For developers
 
@@ -44,8 +47,9 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 
 - Python 3.9+ with `pn532pi` library
 - SQLite database (WAL mode for crash resistance)
-- Flask web server for status/health checks
+- Flask web server for live dashboard & status checks
 - systemd service for auto-start/restart
+- Real-time operational analytics
 
 ## Quick Start (Raspberry Pi)
 
@@ -127,6 +131,128 @@ python scripts/ingest_mobile_batch.py --input mobile-export.jsonl
 ```
 
 **Need detailed instructions?** See the [Mobile Guide](docs/MOBILE.md).
+
+---
+
+## Live Monitoring
+
+The system includes powerful real-time dashboards for operational management during your event.
+
+### Access Dashboards
+
+Once the system is running, access dashboards from any device on the same network:
+
+```
+# Full analytics dashboard (for coordinators)
+http://<pi-ip-address>:8080/dashboard
+
+# Simplified monitor (for peer workers)
+http://<pi-ip-address>:8080/monitor
+
+# Control panel (for administrators)
+http://<pi-ip-address>:8080/control
+```
+
+**Find your Pi's IP address:**
+
+```bash
+hostname -I
+```
+
+**Security Note:** The control panel provides system administration capabilities. Keep your Pi on a private network and only share the control panel URL with trusted administrators.
+
+### Dashboard Features
+
+#### 📊 Full Dashboard (`/dashboard`)
+
+**For coordinators and decision-makers**
+
+- **Real-time metrics:**
+
+  - People in queue right now
+  - Estimated wait time for new arrivals
+  - Longest current wait (time in service)
+  - Capacity utilization
+  - Throughput per hour
+
+- **Operational alerts:**
+
+  - 🟢 Green: All systems normal
+  - 🟡 Yellow: Queue getting busy (>10 people or >45min wait)
+  - 🔴 Red: Critical conditions (>20 people or >90min wait)
+
+- **Queue details:**
+
+  - Position in queue (#1, #2, etc.)
+  - Time each person has been waiting
+  - Real-time updates every 5 seconds
+
+- **Activity visualization:**
+  - 12-hour activity chart
+  - Recent completions with wait times
+  - Live event feed showing all taps
+
+#### 📱 Simplified Monitor (`/monitor`)
+
+**For peer workers and quick status checks**
+
+- Large, easy-to-read display optimized for mobile/tablet
+- Critical metrics only:
+  - People waiting
+  - Estimated wait time
+  - Simple status indicators
+- Color-coded alerts (green/yellow/red)
+- No clutter - just what you need to know
+
+### Using Live Data Operationally
+
+**At Queue Entry:**
+
+- Communicate current wait time to arrivals
+- Adjust staffing based on queue length alerts
+
+**During Service:**
+
+- Monitor longest wait to prioritize people
+- Track throughput to identify bottlenecks
+- Use alerts to make staffing decisions
+
+**Example scenarios:**
+
+```
+🟢 Queue: 3 people, Est. wait: 15min
+→ All good, normal operations
+
+🟡 Queue: 12 people, Est. wait: 35min, Longest wait: 47min
+→ Monitor closely, consider calling extra volunteer
+
+🔴 Queue: 24 people, Est. wait: 65min, Longest wait: 95min
+→ URGENT: Add resources, prioritize longest waiters
+```
+
+See the [Operations Guide](docs/OPERATIONS.md) for detailed guidance on interpreting metrics and making operational decisions.
+
+### Control Panel (`/control`)
+
+**Administrative interface for system management** - No SSH required!
+
+Execute common tasks through a web interface:
+
+- **Service Management:** Start/stop/restart tap-station service
+- **Diagnostics:** Verify hardware, run health checks, scan I2C devices
+- **Data Operations:** Export data, backup database, view recent events
+- **System Control:** Reboot, shutdown, view logs, check disk space
+- **Development:** Reset I2C, test card reading, run tests
+
+**Key Benefits:**
+
+- Execute commands without SSH access
+- Real-time command output display
+- Safety confirmations for destructive operations
+- Quick troubleshooting during events
+- One-click data export and backup
+
+**Security:** Keep your Pi on a private network. Only share control panel URL with trusted administrators.
 
 ---
 
@@ -222,37 +348,96 @@ nfc-tap-logger/
 │   ├── database.py          # SQLite operations
 │   ├── nfc_reader.py        # PN532 NFC interface
 │   ├── feedback.py          # Buzzer/LED control
-│   ├── web_server.py        # Flask status server
-│   └── ndef_writer.py       # NDEF writing (NFC Tools)
+│   ├── web_server.py        # Flask server (dashboards + control panel)
+│   ├── ndef_writer.py       # NDEF writing (NFC Tools)
+│   └── templates/           # Web interface templates
+│       ├── dashboard.html   # Full analytics dashboard
+│       ├── monitor.html     # Simplified peer worker view
+│       ├── control.html     # System administration panel
+│       ├── index.html       # Landing page
+│       ├── status.html      # Participant status check
+│       └── error.html       # Error display
 ├── scripts/                  # Utility scripts
 │   ├── install.sh           # Automated installation
 │   ├── verify_hardware.py   # Hardware diagnostics
+│   ├── verify_deployment.sh # Full system verification
 │   ├── init_cards.py        # Card initialization
+│   ├── init_cards_with_ndef.py # NDEF card programming
 │   ├── export_data.py       # Data export
 │   ├── ingest_mobile_batch.py  # Mobile data import
-│   └── health_check.py      # Remote health monitoring
+│   ├── health_check.py      # Remote health monitoring
+│   ├── service_manager.py   # Service control utility
+│   ├── dev_reset.py         # Development reset tool
+│   ├── setup_wizard.py      # Interactive configuration
+│   └── enable_i2c.sh        # I2C setup automation
 ├── mobile_app/              # Progressive Web App
 │   ├── index.html           # App interface
 │   ├── app.js               # NFC scanning logic
 │   ├── service-worker.js    # Offline support
+│   ├── style.css            # Styling
 │   └── manifest.webmanifest # PWA manifest
 ├── tests/                   # Test suite
+│   ├── test_config.py       # Configuration tests
+│   ├── test_database.py     # Database tests
+│   ├── test_nfc_reader.py   # NFC reader tests
+│   ├── test_web_server.py   # Web server tests
+│   ├── test_integration.py  # End-to-end tests
+│   └── test_mobile_ingest.py # Mobile ingest tests
 ├── docs/                    # Documentation
 │   ├── SETUP.md            # Installation & setup
-│   ├── OPERATIONS.md       # Day-of-event guide
+│   ├── OPERATIONS.md       # Day-of-event operations
+│   ├── PRE_DEPLOYMENT_CHECKLIST.md # Pre-event verification
+│   ├── CONTROL_PANEL.md    # Control panel reference
 │   ├── TROUBLESHOOTING.md  # Problem solving
 │   ├── MOBILE.md           # Mobile app guide
-│   └── CONTRIBUTING.md     # Developer guide
+│   └── ROADMAP.md          # Future plans
 ├── data/                    # Database & mappings
 │   ├── events.db           # Main event database
 │   └── card_mapping.csv    # Card UID → Token ID
-└── logs/                    # Application logs
-    └── tap-station.log     # Rotating logs
-├── backups/              # Database backups
-├── config.yaml           # Configuration file
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
+├── logs/                    # Application logs
+│   └── tap-station.log     # Rotating logs
+├── backups/                 # Database backups
+├── config.yaml              # Configuration file
+├── config.yaml.example      # Configuration template
+├── requirements.txt         # Python dependencies
+├── tap-station.service      # systemd service file
+├── CONTRIBUTING.md          # Developer guide
+├── PRODUCTION_READINESS.md  # Production status report
+└── README.md               # This file
 ```
+
+│ ├── web_server.py # Flask status server
+│ └── ndef_writer.py # NDEF writing (NFC Tools)
+├── scripts/ # Utility scripts
+│ ├── install.sh # Automated installation
+│ ├── verify_hardware.py # Hardware diagnostics
+│ ├── init_cards.py # Card initialization
+│ ├── export_data.py # Data export
+│ ├── ingest_mobile_batch.py # Mobile data import
+│ └── health_check.py # Remote health monitoring
+├── mobile_app/ # Progressive Web App
+│ ├── index.html # App interface
+│ ├── app.js # NFC scanning logic
+│ ├── service-worker.js # Offline support
+│ └── manifest.webmanifest # PWA manifest
+├── tests/ # Test suite
+├── docs/ # Documentation
+│ ├── SETUP.md # Installation & setup
+│ ├── OPERATIONS.md # Day-of-event guide
+│ ├── TROUBLESHOOTING.md # Problem solving
+│ ├── MOBILE.md # Mobile app guide
+│ └── CONTRIBUTING.md # Developer guide
+├── data/ # Database & mappings
+│ ├── events.db # Main event database
+│ └── card_mapping.csv # Card UID → Token ID
+└── logs/ # Application logs
+└── tap-station.log # Rotating logs
+├── backups/ # Database backups
+├── config.yaml # Configuration file
+├── requirements.txt # Python dependencies
+└── README.md # This file
+
+````
 
 ## Configuration
 
@@ -267,7 +452,7 @@ station:
   device_id: "station1"
   stage: "QUEUE_JOIN"
   session_id: "festival-2025-summer"
-```
+````
 
 **Station 2 (Exit):**
 
