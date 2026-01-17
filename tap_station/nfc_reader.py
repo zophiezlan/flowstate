@@ -145,6 +145,23 @@ class NFCReader:
         time_since_last = datetime.now() - self.last_read_time
         return time_since_last.total_seconds() < self.debounce_seconds
 
+    def _read_page_bytes(self, page: int) -> Optional[bytes]:
+        read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
+        if not read_page:
+            return None
+
+        result = read_page(page)
+        if isinstance(result, tuple):
+            success, data = result
+            if not success:
+                return None
+            result = data
+
+        if not result:
+            return None
+
+        return bytes(result)
+
     def _read_token_id(self, uid_bytes: bytes) -> Optional[str]:
         """
         Try to read token ID from card (supports NDEF and legacy formats)
@@ -159,8 +176,7 @@ class NFCReader:
             if not self.pn532:
                 return None
 
-            read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
-            if not read_page:
+            if not getattr(self.pn532, "mifareultralight_ReadPage", None):
                 return None
 
             # Read first ~96 bytes (pages 4-27) to cover NDEF records
@@ -168,11 +184,10 @@ class NFCReader:
             raw_data = bytearray()
             for page in range(4, 28, 4):
                 try:
-                    chunk = read_page(page)
-                    if chunk:
-                        raw_data.extend(bytes(chunk))
-                    else:
+                    chunk = self._read_page_bytes(page)
+                    if not chunk:
                         break
+                    raw_data.extend(chunk)
                 except Exception:
                     break
 
@@ -280,21 +295,16 @@ class NFCReader:
                 return False
 
             # Verify readback if possible
-            read_page = getattr(self.pn532, "mifareultralight_ReadPage", None)
-            if read_page:
-                raw = read_page(4)
-                if raw:
-                    read_token = (
-                        bytes(raw)
-                        .decode("ascii", errors="ignore")
-                        .strip("\x00")
-                        .strip()
+            raw = self._read_page_bytes(4)
+            if raw:
+                read_token = (
+                    raw[:4].decode("ascii", errors="ignore").strip("\x00").strip()
+                )
+                if read_token and read_token != token_id:
+                    logger.error(
+                        f"Token ID verification mismatch: wrote {token_id}, read {read_token}"
                     )
-                    if read_token and read_token != token_id:
-                        logger.error(
-                            f"Token ID verification mismatch: wrote {token_id}, read {read_token}"
-                        )
-                        return False
+                    return False
 
             logger.info(f"Wrote token ID '{token_id}' to card")
             return True

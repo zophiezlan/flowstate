@@ -134,3 +134,33 @@ def test_write_ntag_pages_accepts_data_argument():
 
     assert reader._write_ntag_pages(4, b"ABCD") is True
     assert reader.pn532.calls == [(4, b"ABCD")]
+
+
+def test_read_token_id_handles_tuple_read_page():
+    """Ensure tuple returns from ReadPage are handled."""
+    class DummyPn532:
+        def mifareultralight_ReadPage(self, page):
+            return True, bytearray(b"001\x00")
+
+    with patch.object(NFCReader, "_setup_reader", lambda self: None):
+        reader = NFCReader()
+    reader.pn532 = DummyPn532()
+
+    assert reader._read_token_id(b"\x00") == "001"
+
+
+def test_write_token_id_verifies_tuple_readback():
+    """Ensure tuple readback data doesn't break verification."""
+    class DummyPn532:
+        def readPassiveTargetID(self, cardbaudrate=0x00):
+            return True, bytearray([1, 2, 3, 4])
+
+        def mifareultralight_ReadPage(self, page):
+            return True, bytearray(b"001\x00")
+
+    with patch.object(NFCReader, "_setup_reader", lambda self: None):
+        reader = NFCReader()
+    reader.pn532 = DummyPn532()
+
+    with patch.object(reader, "_write_ntag_pages", return_value=True):
+        assert reader.write_token_id("001") is True
