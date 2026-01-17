@@ -360,42 +360,50 @@ class NFCReader:
         page = start_page
         for offset in range(0, len(padded), 4):
             chunk = padded[offset : offset + 4]
+
+            # Convert chunk to list of integers (most compatible approach)
+            byte_list = [int(b) for b in chunk]
+
             try:
-                # Try passing the chunk directly (page, data)
-                result = write_page(page, chunk)
-            except TypeError as exc_bytes:
+                # Method 1: Try unpacking as individual integer arguments (most common)
+                # write_page(page, byte0, byte1, byte2, byte3)
+                result = write_page(page, *byte_list)
+            except Exception as exc1:
                 logger.warning(
-                    "WritePage rejected bytes; retrying with unpacked bytes: %s",
-                    exc_bytes,
+                    f"WritePage with unpacked ints failed (page {page}): {exc1}. Trying alternate methods..."
                 )
                 try:
-                    # Try unpacking the chunk as individual arguments
-                    result = write_page(page, *chunk)
-                except TypeError as exc:
-                    # Fallback: try passing as bytearray (for library versions that accept it)
+                    # Method 2: Try passing as bytes object (page, data)
+                    result = write_page(page, chunk)
+                except Exception as exc2:
                     logger.warning(
-                        "WritePage rejected unpacked bytes; retrying with bytearray: %s",
-                        exc,
+                        f"WritePage with bytes failed (page {page}): {exc2}. Trying bytearray..."
                     )
                     try:
+                        # Method 3: Try passing as bytearray
                         result = write_page(page, bytearray(chunk))
-                    except TypeError as exc2:
-                        # Second fallback: try as list
+                    except Exception as exc3:
                         logger.warning(
-                            "WritePage rejected bytearray; retrying with list: %s",
-                            exc2,
+                            f"WritePage with bytearray failed (page {page}): {exc3}. Trying list..."
                         )
                         try:
-                            result = write_page(page, list(chunk))
-                        except TypeError as exc3:
+                            # Method 4: Try passing as list
+                            result = write_page(page, byte_list)
+                        except Exception as exc4:
                             # All methods failed - log detailed error
                             logger.error(
-                                f"All write methods failed for page {page}. Bytes: {exc_bytes}, Unpacked: {exc}, Bytearray: {exc2}, List: {exc3}"
+                                f"All write methods failed for page {page}:\n"
+                                f"  1. Unpacked ints (*[{','.join(map(str,byte_list))}]): {exc1}\n"
+                                f"  2. Bytes object: {exc2}\n"
+                                f"  3. Bytearray: {exc3}\n"
+                                f"  4. List: {exc4}"
                             )
                             return False
+
             if result is False:
-                logger.error(f"Failed to write page {page}")
+                logger.error(f"Failed to write page {page} (write returned False)")
                 return False
+
             page += 1
 
         return True
