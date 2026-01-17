@@ -94,6 +94,98 @@ Expected addresses:
   - Route antenna to be flush against the enclosure’s lid for best coupling
 - If your PN532 has an integrated coil and no connector, adding an external antenna is not supported—mount the board firmly near the lid (use nylon standoffs) to minimize air gap
 
+## Breadboard-Based Wiring Guide
+
+Using an 830-point breadboard simplifies connections and reduces wiring complexity. This guide shows how to organize all components on the breadboard.
+
+### Breadboard Power Rails Setup
+
+1. **Connect power rails to Raspberry Pi:**
+   - Pi Pin 1 (3.3V) → Breadboard positive rail (red)
+   - Pi Pin 6 (GND) → Breadboard negative rail (blue/black)
+   - Optional: Bridge both power rails on breadboard for easier access
+
+### Component Placement on Breadboard
+
+#### I2C Devices (PN532, DS3231 RTC, SSD1306 OLED)
+
+All I2C devices share the same 4 connections. Use breadboard rows to fan out:
+
+```
+Breadboard Layout (I2C Bus):
+Row A: 3.3V rail → All VCC pins
+Row B: GND rail → All GND pins  
+Row C: SDA (Pi Pin 3/GPIO2) → All SDA pins
+Row D: SCL (Pi Pin 5/GPIO3) → All SCL pins
+
+Connect each I2C module:
+- PN532: VCC to Row A, GND to Row B, SDA to Row C, SCL to Row D
+- DS3231 RTC: VCC to Row A, GND to Row B, SDA to Row C, SCL to Row D
+- SSD1306 OLED: VCC to Row A, GND to Row B, SDA to Row C, SCL to Row D
+```
+
+#### Green LED Circuit (GPIO 27)
+
+```
+Pi Pin 13 (GPIO27) → 220Ω resistor → LED anode (long leg) → LED cathode (short leg) → GND rail
+```
+
+Place on breadboard:
+- Row E: Connect GPIO27 wire
+- Row E: Insert 220Ω resistor (one leg)
+- Row F: Resistor other leg + LED anode (long leg)
+- Row G: LED cathode (short leg) → jumper to GND rail
+
+#### Red LED Circuit (GPIO 22)
+
+```
+Pi Pin 15 (GPIO22) → 220Ω resistor → LED anode (long leg) → LED cathode (short leg) → GND rail
+```
+
+Place on breadboard:
+- Row H: Connect GPIO22 wire
+- Row H: Insert 220Ω resistor (one leg)
+- Row I: Resistor other leg + LED anode (long leg)
+- Row J: LED cathode (short leg) → jumper to GND rail
+
+#### Buzzer Connection
+
+```
+Pi Pin 11 (GPIO17) → Buzzer positive (+)
+Buzzer negative (−) → GND rail
+```
+
+Place on breadboard:
+- Row K: Connect GPIO17 wire and buzzer positive pin
+- Row L: Connect buzzer negative pin → jumper to GND rail
+
+#### Shutdown Button (Momentary Push Button)
+
+```
+Pi Pin 37 (GPIO26) → Button leg 1
+Button leg 2 → GND rail
+```
+
+Place on breadboard:
+- Row M: Connect GPIO26 wire and one button leg
+- Row N: Connect other button leg → jumper to GND rail
+- Software will enable internal pull-up resistor (no external resistor needed)
+
+### Complete Breadboard Connection Summary
+
+```
+Raspberry Pi → Breadboard Connections:
+Pin 1  (3.3V)    → Positive rail (red)
+Pin 3  (GPIO2/SDA) → I2C SDA row
+Pin 5  (GPIO3/SCL) → I2C SCL row
+Pin 6  (GND)     → Negative rail (blue/black)
+Pin 11 (GPIO17)  → Buzzer positive row
+Pin 13 (GPIO27)  → Green LED resistor row
+Pin 15 (GPIO22)  → Red LED resistor row
+Pin 37 (GPIO26)  → Button row
+Pin 39 (GND)     → Negative rail (optional, for shorter runs)
+```
+
 ## ASCII Wiring Diagram (Simplified)
 
 ```
@@ -114,24 +206,24 @@ Raspberry Pi Zero 2 W (Top view, pin numbers)
 (37)GPIO26 [Shutdown button]
 (39)GND   [Shutdown button]
 
-I2C BUS (shared):
+I2C BUS (shared via breadboard):
  Pin 1 (3V3) → VCC on PN532, RTC, OLED
  Pin 6 (GND) → GND on PN532, RTC, OLED
  Pin 3 (SDA) → SDA on PN532, RTC, OLED
  Pin 5 (SCL) → SCL on PN532, RTC, OLED
 
-LEDs:
- GPIO27 → 220Ω → LED(GREEN anode)
- LED(GREEN cathode) → GND
- GPIO22 → 220Ω → LED(RED anode)
- LED(RED cathode) → GND
+LEDs (with 220Ω resistors):
+ GPIO27 (Pin 13) → 220Ω → LED(GREEN anode) → LED cathode → GND
+ GPIO22 (Pin 15) → 220Ω → LED(RED anode) → LED cathode → GND
 
-Buzzer:
- GPIO17 → Buzzer +
+Buzzer (Active):
+ GPIO17 (Pin 11) → Buzzer +
  Buzzer − → GND
 
-Button:
- GPIO26 ↔ Button ↔ GND
+Shutdown Button (Momentary):
+ GPIO26 (Pin 37) → Button leg 1
+ Button leg 2 → GND
+ (Internal pull-up enabled in software)
 ```
 
 ## Software/Config Notes
@@ -149,3 +241,12 @@ Button:
   - LED green: GPIO 27
   - LED red: GPIO 22
   - I2C bus: 1 (SDA=GPIO2, SCL=GPIO3)
+  - Shutdown button: GPIO 26 (with internal pull-up)
+- Shutdown button configuration:
+  - The shutdown button uses GPIO 26 with an internal pull-up resistor
+  - Press and hold for 3 seconds to trigger a clean shutdown
+  - Enable in `config.yaml`: `shutdown_button_enabled: true`
+- RTC time synchronization:
+  - After enabling RTC overlay, disable fake-hwclock: `sudo apt-get -y remove fake-hwclock && sudo update-rc.d -f fake-hwclock remove`
+  - Set system time from RTC on boot: `sudo hwclock -s`
+  - Set RTC from system time: `sudo hwclock -w`

@@ -72,6 +72,24 @@ class TapStation:
             beep_error=self.config.beep_error,
         )
 
+        # Initialize shutdown button handler
+        self.button_handler = None
+        if self.config.shutdown_button_enabled:
+            try:
+                from tap_station.button_handler import ButtonHandler
+
+                self.button_handler = ButtonHandler(
+                    enabled=True,
+                    gpio_pin=self.config.shutdown_button_gpio,
+                    hold_time=self.config.shutdown_button_hold_time,
+                    shutdown_callback=self._shutdown_callback,
+                )
+                self.logger.info("Shutdown button handler initialized")
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to initialize shutdown button: {e}", exc_info=True
+                )
+
         self.web_server = None
         self.web_thread = None
         if self.config.web_server_enabled:
@@ -203,6 +221,10 @@ class TapStation:
         """Cleanup and shutdown"""
         self.logger.info("Shutting down...")
 
+        # Stop button handler
+        if self.button_handler:
+            self.button_handler.cleanup()
+
         # Close database
         if self.db:
             self.db.close()
@@ -212,6 +234,20 @@ class TapStation:
             self.feedback.cleanup()
 
         self.logger.info("Shutdown complete")
+
+    def _shutdown_callback(self):
+        """Callback executed when shutdown button is pressed"""
+        self.logger.warning("Shutdown button callback - cleaning up resources...")
+        
+        # Stop the main loop
+        self.running = False
+        
+        # Cleanup resources
+        if self.db:
+            self.db.close()
+        
+        if self.feedback:
+            self.feedback.cleanup()
 
     def get_stats(self) -> dict:
         """Get current station statistics"""

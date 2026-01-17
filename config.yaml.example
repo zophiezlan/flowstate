@@ -53,6 +53,16 @@ feedback:
   beep_duplicate: [0.1, 0.05, 0.1]   # Double beep
   beep_error: [0.3]                  # Long beep
 
+shutdown_button:
+  # Enable shutdown button (GPIO 26)
+  enabled: true
+  
+  # GPIO pin for shutdown button (BCM numbering)
+  gpio_pin: 26
+  
+  # Hold time in seconds to trigger shutdown
+  hold_time: 3.0
+
 logging:
   # Log file path
   path: "logs/tap-station.log"

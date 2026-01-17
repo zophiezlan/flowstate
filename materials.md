@@ -37,7 +37,8 @@ This list covers the proposed upgrades and all supporting hardware to make the P
 
 - 1× ABS project box (approx. 115×65×40 mm or larger)
 - 1× Nylon standoff kit (M3) for mounting Pi and PN532
-- 1× Small breadboard or distribution block (optional, for neat I2C bus splitting)
+- 1× 830-point breadboard (for organizing all connections - highly recommended)
+  - Alternative: Small distribution block for I2C bus splitting only
 - 1× Clear acrylic window or protective film (optional, to protect OLED)
 
 ## Cabling and Connectors

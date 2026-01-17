@@ -112,9 +112,11 @@ Pi Zero GPIO Header (top view)
 - Yellow wire → Pin 5 (third row, left)
 - Black wire → Pin 6 (third row, right)
 
-### Step 4: Wire Optional Components
+### Step 4: Wire Optional Components (Recommended)
 
-**Buzzer (Optional):**
+For easier wiring, use an 830-point breadboard to organize all connections. See detailed breadboard layout in `wiring_schematic.md`.
+
+**Buzzer (Optional but recommended):**
 
 ```
 Buzzer Pin   →    Raspberry Pi GPIO
@@ -123,16 +125,40 @@ Positive (+) →    Pin 11 (GPIO 17)
 Negative (-) →    Any GND pin
 ```
 
-**LEDs (Optional):**
+**LEDs with 220Ω Resistors (Optional but recommended):**
 
 ```
 LED          →    Raspberry Pi GPIO
 ──────────────────────────────────────
-Green LED+   →    Pin 13 (GPIO 27) → 220Ω resistor
-Green LED-   →    GND
-Red LED+     →    Pin 15 (GPIO 22) → 220Ω resistor
-Red LED-     →    GND
+Green LED    →    Pin 13 (GPIO 27) → 220Ω resistor → LED anode (+) → LED cathode (-) → GND
+Red LED      →    Pin 15 (GPIO 22) → 220Ω resistor → LED anode (+) → LED cathode (-) → GND
 ```
+
+**Important:** Always connect resistor in series between GPIO and LED anode (long leg).
+
+**Shutdown Button (Optional but recommended):**
+
+```
+Button Pin   →    Raspberry Pi GPIO
+──────────────────────────────────────
+Button leg 1 →    Pin 37 (GPIO 26)
+Button leg 2 →    Pin 39 (GND)
+```
+
+The button uses internal pull-up resistor (no external resistor needed). Press and hold for 3 seconds to trigger clean shutdown.
+
+**DS3231 RTC Module:**
+
+```
+RTC Pin      →    Raspberry Pi GPIO (shared I2C bus)
+──────────────────────────────────────
+VCC          →    Pin 1 (3.3V)
+GND          →    Pin 6 (GND)
+SDA          →    Pin 3 (GPIO 2) - shared with PN532 and OLED
+SCL          →    Pin 5 (GPIO 3) - shared with PN532 and OLED
+```
+
+**Note:** Install CR1220 backup battery in RTC module before use.
 
 ### Step 5: Double-Check Connections
 
@@ -142,6 +168,8 @@ Before powering on:
 - [ ] All connections secure
 - [ ] No loose wires touching other pins
 - [ ] PN532 set to I2C mode
+- [ ] LED resistors in series (220Ω between GPIO and LED anode)
+- [ ] CR1220 battery installed in RTC module
 
 ---
 
@@ -235,6 +263,88 @@ No throttling detected.............................. ✓ PASS
 
 **If checks fail**, see [Troubleshooting](TROUBLESHOOTING.md).
 
+### Step 5: Configure DS3231 RTC (Optional but Recommended)
+
+The DS3231 RTC maintains accurate time even when the Pi is powered off. This is critical for accurate timestamps during events.
+
+**1. Enable RTC overlay:**
+
+```bash
+sudo nano /boot/config.txt
+```
+
+Add this line at the end:
+
+```
+dtoverlay=i2c-rtc,ds3231
+```
+
+Save and exit (Ctrl+X, Y, Enter).
+
+**2. Disable fake-hwclock:**
+
+```bash
+sudo apt-get -y remove fake-hwclock
+sudo update-rc.d -f fake-hwclock remove
+```
+
+**3. Reboot to load RTC:**
+
+```bash
+sudo reboot
+```
+
+**4. Verify RTC detection:**
+
+```bash
+sudo i2cdetect -y 1
+```
+
+You should see `UU` at address 0x68 (indicates RTC is in use by kernel):
+
+```
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- 24 -- -- -- -- -- -- -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- UU -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+70: -- -- -- -- -- -- -- --
+```
+
+**5. Set system time from RTC:**
+
+```bash
+# Read current time from RTC
+sudo hwclock -r
+
+# If RTC time is correct, set system time from RTC
+sudo hwclock -s
+
+# If RTC time is wrong, set it from system time (ensure Pi has network time first)
+sudo hwclock -w
+```
+
+**6. Test RTC persistence:**
+
+```bash
+# Set a test time
+date
+
+# Write to RTC
+sudo hwclock -w
+
+# Reboot
+sudo reboot
+
+# After reboot, check time is maintained
+date
+```
+
+The RTC will now maintain time across reboots and power cycles (battery backup required).
+
 ---
 
 ## Part 3: Configuration
@@ -283,6 +393,17 @@ feedback:
 ```
 
 ### Step 4: Optional Settings
+
+**Enable/disable shutdown button:**
+
+```yaml
+shutdown_button:
+  enabled: true          # Enable shutdown button on GPIO 26
+  gpio_pin: 26          # BCM pin number
+  hold_time: 3.0        # Seconds to hold for shutdown
+```
+
+Press and hold button for 3 seconds to trigger a clean system shutdown.
 
 **Disable buzzer/LEDs:**
 

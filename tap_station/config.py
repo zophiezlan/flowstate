@@ -148,6 +148,21 @@ class Config:
         return self.get("feedback.beep_error", [0.3])
 
     @property
+    def shutdown_button_enabled(self) -> bool:
+        """Check if shutdown button is enabled"""
+        return self.get("shutdown_button.enabled", False)
+
+    @property
+    def shutdown_button_gpio(self) -> int:
+        """Get GPIO pin for shutdown button"""
+        return self.get("shutdown_button.gpio_pin", 26)
+
+    @property
+    def shutdown_button_hold_time(self) -> float:
+        """Get shutdown button hold time in seconds"""
+        return self.get("shutdown_button.hold_time", 3.0)
+
+    @property
     def log_path(self) -> str:
         """Get log file path"""
         return self.get("logging.path", "logs/tap-station.log")
