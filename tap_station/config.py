@@ -163,6 +163,11 @@ class Config:
         return self.get("shutdown_button.hold_time", 3.0)
 
     @property
+    def shutdown_button_delay_minutes(self) -> int:
+        """Get shutdown delay in minutes"""
+        return self.get("shutdown_button.delay_minutes", 1)
+
+    @property
     def log_path(self) -> str:
         """Get log file path"""
         return self.get("logging.path", "logs/tap-station.log")
@@ -198,4 +203,7 @@ class Config:
         return int(self.get("web_server.port", 8080))
 
     def __repr__(self) -> str:
-        return f"Config(device={self.device_id}, stage={self.stage}, session={self.session_id})"
+        return (
+            f"Config(device={self.device_id}, "
+            f"stage={self.stage}, session={self.session_id})"
+        )

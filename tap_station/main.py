@@ -83,6 +83,7 @@ class TapStation:
                     gpio_pin=self.config.shutdown_button_gpio,
                     hold_time=self.config.shutdown_button_hold_time,
                     shutdown_callback=self._shutdown_callback,
+                    shutdown_delay_minutes=self.config.shutdown_button_delay_minutes,
                 )
                 self.logger.info("Shutdown button handler initialized")
             except Exception as e:

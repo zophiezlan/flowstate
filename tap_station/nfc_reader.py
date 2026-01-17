@@ -390,14 +390,18 @@ class NFCReader:
                 # Call with the correct signature: (page: int, buffer: bytearray)
                 result = write_page(page, chunk)
 
-                logger.debug(f"Write result for page {page}: {result} (type: {type(result)})")
+                logger.debug(
+                    f"Write result for page {page}: {result} (type: {type(result)})"
+                )
 
                 # Check result - some implementations return None on success, others return True
                 if result is False:
                     logger.error(f"Failed to write page {page} (write returned False)")
                     return False
                 elif result is None:
-                    logger.debug(f"Write returned None for page {page} - assuming success")
+                    logger.debug(
+                        f"Write returned None for page {page} - assuming success"
+                    )
                 # If result is True or any other truthy value, continue
 
             except TypeError as e:
@@ -420,7 +424,9 @@ class NFCReader:
                     return False
 
             except Exception as e:
-                logger.error(f"Unexpected error writing page {page}: {type(e).__name__}: {e}")
+                logger.error(
+                    f"Unexpected error writing page {page}: {type(e).__name__}: {e}"
+                )
                 return False
 
             page += 1

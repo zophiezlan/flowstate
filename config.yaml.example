@@ -62,6 +62,9 @@ shutdown_button:
   
   # Hold time in seconds to trigger shutdown
   hold_time: 3.0
+  
+  # Shutdown delay in minutes (0 for immediate shutdown)
+  delay_minutes: 1
 
 logging:
   # Log file path
