@@ -73,7 +73,10 @@ class ButtonHandler:
             return
 
         self.running = True
-        self.monitor_thread = threading.Thread(target=self._monitor_button, daemon=True)
+        # Use non-daemon thread to ensure proper cleanup during shutdown
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_button, daemon=False
+        )
         self.monitor_thread.start()
         logger.info("Button monitoring started")
 
@@ -121,7 +124,17 @@ class ButtonHandler:
                 time.sleep(1)
 
     def _trigger_shutdown(self):
-        """Execute shutdown sequence"""
+        """
+        Execute shutdown sequence
+
+        Security Note: This uses 'sudo shutdown' which requires passwordless sudo
+        for the shutdown command. Configure in /etc/sudoers.d/tap-station:
+
+            # Allow tap-station user to shutdown without password
+            username ALL=(ALL) NOPASSWD: /sbin/shutdown
+
+        Replace 'username' with your actual username (e.g., 'pi').
+        """
         logger.warning("SHUTDOWN TRIGGERED BY BUTTON")
 
         # Call shutdown callback if provided (e.g., cleanup)
@@ -136,6 +149,7 @@ class ButtonHandler:
         try:
             logger.warning("Executing system shutdown command...")
             # Use shutdown command with 1 minute delay for safety
+            # This requires passwordless sudo for /sbin/shutdown
             subprocess.run(
                 ["sudo", "shutdown", "-h", "+1", "Shutdown triggered by button"],
                 check=True,
@@ -144,7 +158,10 @@ class ButtonHandler:
                 "Shutdown scheduled in 1 minute (cancel with: sudo shutdown -c)"
             )
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to execute shutdown command: {e}")
+            logger.error(
+                f"Failed to execute shutdown command: {e}. "
+                "Ensure passwordless sudo is configured for shutdown."
+            )
         except FileNotFoundError:
             logger.error("shutdown command not found (not on Linux?)")
 

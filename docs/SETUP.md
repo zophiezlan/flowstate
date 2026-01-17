@@ -429,6 +429,22 @@ web_server:
   port: 8080
 ```
 
+**Configure shutdown button passwordless sudo (if enabled):**
+
+If you enabled the shutdown button, configure passwordless sudo for safe shutdowns:
+
+```bash
+sudo visudo -f /etc/sudoers.d/tap-station
+```
+
+Add this line (replace `pi` with your username):
+
+```
+pi ALL=(ALL) NOPASSWD: /sbin/shutdown
+```
+
+Save and exit. This allows the shutdown button to work without password prompts.
+
 Save and exit: `Ctrl+X`, `Y`, `Enter`
 
 ---

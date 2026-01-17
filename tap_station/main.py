@@ -237,17 +237,10 @@ class TapStation:
 
     def _shutdown_callback(self):
         """Callback executed when shutdown button is pressed"""
-        self.logger.warning("Shutdown button callback - cleaning up resources...")
-        
-        # Stop the main loop
+        self.logger.warning("Shutdown button pressed - stopping service...")
+
+        # Stop the main loop to allow graceful shutdown
         self.running = False
-        
-        # Cleanup resources
-        if self.db:
-            self.db.close()
-        
-        if self.feedback:
-            self.feedback.cleanup()
 
     def get_stats(self) -> dict:
         """Get current station statistics"""
@@ -294,7 +287,8 @@ def main():
             cli_logger.info("\nRecent Events:")
             for event in stats["recent_events"]:
                 cli_logger.info(
-                    f"  {event['timestamp']} - Token {event['token_id']} at {event['stage']}"
+                    f"  {event['timestamp']} - "
+                    f"Token {event['token_id']} at {event['stage']}"
                 )
             return 0
 
