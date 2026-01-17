@@ -1,7 +1,8 @@
 """Tests for NFC reader"""
 
 import time
-from tap_station.nfc_reader import MockNFCReader
+from unittest.mock import patch
+from tap_station.nfc_reader import NFCReader, MockNFCReader
 
 
 def test_mock_reader_initialization():
@@ -113,3 +114,23 @@ def test_mock_write():
     # Mock write always succeeds
     success = reader.write_token_id("001")
     assert success is True
+
+
+def test_write_ntag_pages_accepts_data_argument():
+    """Ensure write supports (page, data) signature used by pn532pi"""
+    class DummyPn532:
+        def __init__(self):
+            self.calls = []
+
+        def mifareultralight_WritePage(self, page, data):
+            self.calls.append((page, data))
+            assert isinstance(data, (bytes, bytearray))
+            assert len(data) == 4
+            return True
+
+    with patch.object(NFCReader, "_setup_reader", lambda self: None):
+        reader = NFCReader()
+    reader.pn532 = DummyPn532()
+
+    assert reader._write_ntag_pages(4, b"ABCD") is True
+    assert reader.pn532.calls == [(4, b"ABCD")]
