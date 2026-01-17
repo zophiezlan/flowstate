@@ -468,6 +468,48 @@ class StatusWebServer:
                 logger.error(f"Export failed: {e}")
                 return jsonify({"error": str(e)}), 500
 
+        @self.app.route("/api/card-lookup")
+        def api_card_lookup():
+            """Look up current status and journey for a card"""
+            try:
+                token_id = request.args.get("token_id", "").strip()
+                if not token_id:
+                    return jsonify({"error": "Token ID required"}), 400
+
+                card_info = self._get_card_status(token_id)
+                return jsonify(card_info), 200
+
+            except Exception as e:
+                logger.error(f"Card lookup failed: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/control/backup-database")
+        def api_backup_database():
+            """Download full database backup"""
+            try:
+                from flask import send_file
+                from datetime import datetime
+
+                # Create backup filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                session_id = self.config.session_id
+                backup_filename = f"tap_station_backup_{session_id}_{timestamp}.db"
+
+                # Get database path
+                db_path = self.db.db_path
+
+                # Send file directly (Flask handles the streaming)
+                return send_file(
+                    db_path,
+                    mimetype="application/x-sqlite3",
+                    as_attachment=True,
+                    download_name=backup_filename,
+                )
+
+            except Exception as e:
+                logger.error(f"Database backup failed: {e}")
+                return jsonify({"error": str(e)}), 500
+
         @self.app.route("/public")
         def public_display():
             """Public-facing queue status display"""
@@ -1963,6 +2005,128 @@ class StatusWebServer:
                 "error": str(e),
                 "processed": 0,
                 "success_count": 0,
+            }
+
+    def _get_card_status(self, token_id: str) -> dict:
+        """
+        Get current status and full journey for a card
+
+        Args:
+            token_id: Token ID to lookup
+
+        Returns:
+            Dictionary with card status and journey information
+        """
+        session_id = self.config.session_id
+        now = datetime.now(timezone.utc)
+
+        try:
+            # Get all events for this card in current session
+            cursor = self.db.conn.execute(
+                """
+                SELECT stage, timestamp, device_id
+                FROM events
+                WHERE session_id = ? AND token_id = ?
+                ORDER BY timestamp ASC
+            """,
+                (session_id, token_id),
+            )
+
+            events = cursor.fetchall()
+
+            if not events:
+                return {
+                    "found": False,
+                    "token_id": token_id,
+                    "message": "Card not found in current session",
+                }
+
+            # Determine current stage (last event)
+            last_event = events[-1]
+            current_stage = last_event["stage"]
+            current_stage_time = last_event["timestamp"]
+
+            # Calculate time in current stage
+            try:
+                if current_stage_time.endswith("Z"):
+                    stage_dt = datetime.fromisoformat(
+                        current_stage_time.replace("Z", "+00:00")
+                    )
+                else:
+                    stage_dt = datetime.fromisoformat(current_stage_time)
+                    if stage_dt.tzinfo is None:
+                        stage_dt = stage_dt.replace(tzinfo=timezone.utc)
+
+                time_in_stage = int((now - stage_dt).total_seconds() / 60)
+            except Exception as e:
+                logger.warning(f"Could not parse timestamp for card {token_id}: {e}")
+                time_in_stage = 0
+
+            # Build journey timeline
+            journey = []
+            for event in events:
+                journey.append(
+                    {
+                        "stage": event["stage"],
+                        "timestamp": event["timestamp"],
+                        "device": event["device_id"],
+                    }
+                )
+
+            # Determine status message
+            status_map = {
+                "QUEUE_JOIN": "In Queue",
+                "SERVICE_START": "Being Served",
+                "EXIT": "Completed",
+            }
+            status = status_map.get(current_stage, current_stage)
+
+            # Calculate total time if completed
+            total_time = None
+            if current_stage == "EXIT" and len(events) > 1:
+                try:
+                    first_time = events[0]["timestamp"]
+                    if first_time.endswith("Z"):
+                        first_dt = datetime.fromisoformat(
+                            first_time.replace("Z", "+00:00")
+                        )
+                    else:
+                        first_dt = datetime.fromisoformat(first_time)
+                        if first_dt.tzinfo is None:
+                            first_dt = first_dt.replace(tzinfo=timezone.utc)
+
+                    if current_stage_time.endswith("Z"):
+                        last_dt = datetime.fromisoformat(
+                            current_stage_time.replace("Z", "+00:00")
+                        )
+                    else:
+                        last_dt = datetime.fromisoformat(current_stage_time)
+                        if last_dt.tzinfo is None:
+                            last_dt = last_dt.replace(tzinfo=timezone.utc)
+
+                    total_time = int((last_dt - first_dt).total_seconds() / 60)
+                except Exception as e:
+                    logger.warning(f"Could not calculate total time: {e}")
+
+            return {
+                "found": True,
+                "token_id": token_id,
+                "status": status,
+                "current_stage": current_stage,
+                "time_in_stage_minutes": time_in_stage,
+                "current_stage_timestamp": current_stage_time,
+                "journey": journey,
+                "total_events": len(events),
+                "total_time_minutes": total_time,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get card status for {token_id}: {e}")
+            return {
+                "found": False,
+                "token_id": token_id,
+                "error": str(e),
+                "message": "Error retrieving card status",
             }
 
     def run(self, host="0.0.0.0", port=8080):

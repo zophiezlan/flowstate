@@ -504,13 +504,10 @@
             <div class="description">Export events to CSV</div>
           </button>
 
-          <button
-            class="control-button"
-            onclick="executeCommand('backup-database')"
-          >
+          <button class="control-button" onclick="downloadBackup()">
             <div class="icon">💾</div>
-            <div class="title">Backup Database</div>
-            <div class="description">Create database backup</div>
+            <div class="title">Download Backup</div>
+            <div class="description">Download full database backup</div>
           </button>
 
           <button
@@ -981,6 +978,25 @@
         } catch (error) {
           showToast("Request failed: " + error.message, "error");
         }
+      }
+
+      // Download database backup
+      function downloadBackup() {
+        showToast("Preparing database backup...", "info");
+
+        // Trigger download
+        const url = "/api/control/backup-database";
+        const link = document.createElement("a");
+        link.href = url;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up and show success after short delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+          showToast("Database backup download started", "success");
+        }, 500);
       }
     </script>
   </body>

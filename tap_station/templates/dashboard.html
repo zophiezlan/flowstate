@@ -428,6 +428,132 @@
         font-size: 13px;
         margin-right: 10px;
       }
+
+      /* Card Lookup */
+      .card-lookup {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .card-lookup h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 18px;
+      }
+
+      .search-box {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .search-box input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .search-box button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .search-box button:hover {
+        background: #5568d3;
+      }
+
+      .card-result {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+
+      .card-result.not-found {
+        border-left-color: #f59e0b;
+      }
+
+      .card-result.completed {
+        border-left-color: #10b981;
+      }
+
+      .card-status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+      }
+
+      .card-status-badge.in-queue {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .card-status-badge.in-service {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .card-status-badge.completed {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .journey-timeline {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .journey-event {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 13px;
+        color: #666;
+      }
+
+      .journey-event .stage-icon {
+        width: 24px;
+        height: 24px;
+        background: #667eea;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        margin-right: 10px;
+        flex-shrink: 0;
+      }
+
+      .journey-event.exit .stage-icon {
+        background: #10b981;
+      }
+
+      .journey-event.service .stage-icon {
+        background: #3b82f6;
+      }
     </style>
   </head>
   <body>
@@ -473,6 +599,21 @@
 
       <!-- Operational Alerts -->
       <div id="alerts-container" style="margin-bottom: 20px"></div>
+
+      <!-- Card Lookup -->
+      <div class="card-lookup">
+        <h3>🔍 Card Status Lookup</h3>
+        <div class="search-box">
+          <input
+            type="text"
+            id="card-search-input"
+            placeholder="Enter Token ID (e.g., ABC123)"
+            onkeypress="if (event.key === 'Enter') lookupCard();"
+          />
+          <button onclick="lookupCard()">Search</button>
+        </div>
+        <div id="card-result" style="display: none"></div>
+      </div>
 
       <!-- Statistics Cards -->
       <div class="stats-grid">
@@ -908,6 +1049,117 @@
         document.body.removeChild(link);
 
         console.log(`Export ${filterName} completed`);
+      }
+
+      // Card lookup function
+      async function lookupCard() {
+        const input = document.getElementById("card-search-input");
+        const resultDiv = document.getElementById("card-result");
+        const tokenId = input.value.trim();
+
+        if (!tokenId) {
+          resultDiv.style.display = "block";
+          resultDiv.innerHTML =
+            '<div class="card-result not-found">⚠️ Please enter a Token ID</div>';
+          return;
+        }
+
+        // Show loading
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = '<div class="card-result">🔍 Searching...</div>';
+
+        try {
+          const response = await fetch(
+            `/api/card-lookup?token_id=${encodeURIComponent(tokenId)}`,
+          );
+          const data = await response.json();
+
+          if (!data.found) {
+            resultDiv.innerHTML = `
+              <div class="card-result not-found">
+                <strong>❌ Card Not Found</strong><br>
+                <span style="color: #666;">Token ID "${tokenId}" has no events in this session.</span>
+              </div>
+            `;
+            return;
+          }
+
+          // Build status display
+          const statusBadgeClass =
+            data.current_stage === "EXIT"
+              ? "completed"
+              : data.current_stage === "SERVICE_START"
+                ? "in-service"
+                : "in-queue";
+          const resultClass = data.current_stage === "EXIT" ? "completed" : "";
+
+          let html = `
+            <div class="card-result ${resultClass}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                  <strong>Token ID: ${data.token_id}</strong>
+                  <span class="card-status-badge ${statusBadgeClass}">${data.status}</span>
+                </div>
+                <div style="color: #666; font-size: 13px;">
+                  ${data.time_in_stage_minutes} min in current stage
+                </div>
+              </div>
+          `;
+
+          // Show total time if completed
+          if (data.total_time_minutes !== null) {
+            html += `<div style="color: #666; font-size: 13px; margin-bottom: 10px;">
+              Total time: ${data.total_time_minutes} minutes
+            </div>`;
+          }
+
+          // Build journey timeline
+          if (data.journey && data.journey.length > 0) {
+            html += '<div class="journey-timeline"><strong>Journey:</strong>';
+            data.journey.forEach((event, index) => {
+              const icon =
+                event.stage === "EXIT"
+                  ? "✓"
+                  : event.stage === "SERVICE_START"
+                    ? "👤"
+                    : "📥";
+              const eventClass =
+                event.stage === "EXIT"
+                  ? "exit"
+                  : event.stage === "SERVICE_START"
+                    ? "service"
+                    : "";
+              const time = new Date(event.timestamp).toLocaleTimeString();
+              const device =
+                event.device !== "manual_force_exit"
+                  ? event.device
+                  : `${event.device} (forced)`;
+
+              html += `
+                <div class="journey-event ${eventClass}">
+                  <div class="stage-icon">${icon}</div>
+                  <div style="flex: 1;">
+                    <strong>${event.stage}</strong><br>
+                    <span style="color: #999; font-size: 12px;">
+                      ${time} • ${device}
+                    </span>
+                  </div>
+                </div>
+              `;
+            });
+            html += "</div>";
+          }
+
+          html += "</div>";
+          resultDiv.innerHTML = html;
+        } catch (error) {
+          resultDiv.innerHTML = `
+            <div class="card-result not-found">
+              <strong>❌ Error</strong><br>
+              <span style="color: #666;">${error.message}</span>
+            </div>
+          `;
+        }
       }
     </script>
   </body>
