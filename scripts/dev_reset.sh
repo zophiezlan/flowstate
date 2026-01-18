@@ -1,6 +1,10 @@
 #!/bin/bash
 # Development Reset Script
 # Stops all services, kills processes, and resets I2C for clean dev environment
+#
+# NOTE: As of v2.2.2+, most scripts now automatically handle cleanup!
+#       You usually don't need to run this manually anymore.
+#       This script is kept for edge cases and manual troubleshooting.
 
 set -e
 

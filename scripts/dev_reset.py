@@ -2,6 +2,10 @@
 """
 Quick development reset utility (no sudo required)
 Kills processes and checks status without needing root privileges
+
+NOTE: As of v2.2.2+, most scripts now automatically handle cleanup!
+      You usually don't need to run this manually anymore.
+      This script is kept for edge cases and manual troubleshooting.
 """
 
 import os
