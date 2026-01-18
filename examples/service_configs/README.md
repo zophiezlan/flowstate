@@ -27,7 +27,7 @@ This directory contains example service configurations for different types of fe
 ### 2. Comprehensive Service (`comprehensive_service.yaml`)
 **Use case:** Large festival with full harm reduction program
 
-**Workflow:** Queue → Intake → Testing → Results → Exit (5 stages)
+**Workflow:** Queue → Intake → Testing → Results → Substance Returned → Exit (6 stages)
 
 **Characteristics:**
 - Multi-stage workflow with detailed tracking
@@ -36,16 +36,45 @@ This directory contains example service configurations for different types of fe
 - Shift management enabled
 - Advanced analytics
 - Hidden internal stages (testing) from public view
+- **Substance return confirmation for accountability**
 
 **Best for:**
 - Large festivals (> 2,000 people)
 - Services with specialized staff roles
 - Detailed substance analysis programs
 - Services requiring comprehensive data collection
+- Services where accountability is critical
 
 ---
 
-### 3. Multi-Location Festival (`multi_location_festival.yaml`)
+### 3. Substance Return Tracking (`substance_return_tracking.yaml`)
+**Use case:** Services requiring accountability for substance custody and return
+
+**Workflow:** Queue → Service Start → Substance Returned → Exit (4 stages)
+
+**Characteristics:**
+- Substance return confirmation stage
+- Alerts for unreturned substances
+- Audit trail for accountability
+- Incident prevention focus
+- Staff accountability tracking
+
+**Best for:**
+- Services where trust is paramount
+- Preventing "left behind" incidents
+- Legal/insurance requirements for custody chain
+- Services with history of substance loss incidents
+- Building participant confidence
+
+**Key Features:**
+- Alerts if substances not returned within threshold time
+- Dashboard shows "awaiting return" status
+- Shift handoff includes unreturned substance review
+- Complete audit trail for all substance movements
+
+---
+
+### 4. Multi-Location Festival (`multi_location_festival.yaml`)
 **Use case:** Large festival with services at multiple locations
 
 **Workflow:** Queue → Service Start → Exit (3 stages)

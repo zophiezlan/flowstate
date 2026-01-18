@@ -20,6 +20,7 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 
 - **🚀 [Setup Guide](docs/SETUP.md)** - Hardware wiring & software installation
 - **⚙️ [Service Configuration Guide](docs/SERVICE_CONFIGURATION.md)** - **NEW!** Customize for your festival service
+- **🤝 [Substance Return Confirmation](docs/SUBSTANCE_RETURN_CONFIRMATION.md)** - **NEW!** Accountability for substance handback
 - **📱 [Mobile App Guide](docs/MOBILE.md)** - Use Android phones instead of Raspberry Pis
 - **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
 - **✅ [Pre-Deployment Checklist](docs/PRE_DEPLOYMENT_CHECKLIST.md)** - Ensure you're ready before your event
@@ -29,9 +30,19 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
 - **💻 [Contributing](CONTRIBUTING.md)** - For developers
 
-## What's New (v2.2.1)
+## What's New (v2.3)
 
-**🚀 Quick Wins for Event Operations:**
+**🤝 Substance Return Confirmation:**
+
+- **Substance Return Tracking** - Track when participants' substances are returned after testing
+- **Accountability & Trust** - Prevent "left behind" incidents with formal confirmation system
+- **Unreturned Substance Alerts** - Proactive alerts when substances not returned within threshold
+- **Audit Trail** - Complete timestamped record of substance custody and handback
+- **Configurable Workflow** - Add SUBSTANCE_RETURNED stage to any service workflow
+
+See [Substance Return Confirmation Guide](docs/SUBSTANCE_RETURN_CONFIRMATION.md) for setup and best practices.
+
+**v2.2.1 - Quick Wins for Event Operations:**
 
 - **Force-Exit Tool** - Mark stuck cards as exited in bulk at end of events (Control Panel)
 - **Real-Time Export** - One-click CSV downloads directly from dashboard (no SSH needed)

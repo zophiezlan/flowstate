@@ -1,0 +1,374 @@
+# ============================================================================
+# EXAMPLE: Drug Checking Service with Substance Return Confirmation
+# ============================================================================
+# This configuration adds substance return tracking to the workflow.
+# This is a critical safety and accountability feature that ensures:
+#   - Participants receive their substances back
+#   - Staff confirm handback occurred
+#   - Audit trail prevents "left behind" incidents
+#   - Builds trust between participants and service providers
+#
+# Use case: Services where accountability and incident prevention are critical
+# ============================================================================
+
+service:
+  name: "Drug Checking with Return Confirmation"
+  description: "Comprehensive Harm Reduction with Accountability"
+  type: "festival"
+  organization: "Safer Community Services"
+  contact:
+    display: true
+    info: "Ask any peer worker for assistance"
+  hours:
+    display: true
+    schedule: "12:00 PM - 2:00 AM"
+    timezone: "UTC"
+
+# 4-stage workflow with substance return confirmation
+workflow:
+  stages:
+    - id: "QUEUE_JOIN"
+      label: "Queue"
+      description: "Participant joins queue with substance"
+      order: 1
+      required: true
+      visible_to_public: true
+      duration_estimate: 0
+      icon: "⏰"
+
+    - id: "SERVICE_START"
+      label: "Service Started"
+      description: "Staff receives substance and begins testing"
+      order: 2
+      required: true
+      visible_to_public: true
+      duration_estimate: 8
+      icon: "🔬"
+
+    - id: "SUBSTANCE_RETURNED"
+      label: "Substance Returned"
+      description: "Staff confirms substance handed back to participant"
+      order: 3
+      required: true  # CRITICAL: Make this required for accountability
+      visible_to_public: true
+      duration_estimate: 1
+      icon: "🤝"
+
+    - id: "EXIT"
+      label: "Complete"
+      description: "Participant exits with substance"
+      order: 4
+      required: true
+      visible_to_public: true
+      duration_estimate: 0
+      icon: "✅"
+
+  allow_skip_stages: false  # Don't allow skipping substance return!
+  allow_repeat_stages: false
+  enforce_stage_order: true
+
+# Capacity settings
+capacity:
+  people_per_hour: 12
+  avg_service_minutes: 10  # Includes return confirmation
+  default_wait_estimate: 20
+  queue_multiplier: 2
+
+  peak_hours:
+    enabled: true
+    ranges:
+      - start: "21:00"
+        end: "01:00"
+
+# Critical alerts for unreturned substances
+alerts:
+  queue:
+    warning_threshold: 10
+    critical_threshold: 20
+
+  wait_time:
+    warning_minutes: 45
+    critical_minutes: 90
+
+  service_inactivity:
+    warning_minutes: 5
+    critical_minutes: 10
+
+  stuck_cards:
+    threshold_hours: 2
+
+  # CRITICAL: Alert if substances not returned
+  unreturned_substances:
+    warning_minutes: 15  # Alert after 15 min without return confirmation
+    critical_minutes: 30  # Critical alert after 30 min
+
+  service_time_variance:
+    multiplier: 3
+
+  messages:
+    queue_warning: "{count} people waiting - monitor flow"
+    queue_critical: "LONG QUEUE: {count} people - add staff or lanes"
+    wait_warning: "Wait time approximately {minutes} min"
+    wait_critical: "Wait time very long ({minutes} min) - urgent action needed"
+    inactivity_warning: "No service activity for {minutes} minutes"
+    inactivity_critical: "Service appears stopped - {minutes} minutes inactive"
+    # Substance return specific alerts
+    unreturned_substance_warning: "⚠️ Substance not returned: Token {token} ({minutes} min)"
+    unreturned_substance_critical: "🚨 URGENT: Substance unreturned for {minutes} min - Token {token}"
+
+ui:
+  labels:
+    queue_count: "in queue"
+    wait_time: "estimated wait"
+    served_today: "people served today"
+    avg_service_time: "avg time"
+    service_status: "status"
+    current_queue: "Current Status"
+    recent_completions: "Recently Completed"
+    # Substance tracking labels
+    awaiting_return: "awaiting substance return"
+    substances_returned_today: "substances returned today"
+
+  branding:
+    show_logo: false
+    color_scheme: "default"
+
+  public_display:
+    show_queue_positions: true
+    show_wait_estimates: true
+    show_served_count: true
+    show_avg_time: true
+    show_service_hours: true
+    refresh_interval_seconds: 5
+
+  dashboard:
+    show_individual_queue_positions: true
+    max_recent_events: 20
+    max_recent_completions: 15
+    analytics_history_hours: 12
+
+# Staffing with accountability focus
+staffing:
+  require_staff_id: true  # Track which staff handled substance return
+
+  roles:
+    - id: "peer_worker"
+      label: "Peer Worker"
+      description: "Front-line service & substance handling"
+      permissions:
+        - "scan_nfc"
+        - "view_queue"
+        - "confirm_substance_return"
+
+    - id: "coordinator"
+      label: "Coordinator"
+      description: "Shift supervisor"
+      permissions:
+        - "scan_nfc"
+        - "view_queue"
+        - "view_dashboard"
+        - "confirm_substance_return"
+        - "force_exit_participant"
+        - "view_unreturned_substances"
+
+    - id: "admin"
+      label: "Administrator"
+      description: "System administrator"
+      permissions:
+        - "*"
+
+  shifts:
+    enabled: true
+    duration_hours: 4
+    handoff_checklist:
+      - "Review current queue status"
+      - "Check for unreturned substances"
+      - "Confirm all substances accounted for"
+      - "Note any incidents or issues"
+
+# Single location with multiple stations
+locations:
+  multi_location: false
+
+  sites:
+    - id: "main"
+      name: "Main Service Area"
+      description: "Primary drug checking location"
+      enabled: true
+      stations:
+        - device_id: "station1"
+          description: "Queue Entry - QUEUE_JOIN"
+        - device_id: "station2"
+          description: "Testing Station - SERVICE_START"
+        - device_id: "station3"
+          description: "Return Confirmation - SUBSTANCE_RETURNED"
+        - device_id: "station4"
+          description: "Exit Station - EXIT"
+
+  shared_queue: false
+  show_all_locations: true
+
+# Data collection for accountability
+data_collection:
+  standard_fields:
+    - token_id
+    - uid
+    - stage
+    - timestamp
+    - device_id
+    - session_id
+    # Note: staff_id would require additional implementation
+    # Currently system tracks device_id to identify who performed action
+
+  custom_fields:
+    enabled: true
+    fields:
+      - id: "staff_id"
+        label: "Staff Member ID"
+        type: "text"
+        required_at_stages: ["SUBSTANCE_RETURNED"]
+        
+      - id: "staff_notes"
+        label: "Staff Notes"
+        type: "textarea"
+        required_at_stages: ["SUBSTANCE_RETURNED"]
+
+  # Keep data for audit trail
+  anonymize_data: false
+  data_retention_days: 365  # Keep for full year for incident review
+
+# Metrics focused on accountability
+metrics:
+  windows:
+    recent_events: 20
+    recent_completions: 15
+    activity_history_hours: 12
+    shift_summary_hours: 4
+    wait_time_sample_size: 20
+
+  targets:
+    max_wait_time_minutes: 30
+    min_people_per_hour: 10
+    max_queue_length: 15
+    # Substance return targets
+    max_unreturned_time_minutes: 20
+    substance_return_rate_percent: 100  # Aim for 100% return confirmation
+
+  export:
+    enabled: true
+    formats: ["csv", "json"]
+    schedule: "daily"
+    destination: "./exports"
+
+# Integration for incident reporting
+integrations:
+  webhooks:
+    enabled: false
+    endpoints: []
+    # Example: Send alerts for unreturned substances
+    # - url: "https://your-incident-system.com/webhook"
+    #   events: ["unreturned_substance_critical"]
+    #   auth_header: "Bearer YOUR_TOKEN"
+
+  analytics:
+    enabled: false
+    provider: null
+    tracking_id: ""
+
+  api:
+    enabled: false
+    require_auth: true
+    rate_limit_per_minute: 60
+
+# Hardware configuration
+hardware:
+  nfc:
+    duplicate_detection_window_seconds: 1
+    success_beep_pattern: [0.1, 0.1, 0.1]
+    error_beep_pattern: [0.5]
+    duplicate_beep_pattern: [0.1, 0.1, 0.1, 0.1, 0.1]
+
+  feedback:
+    audio_enabled: true
+    visual_enabled: true
+    haptic_enabled: false
+
+  readers:
+    max_concurrent: 4  # One for each stage
+    auto_detect: true
+
+# Security and audit
+security:
+  authentication:
+    enabled: true
+    method: "simple"
+
+  access_control:
+    public_display_auth: false
+    dashboard_auth: true
+    admin_auth: true
+
+  audit:
+    enabled: true
+    log_level: "info"
+    retention_days: 365
+
+  network:
+    cors_enabled: true
+    allowed_origins: ["*"]
+    https_only: false
+
+# Advanced settings
+advanced:
+  database:
+    wal_mode: true
+    checkpoint_interval: 1000
+
+  performance:
+    cache_enabled: true
+    cache_ttl_seconds: 300
+    async_processing: true
+
+  debug:
+    enabled: false
+    verbose_logging: false
+    show_debug_info: false
+
+  features:
+    experimental_ui: false
+    advanced_analytics: true
+    predictive_wait_times: false
+    substance_return_tracking: true  # Enable substance return features
+
+# ============================================================================
+# OPERATIONAL NOTES
+# ============================================================================
+# 
+# Station Setup:
+# - Station 1: Entry point (QUEUE_JOIN)
+# - Station 2: Testing area (SERVICE_START) - staff receives substance
+# - Station 3: Return confirmation (SUBSTANCE_RETURNED) - staff hands back substance
+# - Station 4: Exit point (EXIT)
+#
+# Staff Workflow:
+# 1. Participant taps at entry (Station 1)
+# 2. Staff taps card when receiving substance (Station 2)
+# 3. Staff performs testing/analysis
+# 4. Staff taps card when handing substance back (Station 3) ← CRITICAL STEP
+# 5. Participant taps at exit (Station 4)
+#
+# Benefits:
+# - Creates audit trail of substance custody
+# - Prevents "left behind" incidents
+# - Builds participant trust
+# - Provides data for accountability
+# - Alerts staff if return confirmation is delayed
+#
+# Best Practices:
+# - Train ALL staff on substance return protocol
+# - Make Station 3 easy to access
+# - Monitor "unreturned substances" alerts actively
+# - Review unreturned substance reports at shift handoff
+# - Document any incidents where substances not returned
+#
+# ============================================================================

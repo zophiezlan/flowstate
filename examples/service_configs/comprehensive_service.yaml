@@ -64,10 +64,19 @@ workflow:
       duration_estimate: 8
       icon: "💬"
 
+    - id: "SUBSTANCE_RETURNED"
+      label: "Substance Returned"
+      description: "Substance handed back to participant (confirmation)"
+      order: 5
+      required: true
+      visible_to_public: true
+      duration_estimate: 1
+      icon: "🤝"
+
     - id: "EXIT"
       label: "Complete"
       description: "Service complete"
-      order: 5
+      order: 6
       required: true
       visible_to_public: true
       duration_estimate: 0
@@ -106,6 +115,10 @@ alerts:
 
   stuck_cards:
     threshold_hours: 3  # Allow more time for complex workflow
+
+  unreturned_substances:
+    warning_minutes: 20  # Alert if substance not returned after results discussion
+    critical_minutes: 40
 
   service_time_variance:
     multiplier: 4  # More variance expected with detailed process

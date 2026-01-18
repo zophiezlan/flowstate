@@ -1,6 +1,6 @@
 # 3-Stage Service Tracking Guide
 
-**Version:** 2.2  
+**Version:** 2.3  
 **Date:** January 18, 2026  
 **Feature:** Enhanced service flow tracking
 
@@ -27,6 +27,17 @@ QUEUE_JOIN ──────► SERVICE_START ──────► EXIT
 ```
 
 **Benefit:** Know exactly where time is spent
+
+### Optional 4-Stage System with Substance Return
+
+```
+QUEUE_JOIN ──────► SERVICE_START ──────► SUBSTANCE_RETURNED ──────► EXIT
+     └── Queue Wait ──┘  └── Service Time ──┘  └── Return Confirm ──┘
+```
+
+**Benefit:** Track substance custody and ensure accountability
+
+👉 **For substance return tracking, see [Substance Return Confirmation Guide](SUBSTANCE_RETURN_CONFIRMATION.md)**
 
 ---
 

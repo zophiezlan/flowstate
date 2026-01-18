@@ -40,7 +40,8 @@ service:
 workflow:
   # Example 1: Simple two-stage workflow (join queue → exit)
   # Example 2: Three-stage workflow (join → service start → exit)
-  # Example 3: Complex workflow (intake → consultation → testing → results → exit)
+  # Example 3: Four-stage workflow with substance return (join → service start → substance returned → exit)
+  # Example 4: Complex workflow (intake → consultation → testing → results → exit)
 
   stages:
     - id: "QUEUE_JOIN"
@@ -61,10 +62,19 @@ workflow:
       duration_estimate: 5
       icon: "🔬"
 
+    - id: "SUBSTANCE_RETURNED"
+      label: "Substance Returned"
+      description: "Substance handed back to participant"
+      order: 3
+      required: false  # Optional but recommended for accountability
+      visible_to_public: true
+      duration_estimate: 1
+      icon: "🤝"
+
     - id: "EXIT"
       label: "Service Complete"
       description: "Participant completes service"
-      order: 3
+      order: 4
       required: true
       visible_to_public: true
       duration_estimate: 0
@@ -163,6 +173,10 @@ alerts:
   stuck_cards:
     threshold_hours: 2   # Card hasn't exited after this many hours
 
+  unreturned_substances:
+    warning_minutes: 15  # Alert if substance not returned 15 min after SERVICE_START
+    critical_minutes: 30  # Critical alert 30 min after SERVICE_START
+
   service_time_variance:
     # Alert if max service time > average * this multiplier
     multiplier: 3
@@ -183,6 +197,8 @@ alerts:
     wait_critical: "Estimated wait time is very high ({minutes} min)"
     inactivity_warning: "No service activity for {minutes} minutes"
     inactivity_critical: "Service appears stopped - no activity for {minutes} minutes"
+    unreturned_substance_warning: "Substance not returned for {minutes} minutes - Token {token}"
+    unreturned_substance_critical: "URGENT: Substance not returned for {minutes} minutes - Token {token}"
 
 # ----------------------------------------------------------------------------
 # UI LABELS & DISPLAY TEXT
@@ -501,9 +517,17 @@ advanced:
 #     - {id: "EXIT", label: "Complete", order: 2, required: true}
 
 # PRESET 2: Standard service (join → service → exit)
-# [This is the default configuration above]
+# [See default configuration above]
 
-# PRESET 3: Detailed workflow (intake → consult → test → results → exit)
+# PRESET 3: Service with substance return confirmation (join → service → substance returned → exit)
+# workflow:
+#   stages:
+#     - {id: "QUEUE_JOIN", label: "Joined Queue", order: 1, required: true, duration_estimate: 0}
+#     - {id: "SERVICE_START", label: "Service Started", order: 2, required: true, duration_estimate: 5}
+#     - {id: "SUBSTANCE_RETURNED", label: "Substance Returned", order: 3, required: true, duration_estimate: 1, icon: "🤝"}
+#     - {id: "EXIT", label: "Complete", order: 4, required: true, duration_estimate: 0}
+
+# PRESET 4: Detailed workflow (intake → consult → test → results → substance returned → exit)
 # workflow:
 #   stages:
 #     - {id: "QUEUE_JOIN", label: "Queue", order: 1, required: true, duration_estimate: 0}
@@ -511,4 +535,5 @@ advanced:
 #     - {id: "CONSULT", label: "Consultation", order: 3, required: true, duration_estimate: 5}
 #     - {id: "TESTING", label: "Testing", order: 4, required: true, duration_estimate: 10}
 #     - {id: "RESULTS", label: "Results", order: 5, required: true, duration_estimate: 7}
-#     - {id: "EXIT", label: "Complete", order: 6, required: true, duration_estimate: 0}
+#     - {id: "SUBSTANCE_RETURNED", label: "Substance Returned", order: 6, required: true, duration_estimate: 1, icon: "🤝"}
+#     - {id: "EXIT", label: "Complete", order: 7, required: true, duration_estimate: 0}
