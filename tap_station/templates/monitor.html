@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Queue Monitor - {{ session }}</title>
+    <script src="{{ url_for('static', filename='js/service-config.js') }}"></script>
     <style>
       * {
         margin: 0;
@@ -250,13 +251,13 @@
 
       <div class="primary-stats">
         <div class="stat-big" id="queue-card">
-          <div class="label">People Waiting</div>
+          <div class="label" data-label="queue_count">People Waiting</div>
           <div class="value" id="in-queue">-</div>
           <div class="sub">in queue now</div>
         </div>
 
         <div class="stat-big" id="wait-card">
-          <div class="label">Wait Time</div>
+          <div class="label" data-label="wait_time">Wait Time</div>
           <div class="value" id="wait-time">-</div>
           <div class="sub">minutes (estimated)</div>
         </div>
@@ -270,7 +271,7 @@
         </div>
 
         <div class="stat-small">
-          <div class="label">Served Today</div>
+          <div class="label" data-label="served_today">Served Today</div>
           <div class="value" id="completed">-</div>
           <div class="sub">people</div>
         </div>

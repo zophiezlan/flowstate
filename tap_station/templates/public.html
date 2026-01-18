@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Queue Status - Drug Checking Service</title>
+    <title>Queue Status</title>
+    <script src="{{ url_for('static', filename='js/service-config.js') }}"></script>
     <style>
       * {
         margin: 0;
@@ -164,44 +165,66 @@
     <div class="container">
       <h1>
         <span class="status-indicator" id="status-indicator"></span>
-        Drug Checking Service
+        <span data-service-name>Drug Checking Service</span>
       </h1>
 
       <div id="queue-display">
         <div class="queue-length" id="queue-length">--</div>
-        <div class="queue-label">people in queue</div>
+        <div class="queue-label" data-label="queue_count">people in queue</div>
       </div>
 
       <div class="wait-time" id="wait-time-container">
         <div class="wait-time-value" id="wait-time">--</div>
-        <div class="wait-time-label">estimated wait time</div>
+        <div class="wait-time-label" data-label="wait_time">estimated wait</div>
       </div>
 
       <div class="info-grid">
         <div class="info-card">
           <div class="info-value" id="completed-today">--</div>
-          <div class="info-label">served today</div>
+          <div class="info-label" data-label="served_today">served today</div>
         </div>
 
         <div class="info-card">
           <div class="info-value" id="avg-service">--</div>
-          <div class="info-label">avg service time</div>
+          <div class="info-label" data-label="avg_service_time">avg service time</div>
         </div>
 
         <div class="info-card">
           <div class="info-value" id="status-text">OPEN</div>
-          <div class="info-label">service status</div>
+          <div class="info-label" data-label="service_status">service status</div>
         </div>
       </div>
 
       <div class="footer">
-        Updates every 5 seconds • Session: <span id="session-id">--</span>
+        <span id="refresh-text">Updates every 5 seconds</span> • Session: <span id="session-id">--</span>
       </div>
     </div>
 
     <script>
       let lastUpdate = Date.now();
       const INACTIVE_THRESHOLD = 600000; // 10 minutes
+      let refreshInterval = 5000; // Default 5 seconds
+
+      // Initialize service config and update page title and refresh interval
+      ServiceConfig.init().then(() => {
+        // Update page title with service name
+        document.title = 'Queue Status - ' + ServiceConfig.getServiceName();
+
+        // Get configured refresh interval
+        refreshInterval = ServiceConfig.getRefreshInterval() * 1000;
+
+        // Update footer text
+        const refreshText = document.getElementById('refresh-text');
+        if (refreshText) {
+          refreshText.textContent = `Updates every ${ServiceConfig.getRefreshInterval()} seconds`;
+        }
+
+        // Restart interval with new timing if it changed
+        if (refreshInterval !== 5000) {
+          clearInterval(window.publicDisplayInterval);
+          window.publicDisplayInterval = setInterval(updateDisplay, refreshInterval);
+        }
+      }).catch(console.error);
 
       async function updateDisplay() {
         try {
@@ -246,10 +269,10 @@
 
           if (data.service_active) {
             indicator.className = "status-indicator status-active";
-            statusText.textContent = "OPEN";
+            statusText.textContent = ServiceConfig.getLabel('status_active', 'OPEN');
           } else {
             indicator.className = "status-indicator status-inactive";
-            statusText.textContent = "CLOSED";
+            statusText.textContent = ServiceConfig.getLabel('status_idle', 'CLOSED');
           }
 
           lastUpdate = Date.now();
@@ -260,7 +283,7 @@
           if (Date.now() - lastUpdate > INACTIVE_THRESHOLD) {
             document.getElementById("status-indicator").className =
               "status-indicator status-inactive";
-            document.getElementById("status-text").textContent = "OFFLINE";
+            document.getElementById("status-text").textContent = ServiceConfig.getLabel('status_stopped', 'OFFLINE');
           }
         }
       }
@@ -268,8 +291,8 @@
       // Initial update
       updateDisplay();
 
-      // Auto-refresh every 5 seconds
-      setInterval(updateDisplay, 5000);
+      // Auto-refresh (interval will be updated by ServiceConfig.init())
+      window.publicDisplayInterval = setInterval(updateDisplay, refreshInterval);
     </script>
   </body>
 </html>

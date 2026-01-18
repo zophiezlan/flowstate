@@ -116,7 +116,7 @@ class MobileStore {
 
 const store = new MobileStore();
 
-function saveSettings() {
+async function saveSettings() {
   const settings = {
     sessionId: sessionInput.value.trim(),
     stage: stageSelect.value,
@@ -125,7 +125,55 @@ function saveSettings() {
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   showToast("Settings saved");
+
+  // Reload stages from new Pi URL
+  await loadStagesFromAPI();
+
   return settings;
+}
+
+async function loadStagesFromAPI() {
+  // Try to load stages from Pi URL if configured
+  const piUrl = piUrlInput.value?.trim();
+  if (!piUrl) {
+    console.log("No Pi URL configured, using default stages");
+    return;
+  }
+
+  try {
+    const configUrl = `${piUrl}/api/service-config`;
+    const response = await fetch(configUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const config = await response.json();
+
+    // Update page title with service name
+    const serviceName = config.service_name || "NFC Tap Logger";
+    document.querySelector("h1").textContent = `${serviceName} (Mobile)`;
+
+    // Populate stage dropdown dynamically
+    if (config.workflow_stages && config.workflow_stages.length > 0) {
+      const currentValue = stageSelect.value; // Save current selection
+      stageSelect.innerHTML = ""; // Clear existing options
+
+      config.workflow_stages.forEach((stage) => {
+        const option = document.createElement("option");
+        option.value = stage.id;
+        option.textContent = stage.label;
+        stageSelect.appendChild(option);
+      });
+
+      // Restore previous selection if it still exists
+      if (currentValue && Array.from(stageSelect.options).some(opt => opt.value === currentValue)) {
+        stageSelect.value = currentValue;
+      }
+
+      console.log(`Loaded ${config.workflow_stages.length} stages from ${serviceName}`);
+    }
+  } catch (error) {
+    console.warn("Could not load service config from API:", error);
+    // Keep default stages if API fails
+  }
 }
 
 function loadSettings() {
@@ -445,6 +493,7 @@ clearCacheBtn.addEventListener("click", async () => {
 
 window.addEventListener("DOMContentLoaded", async () => {
   loadSettings();
+  await loadStagesFromAPI(); // Load stages from API after settings are loaded
   updateStats();
   initServiceWorker();
   if (!("NDEFReader" in window)) {

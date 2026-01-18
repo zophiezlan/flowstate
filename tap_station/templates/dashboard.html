@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Live Dashboard - {{ session }}</title>
+    <script src="{{ url_for('static', filename='js/service-config.js') }}"></script>
     <style>
       * {
         margin: 0;
@@ -730,7 +731,7 @@
       <!-- Statistics Cards -->
       <div class="stats-grid">
         <div class="stat-card highlight" id="queue-card">
-          <div class="label">In Queue Now</div>
+          <div class="label" data-label="queue_count">In Queue Now</div>
           <div class="value" id="in-queue">-</div>
           <div class="sub-value">people waiting</div>
         </div>
@@ -742,7 +743,7 @@
         </div>
 
         <div class="stat-card" id="wait-card">
-          <div class="label">Smart Wait Estimate</div>
+          <div class="label" data-label="wait_time">Smart Wait Estimate</div>
           <div class="value">
             <span id="estimated-wait">-</span>
             <span id="wait-confidence" class="confidence-indicator"></span>
@@ -771,13 +772,13 @@
         </div>
 
         <div class="stat-card" id="service-time-card" style="display: none">
-          <div class="label">Avg Service Time</div>
+          <div class="label" data-label="avg_service_time">Avg Service Time</div>
           <div class="value" id="avg-service-time">-</div>
           <div class="sub-value">testing time</div>
         </div>
 
         <div class="stat-card">
-          <div class="label">Completed Today</div>
+          <div class="label" data-label="served_today">Completed Today</div>
           <div class="value" id="completed-today">-</div>
           <div class="sub-value">people served</div>
         </div>
