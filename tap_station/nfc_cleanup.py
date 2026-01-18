@@ -176,6 +176,7 @@ class NFCCleanupManager:
             current_pid = os.getpid()
 
             # Find Python processes with NFC-related patterns
+            # These patterns identify common scripts that use the NFC reader
             patterns = [
                 "tap_station/main.py",
                 "scripts/init_cards",
@@ -193,9 +194,20 @@ class NFCCleanupManager:
                     )
 
                     if result.returncode == 0 and result.stdout.strip():
-                        pids = [int(pid) for pid in result.stdout.strip().split("\n")]
+                        # Parse PIDs, filtering empty lines
+                        pid_lines = [
+                            line.strip()
+                            for line in result.stdout.strip().split("\n")
+                            if line.strip()
+                        ]
+                        
+                        for pid_str in pid_lines:
+                            try:
+                                pid = int(pid_str)
+                            except ValueError:
+                                logger.debug(f"Skipping invalid PID: {pid_str}")
+                                continue
 
-                        for pid in pids:
                             # Skip current process
                             if pid == current_pid:
                                 continue
@@ -233,8 +245,10 @@ class NFCCleanupManager:
 
         for pid, cmdline in processes:
             try:
-                # Send SIGTERM (graceful)
-                os.kill(pid, 15)
+                # Send SIGTERM (graceful shutdown)
+                import signal
+
+                os.kill(pid, signal.SIGTERM)
                 logger.info(f"Sent SIGTERM to PID {pid}: {cmdline[:60]}")
                 killed += 1
             except ProcessLookupError:
@@ -253,24 +267,16 @@ class NFCCleanupManager:
         """Check if I2C device exists and is accessible"""
         # Check for I2C device
         if os.path.exists("/dev/i2c-1"):
-            # Check if we can access it
-            try:
-                with open("/dev/i2c-1", "rb"):
-                    pass
+            # Check if we can access it using os.access()
+            if os.access("/dev/i2c-1", os.R_OK | os.W_OK):
                 return True, "I2C device /dev/i2c-1 accessible"
-            except PermissionError:
+            else:
                 return False, "I2C device exists but no permission (add user to i2c group)"
-            except Exception as e:
-                return False, f"I2C device exists but error accessing: {e}"
         elif os.path.exists("/dev/i2c-0"):
-            try:
-                with open("/dev/i2c-0", "rb"):
-                    pass
+            if os.access("/dev/i2c-0", os.R_OK | os.W_OK):
                 return True, "I2C device /dev/i2c-0 accessible"
-            except PermissionError:
+            else:
                 return False, "I2C device exists but no permission (add user to i2c group)"
-            except Exception as e:
-                return False, f"I2C device exists but error accessing: {e}"
         else:
             return False, "I2C device not found (enable I2C in raspi-config)"
 
