@@ -217,11 +217,17 @@ data_collection:
     - timestamp
     - device_id
     - session_id
-    - staff_id  # Track who handled substance return
+    # Note: staff_id would require additional implementation
+    # Currently system tracks device_id to identify who performed action
 
   custom_fields:
     enabled: true
     fields:
+      - id: "staff_id"
+        label: "Staff Member ID"
+        type: "text"
+        required_at_stages: ["SUBSTANCE_RETURNED"]
+        
       - id: "staff_notes"
         label: "Staff Notes"
         type: "textarea"

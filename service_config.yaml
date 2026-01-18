@@ -174,8 +174,8 @@ alerts:
     threshold_hours: 2   # Card hasn't exited after this many hours
 
   unreturned_substances:
-    warning_minutes: 15  # Substance not returned after service start
-    critical_minutes: 30  # Critical threshold for unreturned substances
+    warning_minutes: 15  # Alert if substance not returned 15 min after SERVICE_START
+    critical_minutes: 30  # Critical alert 30 min after SERVICE_START
 
   service_time_variance:
     # Alert if max service time > average * this multiplier

@@ -399,6 +399,7 @@ When SUBSTANCE_RETURNED stage is enabled:
 
 2. Are any return events logged?
    ```bash
+   # Use database path from your config.yaml (typically data/events.db)
    sqlite3 data/events.db "SELECT COUNT(*) FROM events WHERE stage='SUBSTANCE_RETURNED'"
    ```
 

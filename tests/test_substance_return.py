@@ -234,17 +234,17 @@ def test_unreturned_substance_detection(test_db):
     
     # Query to find participants awaiting substance return
     # (has SERVICE_START but no SUBSTANCE_RETURNED)
+    # Using LEFT JOIN for better performance
     cursor = test_db.conn.execute(
         """
-        SELECT DISTINCT token_id
-        FROM events
-        WHERE session_id = ?
-          AND stage = 'SERVICE_START'
-          AND token_id NOT IN (
-              SELECT token_id 
-              FROM events 
-              WHERE session_id = ? AND stage = 'SUBSTANCE_RETURNED'
-          )
+        SELECT DISTINCT e.token_id
+        FROM events e
+        LEFT JOIN events r ON e.token_id = r.token_id
+                          AND r.session_id = ?
+                          AND r.stage = 'SUBSTANCE_RETURNED'
+        WHERE e.session_id = ?
+          AND e.stage = 'SERVICE_START'
+          AND r.token_id IS NULL
         """,
         (session_id, session_id),
     )
