@@ -16,6 +16,15 @@ import shutil
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, timezone
 
+# Import service configuration integration
+try:
+    from .service_integration import get_service_integration
+    SERVICE_CONFIG_AVAILABLE = True
+except ImportError:
+    SERVICE_CONFIG_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Service configuration not available, using defaults")
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +42,14 @@ class StatusWebServer:
         self.config = config
         self.db = database
         self.app = Flask(__name__)
+
+        # Load service configuration
+        if SERVICE_CONFIG_AVAILABLE:
+            self.svc = get_service_integration()
+            logger.info(f"Service configuration loaded: {self.svc.get_service_name()}")
+        else:
+            self.svc = None
+            logger.warning("Service configuration not available")
 
         # Setup routes
         self._setup_routes()
@@ -290,6 +307,72 @@ class StatusWebServer:
 
             except Exception as e:
                 logger.error(f"API stats failed: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/service-config")
+        def api_service_config():
+            """
+            API endpoint for service configuration
+
+            Returns:
+                JSON with service configuration for frontend use
+            """
+            try:
+                if not self.svc:
+                    # Return default configuration
+                    return jsonify({
+                        "service_name": "Drug Checking Service",
+                        "workflow_stages": [
+                            {"id": "QUEUE_JOIN", "label": "In Queue", "order": 1},
+                            {"id": "SERVICE_START", "label": "Being Served", "order": 2},
+                            {"id": "EXIT", "label": "Completed", "order": 3}
+                        ],
+                        "ui_labels": {
+                            "queue_count": "people in queue",
+                            "wait_time": "estimated wait",
+                            "served_today": "served today",
+                            "avg_service_time": "avg service time",
+                            "service_status": "service status"
+                        },
+                        "display_settings": {
+                            "refresh_interval": 5,
+                            "show_queue_positions": True,
+                            "show_wait_estimates": True,
+                            "show_served_count": True,
+                            "show_avg_time": True
+                        }
+                    }), 200
+
+                # Return actual configuration
+                config = {
+                    "service_name": self.svc.get_service_name(),
+                    "workflow_stages": [
+                        {
+                            "id": stage.id,
+                            "label": stage.label,
+                            "description": stage.description,
+                            "order": stage.order,
+                            "visible_to_public": stage.visible_to_public
+                        }
+                        for stage in self.svc._config.workflow_stages
+                    ] if self.svc._config else [],
+                    "ui_labels": self.svc._config.ui_labels if self.svc._config else {},
+                    "display_settings": {
+                        "refresh_interval": self.svc.get_public_refresh_interval(),
+                        "show_queue_positions": self.svc.show_queue_positions(),
+                        "show_wait_estimates": self.svc.show_wait_estimates(),
+                        "show_served_count": self.svc.show_served_count(),
+                        "show_avg_time": self.svc.show_avg_time()
+                    },
+                    "capacity": {
+                        "people_per_hour": self.svc.get_people_per_hour(),
+                        "avg_service_minutes": self.svc.get_avg_service_minutes()
+                    }
+                }
+                return jsonify(config), 200
+
+            except Exception as e:
+                logger.error(f"API service config failed: {e}")
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/dashboard")
@@ -829,7 +912,9 @@ class StatusWebServer:
             (session_id,),
         )
         in_queue = cursor.fetchone()["count"]
-        estimated_wait_new = avg_wait + (in_queue * 2) if avg_wait > 0 else 20
+        queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
+        default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
+        estimated_wait_new = avg_wait + (in_queue * queue_mult) if avg_wait > 0 else default_wait
 
         # Calculate service uptime (time since first event today)
         cursor = self.db.conn.execute(
@@ -863,40 +948,53 @@ class StatusWebServer:
             (session_id,),
         )
         completed_last_hour = cursor.fetchone()["completed"]
-        # Assume theoretical max of 12 people per hour (5 min per person)
-        capacity_utilization = min(100, int((completed_last_hour / 12) * 100))
+        # Get service capacity from configuration
+        people_per_hour = self.svc.get_people_per_hour() if self.svc else 12
+        capacity_utilization = min(100, int((completed_last_hour / people_per_hour) * 100))
 
         # Generate alerts
         alerts = []
 
+        # Get alert thresholds from configuration
+        queue_warn = self.svc.get_queue_warning_threshold() if self.svc else 10
+        queue_crit = self.svc.get_queue_critical_threshold() if self.svc else 20
+
         # Queue length alerts
-        if in_queue > 10:
+        if in_queue > queue_warn:
+            message = self.svc.get_alert_message('queue_warning', count=in_queue) if self.svc else f"Queue is long ({in_queue} people)"
             alerts.append(
-                {"level": "warning", "message": f"Queue is long ({in_queue} people)"}
+                {"level": "warning", "message": message}
             )
-        if in_queue > 20:
+        if in_queue > queue_crit:
+            message = self.svc.get_alert_message('queue_critical', count=in_queue) if self.svc else f"🚨 Queue critical ({in_queue} people) - consider additional resources"
             alerts.append(
                 {
                     "level": "critical",
-                    "message": f"🚨 Queue critical ({in_queue} people) - consider additional resources",
+                    "message": message,
                 }
             )
 
         # Wait time alerts
-        if longest_wait > 45:
+        wait_warn = self.svc.get_wait_warning_minutes() if self.svc else 45
+        wait_crit = self.svc.get_wait_critical_minutes() if self.svc else 90
+
+        if longest_wait > wait_warn:
+            message = self.svc.get_alert_message('wait_warning', minutes=longest_wait) if self.svc else f"⏱️ Longest wait: {longest_wait} min"
             alerts.append(
-                {"level": "warning", "message": f"⏱️ Longest wait: {longest_wait} min"}
+                {"level": "warning", "message": message}
             )
-        if longest_wait > 90:
+        if longest_wait > wait_crit:
+            message = self.svc.get_alert_message('wait_critical', minutes=longest_wait) if self.svc else f"🚨 Critical wait time: {longest_wait} min"
             alerts.append(
                 {
                     "level": "critical",
-                    "message": f"🚨 Critical wait time: {longest_wait} min",
+                    "message": message,
                 }
             )
 
         # Capacity alerts
-        if capacity_utilization > 90:
+        capacity_crit = self.svc.get_capacity_critical_percent() if self.svc else 90
+        if capacity_utilization > capacity_crit:
             alerts.append({"level": "info", "message": "⚡ Operating near capacity"})
 
         # Check for station inactivity (no events in last 10 minutes)
@@ -913,18 +1011,23 @@ class StatusWebServer:
             last_event_dt = datetime.fromisoformat(row["last_event"])
             minutes_since_last = int((now - last_event_dt).total_seconds() / 60)
 
-            if minutes_since_last > 10 and in_queue > 0:
+            inactivity_crit = self.svc.get_service_inactivity_critical_minutes() if self.svc else 10
+            inactivity_warn = self.svc.get_service_inactivity_warning_minutes() if self.svc else 5
+
+            if minutes_since_last > inactivity_crit and in_queue > 0:
+                message = self.svc.get_alert_message('inactivity_critical', minutes=minutes_since_last) if self.svc else f"⚠️ No activity in {minutes_since_last} min - station may be down!"
                 alerts.append(
                     {
                         "level": "critical",
-                        "message": f"⚠️ No activity in {minutes_since_last} min - station may be down!",
+                        "message": message,
                     }
                 )
-            elif minutes_since_last > 5 and in_queue > 0:
+            elif minutes_since_last > inactivity_warn and in_queue > 0:
+                message = self.svc.get_alert_message('inactivity_warning', minutes=minutes_since_last) if self.svc else f"No taps in {minutes_since_last} min - check stations"
                 alerts.append(
                     {
                         "level": "warning",
-                        "message": f"No taps in {minutes_since_last} min - check stations",
+                        "message": message,
                     }
                 )
 
@@ -950,8 +1053,9 @@ class StatusWebServer:
             avg_time = float(row["avg_time"])
             max_time = float(row["max_time"])
 
-            # Alert if someone took >3x average time (may indicate complex case)
-            if max_time > avg_time * 3 and avg_time > 5:
+            # Alert if someone took more than the configured multiplier of average time
+            variance_multiplier = self.svc.get_service_variance_multiplier() if self.svc else 3
+            if max_time > avg_time * variance_multiplier and avg_time > 5:
                 alerts.append(
                     {
                         "level": "info",
@@ -959,9 +1063,10 @@ class StatusWebServer:
                     }
                 )
 
-        # Check for potential abandonments (people in queue > 2 hours)
+        # Check for potential abandonments (people in queue > threshold hours)
+        stuck_hours = self.svc.get_stuck_cards_threshold_hours() if self.svc else 2
         cursor = self.db.conn.execute(
-            """
+            f"""
             SELECT COUNT(*) as count
             FROM events q
             LEFT JOIN events e
@@ -971,7 +1076,7 @@ class StatusWebServer:
             WHERE q.stage = 'QUEUE_JOIN'
                 AND q.session_id = ?
                 AND e.id IS NULL
-                AND q.timestamp < datetime('now', '-2 hours')
+                AND q.timestamp < datetime('now', '-{stuck_hours} hours')
         """,
             (session_id,),
         )
@@ -980,16 +1085,16 @@ class StatusWebServer:
             alerts.append(
                 {
                     "level": "warning",
-                    "message": f"⚠️ {stuck_count} people in queue >2 hours - possible abandonments or missed exits",
+                    "message": f"⚠️ {stuck_count} people in queue >{stuck_hours} hours - possible abandonments or missed exits",
                 }
             )
 
-        # Queue health assessment
-        if in_queue > 20 or longest_wait > 90:
+        # Queue health assessment (use same thresholds as alerts)
+        if in_queue > queue_crit or longest_wait > wait_crit:
             queue_health = "critical"
-        elif in_queue > 10 or longest_wait > 45:
+        elif in_queue > queue_warn or longest_wait > wait_warn:
             queue_health = "warning"
-        elif in_queue > 5 or longest_wait > 30:
+        elif in_queue > (queue_warn // 2) or longest_wait > (wait_warn // 1.5):
             queue_health = "moderate"
         else:
             queue_health = "good"
@@ -1668,8 +1773,10 @@ class StatusWebServer:
 
         # Calculate estimated wait time
         avg_wait = self._calculate_avg_wait_time(limit=10)
-        # Add buffer based on queue length
-        estimated_wait = avg_wait + (queue_length * 2) if avg_wait > 0 else 5
+        # Add buffer based on queue length (using configured multiplier)
+        queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
+        default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
+        estimated_wait = avg_wait + (queue_length * queue_mult) if avg_wait > 0 else (default_wait // 4)
 
         # Get completed today
         cursor = self.db.conn.execute(
@@ -2303,14 +2410,17 @@ class StatusWebServer:
                 reasoning = f"Based on {recent_completions} recent completions (~{int(avg_service_time)} min/person)"
             else:
                 # Fall back to overall average
-                overall_avg = self._calculate_avg_wait_time(limit=20)
+                wait_sample_size = self.svc.get_wait_time_sample_size() if self.svc else 20
+                overall_avg = self._calculate_avg_wait_time(limit=wait_sample_size)
+                queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
+                default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
                 if overall_avg > 0:
-                    estimated_wait = overall_avg + (queue_length * 2)
+                    estimated_wait = overall_avg + (queue_length * queue_mult)
                     method = "overall_avg"
                     reasoning = f"Using overall average ({queue_length} in queue)"
                 else:
                     # No data, use default estimate
-                    estimated_wait = 20 if queue_length > 0 else 0
+                    estimated_wait = default_wait if queue_length > 0 else 0
                     method = "default"
                     reasoning = "Insufficient data for accurate estimate"
                     confidence = "low"
