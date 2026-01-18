@@ -138,6 +138,43 @@ Repeat same process as Station 1:
    - "Thanks! Have a great festival!"
    - They can keep or return the card
 
+### Optional: Station 3 (Substance Return Confirmation)
+
+**If your service uses substance return tracking:**
+
+This station provides accountability when returning substances to participants after testing/analysis.
+
+**When returning a participant's substance:**
+
+1. **Complete testing/analysis**
+   - Finish service interaction
+   - Prepare substance for return
+
+2. **Physically hand substance to participant**
+   - "Here's your substance back"
+   - Make eye contact, clear handoff
+
+3. **Immediately tap their card on Station 3**
+   - This confirms the return happened
+   - Creates timestamped proof
+   - Prevents "left behind" incidents
+
+4. **Wait for beep**
+   - 1 beep = ✅ Return confirmed
+   - Participant can proceed to exit
+
+**Why this matters:**
+
+- Builds trust with participants
+- Prevents substances from being forgotten
+- Protects staff from disputes
+- Creates audit trail
+- Dashboard alerts if return delayed
+
+**Training tip:** Make it a habit - "Hand back + Tap = Complete"
+
+See [Substance Return Confirmation Guide](SUBSTANCE_RETURN_CONFIRMATION.md) for full details.
+
 ### Managing Cards
 
 **Handing out cards:**
