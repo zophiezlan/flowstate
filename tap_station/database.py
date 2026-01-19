@@ -69,6 +69,17 @@ class Database:
         """
         )
 
+        # Create table for auto-init token tracking
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS auto_init_counter (
+                session_id TEXT PRIMARY KEY,
+                next_token_id INTEGER NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
         self.conn.commit()
         logger.info("Database tables initialized")
 
@@ -190,6 +201,70 @@ class Database:
             cursor = self.conn.execute("SELECT COUNT(*) as count FROM events")
 
         return cursor.fetchone()["count"]
+
+    def get_next_auto_init_token_id(
+        self, session_id: str, start_id: int = 1
+    ) -> tuple[int, str]:
+        """
+        Get and increment the next available token ID for auto-initialization
+
+        Args:
+            session_id: Session ID
+            start_id: Starting token ID if not yet initialized
+
+        Returns:
+            Tuple of (next_token_id as int, token_id as formatted string)
+        """
+        try:
+            # Try to get existing counter
+            cursor = self.conn.execute(
+                "SELECT next_token_id FROM auto_init_counter WHERE session_id = ?",
+                (session_id,),
+            )
+            row = cursor.fetchone()
+
+            if row:
+                # Use existing counter
+                next_id = row["next_token_id"]
+            else:
+                # Initialize counter for this session
+                next_id = start_id
+                self.conn.execute(
+                    """
+                    INSERT INTO auto_init_counter (session_id, next_token_id, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                """,
+                    (session_id, next_id),
+                )
+                self.conn.commit()
+
+            # Increment counter for next time
+            self.conn.execute(
+                """
+                UPDATE auto_init_counter
+                SET next_token_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE session_id = ?
+            """,
+                (next_id + 1, session_id),
+            )
+            self.conn.commit()
+
+            # Format as 3-digit string
+            token_id_str = f"{next_id:03d}"
+            logger.info(
+                f"Auto-assigned token ID {token_id_str} for session {session_id}"
+            )
+
+            return (next_id, token_id_str)
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get next auto-init token ID: {e}")
+            self.conn.rollback()
+            # Return a fallback based on timestamp to avoid duplicates
+            import time
+
+            fallback_id = int(time.time() % 10000)
+            return (fallback_id, f"{fallback_id:04d}")
 
     def export_to_csv(self, output_path: str, session_id: Optional[str] = None) -> int:
         """

@@ -20,6 +20,8 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 
 - **🚀 [Setup Guide](docs/SETUP.md)** - Hardware wiring & software installation
 - **⚙️ [Service Configuration Guide](docs/SERVICE_CONFIGURATION.md)** - **NEW!** Customize for your festival service
+- **🆔 [Auto-Initialize Cards](docs/AUTO_INIT_CARDS.md)** - **NEW!** Use fresh cards without pre-initialization
+- **⏱️ [Wait Time Metrics Guide](docs/WAIT_TIME_METRICS.md)** - **NEW!** Understanding queue wait vs. service time
 - **🤝 [Substance Return Confirmation](docs/SUBSTANCE_RETURN_CONFIRMATION.md)** - **NEW!** Accountability for substance handback
 - **📱 [Mobile App Guide](docs/MOBILE.md)** - Use Android phones instead of Raspberry Pis
 - **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
@@ -30,9 +32,26 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
 - **💻 [Contributing](CONTRIBUTING.md)** - For developers
 
-## What's New (v2.3)
+## What's New (v2.4)
 
-**🤝 Substance Return Confirmation:**
+**🆔 Auto-Initialize Cards on First Tap:**
+
+- **Dynamic Card Initialization** - No need to pre-initialize cards before events
+- **Sequential Assignment** - System automatically assigns next available token ID
+- **Saves Setup Time** - Just hand out blank cards and let the system handle numbering
+- **Lost Card Recovery** - When cards are stolen/lost, numbering stays sequential without gaps
+- **Optional Feature** - Enable/disable per event via configuration
+
+**⏱️ Enhanced Wait Time Metrics:**
+
+- **Separate Queue Wait & Service Time** - Distinguish between waiting and being served
+- **Better Estimates** - Queue wait time (highly variable) vs. service time (consistent)
+- **Improved Dashboard** - Clear display of both metrics with explanations
+- **Documentation** - Comprehensive guide on understanding and using wait time data
+
+See [Auto-Initialize Cards Guide](docs/AUTO_INIT_CARDS.md) and [Wait Time Metrics Guide](docs/WAIT_TIME_METRICS.md) for details.
+
+**v2.3 - Substance Return Confirmation:**
 
 - **Substance Return Tracking** - Track when participants' substances are returned after testing
 - **Accountability & Trust** - Prevent "left behind" incidents with formal confirmation system
