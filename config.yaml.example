@@ -36,6 +36,14 @@ nfc:
   # Debounce time (seconds) - ignore same card within this window
   debounce_seconds: 1.0
 
+  # Auto-initialize cards on first tap (assigns next available token ID)
+  # When enabled, fresh cards can be used without pre-initialization
+  # The system will automatically assign the next sequential token ID
+  auto_init_cards: false
+
+  # Starting token ID for auto-initialization (default: 1)
+  auto_init_start_id: 1
+
 feedback:
   # Enable/disable feedback mechanisms
   buzzer_enabled: true

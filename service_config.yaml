@@ -130,7 +130,8 @@ capacity:
   people_per_hour: 12
 
   # Average service time per person (in minutes)
-  # This is used to calculate wait time estimates
+  # This is the time spent actively being served (SERVICE_START → EXIT)
+  # NOT the total time including queue wait (QUEUE_JOIN → EXIT)
   avg_service_minutes: 5
 
   # Multipliers for different conditions
@@ -139,10 +140,12 @@ capacity:
     off_peak: 1.2    # Increase during off-peak
 
   # Default wait time estimate when no data is available (minutes)
+  # This is the queue wait time (time before being served)
   default_wait_estimate: 20
 
   # Queue position multiplier for wait estimation
   # wait_estimate = queue_position * multiplier (in minutes)
+  # This estimates how long each person ahead adds to your wait
   queue_multiplier: 2
 
   # Peak hours definition (when to apply peak multiplier)
@@ -151,6 +154,29 @@ capacity:
     ranges:
       - start: "20:00"
         end: "23:00"
+
+# ----------------------------------------------------------------------------
+# UNDERSTANDING WAIT TIME METRICS
+# ----------------------------------------------------------------------------
+# The system tracks two distinct time periods:
+#
+# 1. QUEUE WAIT TIME (QUEUE_JOIN → SERVICE_START)
+#    - Time spent waiting in queue before being served
+#    - This is what participants experience as "waiting"
+#    - Can vary greatly: 0 minutes to 3+ hours depending on demand
+#    - Used for "estimated wait time" displayed to new arrivals
+#
+# 2. SERVICE TIME (SERVICE_START → EXIT)
+#    - Time spent actively being served by staff
+#    - Usually consistent across events (e.g., 5-15 minutes)
+#    - Used for capacity planning and throughput calculations
+#
+# 3. TOTAL TIME (QUEUE_JOIN → EXIT)
+#    - Complete journey from arrival to completion
+#    - Queue wait time + service time
+#
+# The dashboard displays all three metrics when using 3-stage tracking.
+# For 2-stage tracking (no SERVICE_START), only total time is available.
 
 # ----------------------------------------------------------------------------
 # ALERT THRESHOLDS & OPERATIONAL LIMITS

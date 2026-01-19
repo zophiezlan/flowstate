@@ -108,6 +108,16 @@ class Config:
         return self.get("nfc.debounce_seconds", 1.0)
 
     @property
+    def auto_init_cards(self) -> bool:
+        """Check if auto card initialization is enabled"""
+        return self.get("nfc.auto_init_cards", False)
+
+    @property
+    def auto_init_start_id(self) -> int:
+        """Get starting token ID for auto-initialization"""
+        return self.get("nfc.auto_init_start_id", 1)
+
+    @property
     def buzzer_enabled(self) -> bool:
         """Check if buzzer is enabled"""
         return self.get("feedback.buzzer_enabled", False)

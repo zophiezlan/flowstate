@@ -196,9 +196,41 @@ class TapStation:
 
         Args:
             uid: Card UID
-            token_id: Token ID
+            token_id: Token ID (may be UID-derived if not initialized)
         """
         self.logger.info(f"Card tapped: UID={uid}, Token={token_id}")
+
+        # Check if auto-initialization is enabled and card appears uninitialized
+        # Uninitialized cards will have token_id that looks like a UID (8+ hex chars)
+        if self.config.auto_init_cards and self._is_uninitialized_card(token_id):
+            # This looks like an uninitialized card (UID being used as token_id)
+            # Auto-assign the next token ID
+            _, new_token_id = self.db.get_next_auto_init_token_id(
+                session_id=self.config.session_id,
+                start_id=self.config.auto_init_start_id,
+            )
+
+            self.logger.info(
+                f"Auto-initializing card UID={uid} with token ID {new_token_id}"
+            )
+
+            # Try to write the new token ID to the card
+            try:
+                write_success = self.nfc.write_token_id(new_token_id)
+                if write_success:
+                    self.logger.info(
+                        f"Successfully wrote token ID {new_token_id} to card"
+                    )
+                else:
+                    self.logger.warning(
+                        f"Failed to write token ID to card, will use auto-assigned ID anyway"
+                    )
+            except Exception as e:
+                self.logger.warning(
+                    f"Exception writing token ID to card: {e}, will use auto-assigned ID anyway"
+                )
+            
+            token_id = new_token_id
 
         # Log to database
         success = self.db.log_event(
@@ -217,6 +249,18 @@ class TapStation:
             # Duplicate tap
             self.feedback.duplicate()
             self.logger.info("Duplicate tap ignored")
+
+    def _is_uninitialized_card(self, token_id: str) -> bool:
+        """
+        Check if a token ID looks like an uninitialized card (UID)
+        
+        Args:
+            token_id: Token ID to check
+            
+        Returns:
+            True if token_id looks like a UID (8+ hex chars), False otherwise
+        """
+        return len(token_id) >= 8 and all(c in "0123456789ABCDEF" for c in token_id)
 
     def shutdown(self):
         """Cleanup and shutdown"""
