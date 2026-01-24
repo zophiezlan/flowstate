@@ -229,11 +229,11 @@ class TapStation:
                 self.logger.warning(
                     f"Exception writing token ID to card: {e}, will use auto-assigned ID anyway"
                 )
-            
+
             token_id = new_token_id
 
         # Log to database
-        success = self.db.log_event(
+        result = self.db.log_event(
             token_id=token_id,
             uid=uid,
             stage=self.config.stage,
@@ -241,22 +241,37 @@ class TapStation:
             session_id=self.config.session_id,
         )
 
-        # Provide feedback
-        if success:
-            self.feedback.success()
-            self.logger.info("Event logged successfully")
-        else:
+        # Provide feedback based on result
+        if result["success"]:
+            if result["out_of_order"]:
+                # Logged but with sequence warning
+                self.feedback.duplicate()  # Use duplicate beep to indicate issue
+                self.logger.warning(
+                    f"Event logged with warning: {result['warning']}. "
+                    f"Suggestion: {result.get('suggestion', 'N/A')}"
+                )
+            else:
+                # Success with no issues
+                self.feedback.success()
+                self.logger.info("Event logged successfully")
+        elif result["duplicate"]:
             # Duplicate tap
             self.feedback.duplicate()
-            self.logger.info("Duplicate tap ignored")
+            self.logger.info(f"Duplicate tap ignored: {result['warning']}")
+        else:
+            # Some other error
+            self.feedback.error()
+            self.logger.error(
+                f"Failed to log event: {result.get('warning', 'Unknown error')}"
+            )
 
     def _is_uninitialized_card(self, token_id: str) -> bool:
         """
         Check if a token ID looks like an uninitialized card (UID)
-        
+
         Args:
             token_id: Token ID to check
-            
+
         Returns:
             True if token_id looks like a UID (8+ hex chars), False otherwise
         """

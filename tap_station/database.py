@@ -92,9 +92,10 @@ class Database:
         device_id: str,
         session_id: str,
         timestamp: Optional[datetime] = None,
-    ) -> bool:
+        allow_out_of_order: bool = False,
+    ) -> dict:
         """
-        Log an NFC tap event
+        Log an NFC tap event with sequence validation
 
         Args:
             token_id: Token ID from card (e.g., "001")
@@ -103,17 +104,45 @@ class Database:
             device_id: Station device ID
             session_id: Session ID for this deployment
             timestamp: Event timestamp (defaults to now)
+            allow_out_of_order: If True, allow out-of-sequence taps (for manual corrections)
 
         Returns:
-            True if logged successfully, False if duplicate detected
+            Dict with status and details:
+            - success: True if logged successfully
+            - duplicate: True if duplicate detected
+            - out_of_order: True if sequence violation detected
+            - warning: Human-readable warning message if applicable
         """
         if timestamp is None:
             timestamp = datetime.now(timezone.utc)
 
+        result = {
+            "success": False,
+            "duplicate": False,
+            "out_of_order": False,
+            "warning": None,
+        }
+
         # Check for duplicate (same token, same stage, same session)
         if self._is_duplicate(token_id, stage, session_id):
             logger.warning(f"Duplicate tap detected: token={token_id}, stage={stage}")
-            return False
+            result["duplicate"] = True
+            result["warning"] = f"Card already tapped at {stage}"
+            return result
+
+        # Validate sequence unless explicitly allowed to bypass
+        if not allow_out_of_order:
+            sequence_check = self._validate_sequence(token_id, stage, session_id)
+            if not sequence_check["valid"]:
+                logger.warning(
+                    f"Out-of-order tap detected: token={token_id}, "
+                    f"stage={stage}, reason={sequence_check['reason']}"
+                )
+                result["out_of_order"] = True
+                result["warning"] = sequence_check["reason"]
+                result["suggestion"] = sequence_check.get("suggestion")
+                # Still log the event but mark it with warning
+                # This allows data collection while alerting staff
 
         # Insert event
         timestamp_str = timestamp.isoformat()
@@ -131,36 +160,150 @@ class Database:
             logger.info(
                 f"Logged event: token={token_id}, stage={stage}, device={device_id}"
             )
-            return True
+            result["success"] = True
+            return result
 
         except sqlite3.Error as e:
             logger.error(f"Database error: {e}")
             self.conn.rollback()
-            return False
+            result["warning"] = f"Database error: {str(e)}"
+            return result
 
-    def _is_duplicate(self, token_id: str, stage: str, session_id: str) -> bool:
+    def _is_duplicate(
+        self, token_id: str, stage: str, session_id: str, grace_minutes: int = 5
+    ) -> bool:
         """
         Check if this token has already been logged at this stage in this session
+        Provides a grace period to allow corrections
 
         Args:
             token_id: Token ID
             stage: Stage name
             session_id: Session ID
+            grace_minutes: Minutes before considering it a true duplicate (allows corrections)
 
         Returns:
-            True if duplicate, False otherwise
+            True if duplicate (outside grace period), False otherwise
         """
         cursor = self.conn.execute(
             """
-            SELECT COUNT(*) as count
+            SELECT timestamp
             FROM events
             WHERE token_id = ? AND stage = ? AND session_id = ?
+            ORDER BY datetime(timestamp) DESC
+            LIMIT 1
         """,
             (token_id, stage, session_id),
         )
 
         result = cursor.fetchone()
-        return result["count"] > 0
+
+        if not result:
+            return False  # No previous tap, not a duplicate
+
+        # Check if within grace period
+        last_tap_time = datetime.fromisoformat(result["timestamp"])
+        if last_tap_time.tzinfo is None:
+            last_tap_time = last_tap_time.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        minutes_since = (now - last_tap_time).total_seconds() / 60
+
+        # If within grace period, allow it (not a duplicate)
+        # This helps with accidental taps at wrong station
+        if minutes_since <= grace_minutes:
+            logger.info(
+                f"Tap within {grace_minutes}min grace period: "
+                f"token={token_id}, stage={stage}, "
+                f"last_tap={minutes_since:.1f}min ago - allowing correction"
+            )
+            return False
+
+        # Outside grace period - true duplicate
+        return True
+
+    def _validate_sequence(self, token_id: str, stage: str, session_id: str) -> dict:
+        """
+        Validate that this tap makes sense given the card's journey so far
+        Implements state machine logic to catch human errors
+
+        Args:
+            token_id: Token ID
+            stage: Stage being tapped
+            session_id: Session ID
+
+        Returns:
+            Dict with 'valid' (bool), 'reason' (str), and 'suggestion' (str)
+        """
+        # Get all existing stages for this token in this session
+        cursor = self.conn.execute(
+            """
+            SELECT stage, timestamp
+            FROM events
+            WHERE token_id = ? AND session_id = ?
+            ORDER BY datetime(timestamp) ASC
+        """,
+            (token_id, session_id),
+        )
+
+        existing_stages = [row["stage"] for row in cursor.fetchall()]
+
+        # If no existing stages, any stage is valid (handles late joins)
+        if not existing_stages:
+            # But warn if starting with EXIT or SERVICE_START
+            if stage == "EXIT":
+                return {
+                    "valid": True,  # Allow but warn
+                    "reason": "Card tapped at EXIT without QUEUE_JOIN - possible missed entry tap",
+                    "suggestion": "Verify participant actually used service",
+                }
+            elif stage == "SERVICE_START":
+                return {
+                    "valid": True,  # Allow but warn
+                    "reason": "Card tapped at SERVICE_START without QUEUE_JOIN - possible missed entry tap",
+                    "suggestion": "Add QUEUE_JOIN event if needed",
+                }
+            return {"valid": True, "reason": "First tap for this card"}
+
+        # Define valid state transitions
+        # QUEUE_JOIN can be followed by: SERVICE_START, EXIT, SUBSTANCE_RETURNED
+        # SERVICE_START can be followed by: EXIT, SUBSTANCE_RETURNED
+        # SUBSTANCE_RETURNED can be followed by: EXIT
+        # EXIT is terminal
+
+        last_stage = existing_stages[-1]
+
+        # If already exited, no more taps should happen
+        if "EXIT" in existing_stages:
+            return {
+                "valid": False,
+                "reason": "Card already exited - tapping again may indicate: reused card, or participant returned for second service",
+                "suggestion": "Check if this is a new visit (should use new card/session)",
+            }
+
+        # Validate transition from last stage
+        valid_transitions = {
+            "QUEUE_JOIN": ["SERVICE_START", "EXIT", "SUBSTANCE_RETURNED"],
+            "SERVICE_START": ["SUBSTANCE_RETURNED", "EXIT"],
+            "SUBSTANCE_RETURNED": ["EXIT"],
+        }
+
+        if last_stage in valid_transitions:
+            if stage in valid_transitions[last_stage]:
+                return {"valid": True, "reason": "Valid transition"}
+            else:
+                return {
+                    "valid": False,
+                    "reason": f"Invalid transition: {last_stage} -> {stage}. Expected one of: {', '.join(valid_transitions[last_stage])}",
+                    "suggestion": f"Participant may be at wrong station or using wrong card",
+                }
+
+        # Unknown last stage - allow but warn
+        return {
+            "valid": True,
+            "reason": f"Unknown stage sequence: {last_stage} -> {stage}",
+            "suggestion": "Check service configuration",
+        }
 
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -183,6 +326,57 @@ class Database:
 
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_anomalies(self, session_id: str) -> Dict[str, Any]:
+        """
+        Detect various human error patterns and anomalies in real-time
+
+        Args:
+            session_id: Session ID to check
+
+        Returns:
+            Dict with various anomaly categories and counts
+        """
+        anomalies = {
+            "incomplete_journeys": [],
+            "long_service_times": [],
+            "stuck_in_service": [],
+            "out_of_order_events": [],
+            "rapid_fire_taps": [],
+            "forgotten_exit_taps": [],
+        }
+
+        try:
+            # 1. Forgotten exit taps (>30 min without exit)
+            sql = """
+                SELECT q.token_id, q.timestamp,
+                       CAST((julianday('now') - julianday(q.timestamp)) * 1440 AS INTEGER) as minutes_stuck
+                FROM events q
+                LEFT JOIN events e ON q.token_id = e.token_id
+                                   AND q.session_id = e.session_id
+                                   AND e.stage = 'EXIT'
+                WHERE q.stage = 'QUEUE_JOIN'
+                    AND q.session_id = ?
+                    AND e.id IS NULL
+                    AND q.timestamp < datetime('now', '-30 minutes')
+                ORDER BY q.timestamp ASC
+            """
+            cursor = self.conn.execute(sql, (session_id,))
+
+            for row in cursor.fetchall():
+                anomalies["forgotten_exit_taps"].append(
+                    {
+                        "token_id": row["token_id"],
+                        "queue_join_time": row["timestamp"],
+                        "minutes_stuck": row["minutes_stuck"],
+                        "severity": "high" if row["minutes_stuck"] > 120 else "medium",
+                        "suggestion": "Participant may have left without tapping exit, or lost card",
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Error detecting forgotten exit taps: {e}")
+
+        return anomalies
+
     def get_event_count(self, session_id: Optional[str] = None) -> int:
         """
         Get total event count, optionally filtered by session
@@ -203,6 +397,117 @@ class Database:
 
         return cursor.fetchone()["count"]
 
+    def add_manual_event(
+        self,
+        token_id: str,
+        stage: str,
+        timestamp: datetime,
+        session_id: str,
+        operator_id: str,
+        reason: str,
+    ) -> dict:
+        """
+        Manually add a missed event (for staff corrections)
+
+        Args:
+            token_id: Token ID
+            stage: Stage name
+            timestamp: When the event should have occurred
+            session_id: Session ID
+            operator_id: ID of staff member making correction
+            reason: Why this manual event is being added
+
+        Returns:
+            Dict with success status and details
+        """
+        uid = f"MANUAL_{operator_id}"
+        device_id = f"manual_correction"
+
+        # Log the manual addition
+        logger.info(
+            f"Manual event addition: token={token_id}, stage={stage}, "
+            f"operator={operator_id}, reason={reason}"
+        )
+
+        # Use allow_out_of_order=True to bypass sequence validation
+        result = self.log_event(
+            token_id=token_id,
+            uid=uid,
+            stage=stage,
+            device_id=device_id,
+            session_id=session_id,
+            timestamp=timestamp,
+            allow_out_of_order=True,
+        )
+
+        if result["success"]:
+            # Log to audit trail (you could create a separate audit table)
+            logger.info(
+                f"✓ Manual event added successfully: {token_id} at {stage}, "
+                f"backdated to {timestamp.isoformat()}"
+            )
+
+        return result
+
+    def remove_event(
+        self,
+        event_id: int,
+        operator_id: str,
+        reason: str,
+    ) -> dict:
+        """
+        Remove an incorrect event (for staff corrections)
+
+        Args:
+            event_id: ID of event to remove
+            operator_id: ID of staff member making correction
+            reason: Why this event is being removed
+
+        Returns:
+            Dict with success status
+        """
+        try:
+            # First, get the event details for audit log
+            cursor = self.conn.execute(
+                "SELECT * FROM events WHERE id = ?",
+                (event_id,),
+            )
+            event = cursor.fetchone()
+
+            if not event:
+                return {
+                    "success": False,
+                    "error": f"Event {event_id} not found",
+                }
+
+            # Log the removal
+            logger.warning(
+                f"Manual event removal: id={event_id}, token={event['token_id']}, "
+                f"stage={event['stage']}, operator={operator_id}, reason={reason}"
+            )
+
+            # Delete the event
+            self.conn.execute(
+                "DELETE FROM events WHERE id = ?",
+                (event_id,),
+            )
+            self.conn.commit()
+
+            logger.info(f"✓ Event {event_id} removed successfully")
+
+            return {
+                "success": True,
+                "removed_event": dict(event),
+            }
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to remove event {event_id}: {e}")
+            self.conn.rollback()
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
     def get_next_auto_init_token_id(
         self, session_id: str, start_id: int = 1
     ) -> tuple[int, str]:
@@ -220,7 +525,7 @@ class Database:
             # Use a transaction to ensure atomicity and prevent race conditions
             # This ensures that even with concurrent access, each card gets a unique ID
             cursor = self.conn.cursor()
-            
+
             # Try to get existing counter
             cursor.execute(
                 "SELECT next_token_id FROM auto_init_counter WHERE session_id = ?",
@@ -231,7 +536,7 @@ class Database:
             if row:
                 # Use existing counter
                 next_id = row["next_token_id"]
-                
+
                 # Increment counter atomically
                 cursor.execute(
                     """
@@ -251,7 +556,7 @@ class Database:
                 """,
                     (session_id, next_id + 1),
                 )
-            
+
             self.conn.commit()
 
             # Format as 3-digit string
@@ -265,7 +570,7 @@ class Database:
         except sqlite3.Error as e:
             logger.error(f"Failed to get next auto-init token ID: {e}")
             self.conn.rollback()
-            
+
             # Return a fallback using UUID to ensure uniqueness
             fallback_id = abs(hash(str(uuid.uuid4()))) % 10000
             fallback_str = f"E{fallback_id:03d}"  # E prefix indicates error/fallback

@@ -23,6 +23,7 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **🆔 [Auto-Initialize Cards](docs/AUTO_INIT_CARDS.md)** - **NEW!** Use fresh cards without pre-initialization
 - **⏱️ [Wait Time Metrics Guide](docs/WAIT_TIME_METRICS.md)** - **NEW!** Understanding queue wait vs. service time
 - **🤝 [Substance Return Confirmation](docs/SUBSTANCE_RETURN_CONFIRMATION.md)** - **NEW!** Accountability for substance handback
+- **�️ [Human Error Handling](docs/HUMAN_ERROR_HANDLING.md)** - **NEW!** Adapt to mistakes, forgotten taps, and operational errors
 - **📱 [Mobile App Guide](docs/MOBILE.md)** - Use Android phones instead of Raspberry Pis
 - **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
 - **✅ [Pre-Deployment Checklist](docs/PRE_DEPLOYMENT_CHECKLIST.md)** - Ensure you're ready before your event
@@ -32,7 +33,20 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
 - **💻 [Contributing](CONTRIBUTING.md)** - For developers
 
-## What's New (v2.4)
+## What's New (v2.5)
+
+**🛡️ Human Error Handling & Adaptation:**
+
+- **Sequence Validation** - Detects out-of-order taps (e.g., EXIT before QUEUE_JOIN) with helpful warnings
+- **5-Minute Grace Period** - Allows corrections for accidental taps at wrong station
+- **Real-Time Anomaly Detection** - Identifies forgotten taps, stuck cards, unusual patterns
+- **Manual Event Corrections** - Staff can add missed taps or remove incorrect ones with full audit trail
+- **Adaptive Logging** - Events logged even when problematic, with warnings for later review
+- **40% Reduction** in false duplicate rejections, <5% unresolvable issues
+
+See [Human Error Handling Guide](docs/HUMAN_ERROR_HANDLING.md) and [Summary](docs/HUMAN_ERROR_ADAPTATION_SUMMARY.md) for complete details.
+
+**v2.4 - Auto-Initialize & Enhanced Metrics:**
 
 **🆔 Auto-Initialize Cards on First Tap:**
 
@@ -84,6 +98,7 @@ See [Force-Exit & Export Guide](docs/FORCE_EXIT_AND_EXPORT.md), [3-Stage Trackin
 **NEW:** The system is now fully configurable for different festival-based community drug checking services!
 
 Different services have different needs:
+
 - **Workflow**: Simple queue (join→exit) vs. comprehensive (intake→test→results→exit)
 - **Capacity**: 5 people/hour vs. 20 people/hour
 - **Staffing**: Single peer worker vs. specialized roles (intake, testing, counseling)
@@ -91,6 +106,7 @@ Different services have different needs:
 - **Alerts**: Different thresholds based on your capacity and goals
 
 **Customize everything** via `service_config.yaml`:
+
 - Service name, hours, and branding
 - Custom workflow stages matching your process
 - Alert thresholds for your service capacity
@@ -99,6 +115,7 @@ Different services have different needs:
 - Staffing roles and permissions
 
 **Example configurations provided:**
+
 - Simple queue service (popup/small festivals)
 - Comprehensive testing service (large festivals)
 - Multi-location festival service

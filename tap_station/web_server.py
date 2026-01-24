@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 # Import service configuration integration
 try:
     from .service_integration import get_service_integration
+
     SERVICE_CONFIG_AVAILABLE = True
 except ImportError:
     SERVICE_CONFIG_AVAILABLE = False
@@ -320,54 +321,71 @@ class StatusWebServer:
             try:
                 if not self.svc:
                     # Return default configuration
-                    return jsonify({
-                        "service_name": "Drug Checking Service",
-                        "workflow_stages": [
-                            {"id": "QUEUE_JOIN", "label": "In Queue", "order": 1},
-                            {"id": "SERVICE_START", "label": "Being Served", "order": 2},
-                            {"id": "EXIT", "label": "Completed", "order": 3}
-                        ],
-                        "ui_labels": {
-                            "queue_count": "people in queue",
-                            "wait_time": "estimated wait",
-                            "served_today": "served today",
-                            "avg_service_time": "avg service time",
-                            "service_status": "service status"
-                        },
-                        "display_settings": {
-                            "refresh_interval": 5,
-                            "show_queue_positions": True,
-                            "show_wait_estimates": True,
-                            "show_served_count": True,
-                            "show_avg_time": True
-                        }
-                    }), 200
+                    return (
+                        jsonify(
+                            {
+                                "service_name": "Drug Checking Service",
+                                "workflow_stages": [
+                                    {
+                                        "id": "QUEUE_JOIN",
+                                        "label": "In Queue",
+                                        "order": 1,
+                                    },
+                                    {
+                                        "id": "SERVICE_START",
+                                        "label": "Being Served",
+                                        "order": 2,
+                                    },
+                                    {"id": "EXIT", "label": "Completed", "order": 3},
+                                ],
+                                "ui_labels": {
+                                    "queue_count": "people in queue",
+                                    "wait_time": "estimated wait",
+                                    "served_today": "served today",
+                                    "avg_service_time": "avg service time",
+                                    "service_status": "service status",
+                                },
+                                "display_settings": {
+                                    "refresh_interval": 5,
+                                    "show_queue_positions": True,
+                                    "show_wait_estimates": True,
+                                    "show_served_count": True,
+                                    "show_avg_time": True,
+                                },
+                            }
+                        ),
+                        200,
+                    )
 
                 # Return actual configuration
                 config = {
                     "service_name": self.svc.get_service_name(),
-                    "workflow_stages": [
-                        {
-                            "id": stage.id,
-                            "label": stage.label,
-                            "description": stage.description,
-                            "order": stage.order,
-                            "visible_to_public": stage.visible_to_public
-                        }
-                        for stage in self.svc._config.workflow_stages
-                    ] if self.svc._config else [],
+                    "workflow_stages": (
+                        [
+                            {
+                                "id": stage.id,
+                                "label": stage.label,
+                                "description": stage.description,
+                                "order": stage.order,
+                                "visible_to_public": stage.visible_to_public,
+                            }
+                            for stage in self.svc._config.workflow_stages
+                        ]
+                        if self.svc._config
+                        else []
+                    ),
                     "ui_labels": self.svc._config.ui_labels if self.svc._config else {},
                     "display_settings": {
                         "refresh_interval": self.svc.get_public_refresh_interval(),
                         "show_queue_positions": self.svc.show_queue_positions(),
                         "show_wait_estimates": self.svc.show_wait_estimates(),
                         "show_served_count": self.svc.show_served_count(),
-                        "show_avg_time": self.svc.show_avg_time()
+                        "show_avg_time": self.svc.show_avg_time(),
                     },
                     "capacity": {
                         "people_per_hour": self.svc.get_people_per_hour(),
-                        "avg_service_minutes": self.svc.get_avg_service_minutes()
-                    }
+                        "avg_service_minutes": self.svc.get_avg_service_minutes(),
+                    },
                 }
                 return jsonify(config), 200
 
@@ -474,6 +492,181 @@ class StatusWebServer:
             except Exception as e:
                 logger.error(f"Get stuck cards failed: {e}")
                 return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/control/anomalies")
+        def api_anomalies():
+            """Get real-time anomaly detection for human errors"""
+            try:
+                anomalies = self.db.get_anomalies(self.config.session_id)
+
+                # Calculate summary counts
+                summary = {
+                    "total_anomalies": sum(len(v) for v in anomalies.values()),
+                    "high_severity": sum(
+                        1
+                        for category in anomalies.values()
+                        for item in category
+                        if item.get("severity") == "high"
+                    ),
+                    "medium_severity": sum(
+                        1
+                        for category in anomalies.values()
+                        for item in category
+                        if item.get("severity") == "medium"
+                    ),
+                }
+
+                return (
+                    jsonify(
+                        {
+                            "anomalies": anomalies,
+                            "summary": summary,
+                            "session_id": self.config.session_id,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ),
+                    200,
+                )
+            except Exception as e:
+                logger.error(f"Get anomalies failed: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/control/manual-event", methods=["POST"])
+        def api_manual_event():
+            """Add a manual event for missed taps"""
+            try:
+                data = request.get_json()
+
+                # Validate required fields
+                required = ["token_id", "stage", "timestamp", "operator_id", "reason"]
+                missing = [f for f in required if f not in data]
+                if missing:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": f"Missing required fields: {', '.join(missing)}",
+                            }
+                        ),
+                        400,
+                    )
+
+                # Parse timestamp
+                try:
+                    timestamp = datetime.fromisoformat(data["timestamp"])
+                    if timestamp.tzinfo is None:
+                        timestamp = timestamp.replace(tzinfo=timezone.utc)
+                except ValueError as e:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": f"Invalid timestamp format: {e}",
+                            }
+                        ),
+                        400,
+                    )
+
+                # Add manual event
+                result = self.db.add_manual_event(
+                    token_id=data["token_id"],
+                    stage=data["stage"],
+                    timestamp=timestamp,
+                    session_id=self.config.session_id,
+                    operator_id=data["operator_id"],
+                    reason=data["reason"],
+                )
+
+                if result["success"]:
+                    return (
+                        jsonify(
+                            {
+                                "success": True,
+                                "message": "Manual event added successfully",
+                                "warnings": result.get("warning"),
+                            }
+                        ),
+                        200,
+                    )
+                else:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": result.get("warning", "Failed to add event"),
+                            }
+                        ),
+                        400,
+                    )
+
+            except Exception as e:
+                logger.error(f"Manual event addition failed: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @self.app.route("/api/control/remove-event", methods=["POST"])
+        def api_remove_event():
+            """Remove an incorrect event"""
+            try:
+                data = request.get_json()
+
+                # Validate required fields
+                if "event_id" not in data:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": "event_id is required",
+                            }
+                        ),
+                        400,
+                    )
+
+                if "operator_id" not in data:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": "operator_id is required",
+                            }
+                        ),
+                        400,
+                    )
+
+                if "reason" not in data:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": "reason is required",
+                            }
+                        ),
+                        400,
+                    )
+
+                # Remove event
+                result = self.db.remove_event(
+                    event_id=data["event_id"],
+                    operator_id=data["operator_id"],
+                    reason=data["reason"],
+                )
+
+                if result["success"]:
+                    return (
+                        jsonify(
+                            {
+                                "success": True,
+                                "message": "Event removed successfully",
+                                "removed_event": result["removed_event"],
+                            }
+                        ),
+                        200,
+                    )
+                else:
+                    return jsonify(result), 400
+
+            except Exception as e:
+                logger.error(f"Event removal failed: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500
 
         @self.app.route("/api/export")
         def api_export():
@@ -914,7 +1107,9 @@ class StatusWebServer:
         in_queue = cursor.fetchone()["count"]
         queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
         default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
-        estimated_wait_new = avg_wait + (in_queue * queue_mult) if avg_wait > 0 else default_wait
+        estimated_wait_new = (
+            avg_wait + (in_queue * queue_mult) if avg_wait > 0 else default_wait
+        )
 
         # Calculate service uptime (time since first event today)
         cursor = self.db.conn.execute(
@@ -950,7 +1145,9 @@ class StatusWebServer:
         completed_last_hour = cursor.fetchone()["completed"]
         # Get service capacity from configuration
         people_per_hour = self.svc.get_people_per_hour() if self.svc else 12
-        capacity_utilization = min(100, int((completed_last_hour / people_per_hour) * 100))
+        capacity_utilization = min(
+            100, int((completed_last_hour / people_per_hour) * 100)
+        )
 
         # Generate alerts
         alerts = []
@@ -961,12 +1158,18 @@ class StatusWebServer:
 
         # Queue length alerts
         if in_queue > queue_warn:
-            message = self.svc.get_alert_message('queue_warning', count=in_queue) if self.svc else f"Queue is long ({in_queue} people)"
-            alerts.append(
-                {"level": "warning", "message": message}
+            message = (
+                self.svc.get_alert_message("queue_warning", count=in_queue)
+                if self.svc
+                else f"Queue is long ({in_queue} people)"
             )
+            alerts.append({"level": "warning", "message": message})
         if in_queue > queue_crit:
-            message = self.svc.get_alert_message('queue_critical', count=in_queue) if self.svc else f"🚨 Queue critical ({in_queue} people) - consider additional resources"
+            message = (
+                self.svc.get_alert_message("queue_critical", count=in_queue)
+                if self.svc
+                else f"🚨 Queue critical ({in_queue} people) - consider additional resources"
+            )
             alerts.append(
                 {
                     "level": "critical",
@@ -979,12 +1182,18 @@ class StatusWebServer:
         wait_crit = self.svc.get_wait_critical_minutes() if self.svc else 90
 
         if longest_wait > wait_warn:
-            message = self.svc.get_alert_message('wait_warning', minutes=longest_wait) if self.svc else f"⏱️ Longest wait: {longest_wait} min"
-            alerts.append(
-                {"level": "warning", "message": message}
+            message = (
+                self.svc.get_alert_message("wait_warning", minutes=longest_wait)
+                if self.svc
+                else f"⏱️ Longest wait: {longest_wait} min"
             )
+            alerts.append({"level": "warning", "message": message})
         if longest_wait > wait_crit:
-            message = self.svc.get_alert_message('wait_critical', minutes=longest_wait) if self.svc else f"🚨 Critical wait time: {longest_wait} min"
+            message = (
+                self.svc.get_alert_message("wait_critical", minutes=longest_wait)
+                if self.svc
+                else f"🚨 Critical wait time: {longest_wait} min"
+            )
             alerts.append(
                 {
                     "level": "critical",
@@ -1011,11 +1220,21 @@ class StatusWebServer:
             last_event_dt = datetime.fromisoformat(row["last_event"])
             minutes_since_last = int((now - last_event_dt).total_seconds() / 60)
 
-            inactivity_crit = self.svc.get_service_inactivity_critical_minutes() if self.svc else 10
-            inactivity_warn = self.svc.get_service_inactivity_warning_minutes() if self.svc else 5
+            inactivity_crit = (
+                self.svc.get_service_inactivity_critical_minutes() if self.svc else 10
+            )
+            inactivity_warn = (
+                self.svc.get_service_inactivity_warning_minutes() if self.svc else 5
+            )
 
             if minutes_since_last > inactivity_crit and in_queue > 0:
-                message = self.svc.get_alert_message('inactivity_critical', minutes=minutes_since_last) if self.svc else f"⚠️ No activity in {minutes_since_last} min - station may be down!"
+                message = (
+                    self.svc.get_alert_message(
+                        "inactivity_critical", minutes=minutes_since_last
+                    )
+                    if self.svc
+                    else f"⚠️ No activity in {minutes_since_last} min - station may be down!"
+                )
                 alerts.append(
                     {
                         "level": "critical",
@@ -1023,7 +1242,13 @@ class StatusWebServer:
                     }
                 )
             elif minutes_since_last > inactivity_warn and in_queue > 0:
-                message = self.svc.get_alert_message('inactivity_warning', minutes=minutes_since_last) if self.svc else f"No taps in {minutes_since_last} min - check stations"
+                message = (
+                    self.svc.get_alert_message(
+                        "inactivity_warning", minutes=minutes_since_last
+                    )
+                    if self.svc
+                    else f"No taps in {minutes_since_last} min - check stations"
+                )
                 alerts.append(
                     {
                         "level": "warning",
@@ -1054,7 +1279,9 @@ class StatusWebServer:
             max_time = float(row["max_time"])
 
             # Alert if someone took more than the configured multiplier of average time
-            variance_multiplier = self.svc.get_service_variance_multiplier() if self.svc else 3
+            variance_multiplier = (
+                self.svc.get_service_variance_multiplier() if self.svc else 3
+            )
             if max_time > avg_time * variance_multiplier and avg_time > 5:
                 alerts.append(
                     {
@@ -1776,7 +2003,11 @@ class StatusWebServer:
         # Add buffer based on queue length (using configured multiplier)
         queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
         default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
-        estimated_wait = avg_wait + (queue_length * queue_mult) if avg_wait > 0 else (default_wait // 4)
+        estimated_wait = (
+            avg_wait + (queue_length * queue_mult)
+            if avg_wait > 0
+            else (default_wait // 4)
+        )
 
         # Get completed today
         cursor = self.db.conn.execute(
@@ -2410,7 +2641,9 @@ class StatusWebServer:
                 reasoning = f"Based on {recent_completions} recent completions (~{int(avg_service_time)} min/person)"
             else:
                 # Fall back to overall average
-                wait_sample_size = self.svc.get_wait_time_sample_size() if self.svc else 20
+                wait_sample_size = (
+                    self.svc.get_wait_time_sample_size() if self.svc else 20
+                )
                 overall_avg = self._calculate_avg_wait_time(limit=wait_sample_size)
                 queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
                 default_wait = self.svc.get_default_wait_estimate() if self.svc else 20
