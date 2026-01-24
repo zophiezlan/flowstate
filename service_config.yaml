@@ -1,14 +1,14 @@
 alerts:
   inactivity_warning_minutes: 10
-  queue_length_critical: 15
-  queue_length_warning: 10
+  queue_length_critical: 50
+  queue_length_warning: 30
   stuck_card_threshold_minutes: 45
-  wait_time_critical_minutes: 60
-  wait_time_warning_minutes: 30
+  wait_time_critical_minutes: 150
+  wait_time_warning_minutes: 90
 capacity:
-  average_service_time_minutes: 23
-  expected_throughput_per_hour: 12
+  avg_service_minutes: 21
   max_queue_length: 100
+  people_per_hour: 12
   staff_count: 6
 display:
   recent_events_limit: 20

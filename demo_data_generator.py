@@ -141,9 +141,19 @@ class DemoDataGenerator:
         # Progress existing participants
         self._progress_random_participants()
 
-        # Occasional abandonments
-        if random.random() < 0.02:  # 2% chance each cycle
-            self._abandon_random_participant()
+        # Abandonments based on scenario-specific rate and queue length
+        # Lost Paradise actual: 0.25 abandonment rate with long queues = many people leave
+        # HTID/Ideal: 0.02-0.03 abandonment rate with short queues = few leave
+        # Probability scales with both abandonment rate and current queue length
+        queue_length = len([p for p in self.active_participants.values()
+                           if p['current_stage'] == 'QUEUE_JOIN' and not p.get('completed', False)])
+
+        if queue_length > 0:
+            # Per-cycle abandonment probability = base_rate * (queue_length / 50)
+            # This means longer queues lead to more abandonments
+            abandon_probability = self.abandon_rate * (queue_length / 50)
+            if random.random() < abandon_probability:
+                self._abandon_random_participant()
 
     def _new_arrival(self):
         """Add a new participant to the queue"""

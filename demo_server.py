@@ -124,8 +124,9 @@ def load_demo_service_config(scenario_name='htid'):
             ]
         },
         'capacity': {
-            'expected_throughput_per_hour': scenario['throughput_per_hour'],
-            'average_service_time_minutes': scenario['service_time_total_min'],
+            # Use correct keys that service_config_loader expects
+            'people_per_hour': scenario['throughput_per_hour'],
+            'avg_service_minutes': scenario['service_time_total_min'],
             'max_queue_length': 100,  # High for demo
             'staff_count': scenario['peer_workers']
         },
