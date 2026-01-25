@@ -158,6 +158,51 @@ def setup_demo_data(db: Database, config: dict):
     print("✅ Database initialized")
 
 
+def write_service_config(service_config: dict):
+    """Write service config to a demo-specific file so it can be loaded by the web server"""
+    service_config_path = Path('demo_service_config.yaml')
+    with open(service_config_path, 'w') as f:
+        yaml.dump(service_config, f, default_flow_style=False)
+
+
+def setup_app_with_scenario(scenario: str):
+    """Common setup logic for creating a Flask app with a specific scenario"""
+    # Load configurations for scenario
+    config_dict = load_demo_config(scenario)
+    service_config = load_demo_service_config(scenario)
+
+    # Create config object
+    config = DemoConfig(config_dict)
+
+    # Initialize database
+    db = Database(config.database_path, wal_mode=config.wal_mode)
+    setup_demo_data(db, config_dict)
+
+    # Start background simulator in separate thread
+    simulator_thread = threading.Thread(
+        target=run_background_simulator,
+        args=(db, config_dict, service_config),
+        daemon=True
+    )
+    simulator_thread.start()
+
+    # Write service config to file
+    write_service_config(service_config)
+
+    # Create web server using standard initialization
+    web_server = StatusWebServer(config, db)
+
+    # Override index route to use demo template
+    from flask import render_template
+
+    @web_server.app.route("/")
+    def demo_index():
+        """Demo landing page for NSW Health"""
+        return render_template("demo_index.html")
+
+    return web_server.app, config_dict
+
+
 def run_background_simulator(db: Database, config: dict, service_config: dict):
     """Run continuous background simulation of festival activity"""
     print("🎪 Starting live demo data simulator...")
@@ -200,40 +245,9 @@ def main(scenario='htid'):
     print(f"   {scenario_data['description']}")
     print(f"   Staff: {scenario_data['peer_workers']} peers, {scenario_data['chemists']} chemists\n")
 
-    config_dict = load_demo_config(scenario)
-    service_config = load_demo_service_config(scenario)
-
-    # Create config object
-    config = DemoConfig(config_dict)
-
-    # Initialize database
-    db = Database(config.database_path, wal_mode=config.wal_mode)
-    setup_demo_data(db, config_dict)
-
-    # Start background simulator in separate thread
-    simulator_thread = threading.Thread(
-        target=run_background_simulator,
-        args=(db, config_dict, service_config),
-        daemon=True
-    )
-    simulator_thread.start()
+    # Setup app using common logic
+    app, config_dict = setup_app_with_scenario(scenario)
     print("✅ Background simulator started")
-
-    # Write service config to a demo-specific file so it can be loaded
-    service_config_path = Path('demo_service_config.yaml')
-    with open(service_config_path, 'w') as f:
-        yaml.dump(service_config, f, default_flow_style=False)
-
-    # Create web server using standard initialization
-    web_server = StatusWebServer(config, db)
-
-    # Override index route to use demo template
-    from flask import render_template
-
-    @web_server.app.route("/")
-    def demo_index():
-        """Demo landing page for NSW Health"""
-        return render_template("demo_index.html")
 
     port = config_dict['web_server']['port']
     host = config_dict['web_server']['host']
@@ -250,7 +264,7 @@ def main(scenario='htid'):
     print("\n🎭 Live data simulation is running in the background")
     print("=" * 60 + "\n")
 
-    return web_server.app
+    return app
 
 
 # Module-level app initialization for Gunicorn
@@ -259,42 +273,9 @@ def create_app(scenario=None):
     if scenario is None:
         scenario = os.environ.get('DEMO_SCENARIO', 'htid')
     
-    # Load configurations for scenario
-    config_dict = load_demo_config(scenario)
-    service_config = load_demo_service_config(scenario)
-
-    # Create config object
-    config = DemoConfig(config_dict)
-
-    # Initialize database
-    db = Database(config.database_path, wal_mode=config.wal_mode)
-    setup_demo_data(db, config_dict)
-
-    # Start background simulator in separate thread
-    simulator_thread = threading.Thread(
-        target=run_background_simulator,
-        args=(db, config_dict, service_config),
-        daemon=True
-    )
-    simulator_thread.start()
-
-    # Write service config to a demo-specific file so it can be loaded
-    service_config_path = Path('demo_service_config.yaml')
-    with open(service_config_path, 'w') as f:
-        yaml.dump(service_config, f, default_flow_style=False)
-
-    # Create web server using standard initialization
-    web_server = StatusWebServer(config, db)
-
-    # Override index route to use demo template
-    from flask import render_template
-
-    @web_server.app.route("/")
-    def demo_index():
-        """Demo landing page for NSW Health"""
-        return render_template("demo_index.html")
-
-    return web_server.app
+    # Setup app using common logic
+    app, _ = setup_app_with_scenario(scenario)
+    return app
 
 
 # Create app instance for Gunicorn

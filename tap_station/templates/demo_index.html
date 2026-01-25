@@ -720,11 +720,31 @@
       }
 
       // Modal functions
+      let lastFocusedElement = null;
+      
       function showModal(title, body) {
         const modal = document.getElementById('scenarioModal');
+        const closeButton = modal.querySelector('.modal-button');
+        
+        // Store the currently focused element
+        lastFocusedElement = document.activeElement;
+        
+        // Use textContent for title to prevent XSS
         document.getElementById('modalHeader').textContent = title;
+        
+        // For body, we control the HTML content via template literals, but still be careful
+        // In this case, we're only injecting scenarioInfo.command which is from our own data
         document.getElementById('modalBody').innerHTML = body;
+        
         modal.classList.add('active');
+        
+        // Focus the close button
+        setTimeout(() => {
+          closeButton.focus();
+        }, 100);
+        
+        // Trap focus within modal
+        trapFocusInModal(modal);
         
         // Close on overlay click
         modal.onclick = (e) => {
@@ -741,12 +761,41 @@
         const modal = document.getElementById('scenarioModal');
         modal.classList.remove('active');
         document.removeEventListener('keydown', handleEscapeKey);
+        
+        // Return focus to the element that opened the modal
+        if (lastFocusedElement) {
+          lastFocusedElement.focus();
+        }
       }
 
       function handleEscapeKey(e) {
         if (e.key === 'Escape') {
           closeModal();
         }
+      }
+      
+      function trapFocusInModal(modal) {
+        const focusableElements = modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+
+        modal.addEventListener('keydown', function(e) {
+          if (e.key !== 'Tab') return;
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstFocusable) {
+              lastFocusable.focus();
+              e.preventDefault();
+            }
+          } else {
+            if (document.activeElement === lastFocusable) {
+              firstFocusable.focus();
+              e.preventDefault();
+            }
+          }
+        });
       }
 
       // Initialize
