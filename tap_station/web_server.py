@@ -22,6 +22,9 @@ from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, current_app
 from datetime import datetime, timezone, timedelta
 
+# Import utilities
+from .datetime_utils import parse_timestamp, from_iso
+
 # Import service configuration integration
 try:
     from .service_integration import get_service_integration
@@ -310,16 +313,9 @@ class StatusWebServer:
                             errors += 1
                             continue
 
-                        # Handle timestamp
+                        # Handle timestamp using centralized function
                         ts_val = event.get("timestamp_ms") or event.get("timestampMs")
-                        timestamp = None
-                        if ts_val:
-                            try:
-                                timestamp = datetime.fromtimestamp(
-                                    int(ts_val) / 1000, tz=timezone.utc
-                                )
-                            except (ValueError, TypeError, OSError):
-                                pass
+                        timestamp = parse_timestamp(ts_val, default_to_now=False)
 
                         # Log event
                         success = self.db.log_event(
@@ -612,6 +608,22 @@ class StatusWebServer:
                 stage=self.config.stage,
                 session=self.config.session_id,
             )
+        
+        @self.app.route("/event-summary")
+        @require_admin_auth
+        def event_summary():
+            """Event summary page with final statistics and goal tracking"""
+            try:
+                session_id = self.config.session_id
+                summary_data = self._calculate_event_summary(session_id)
+                
+                return render_template(
+                    "event_summary.html",
+                    **summary_data
+                )
+            except Exception as e:
+                logger.error(f"Event summary failed: {e}", exc_info=True)
+                return render_template("error.html", error=str(e)), 500
 
         @self.app.route("/api/control/status")
         @require_admin_auth
@@ -3140,6 +3152,219 @@ class StatusWebServer:
             }
 
         return status
+    
+    def _calculate_event_summary(self, session_id: str) -> dict:
+        """
+        Calculate comprehensive event summary statistics
+        
+        Args:
+            session_id: Session ID for the event
+            
+        Returns:
+            Dictionary with event summary data
+        """
+        from datetime import datetime
+        
+        now = datetime.now(timezone.utc)
+        
+        # Get all completed journeys
+        cursor = self.db.conn.execute(
+            """
+            SELECT 
+                j.token_id,
+                j.timestamp as queue_time,
+                e.timestamp as exit_time,
+                s.timestamp as service_start_time,
+                CAST((julianday(e.timestamp) - julianday(j.timestamp)) * 1440 AS INTEGER) as total_minutes,
+                CAST((julianday(e.timestamp) - julianday(COALESCE(s.timestamp, j.timestamp))) * 1440 AS INTEGER) as service_minutes
+            FROM events j
+            JOIN events e ON j.token_id = e.token_id 
+                        AND j.session_id = e.session_id
+                        AND e.stage = 'EXIT'
+            LEFT JOIN events s ON j.token_id = s.token_id
+                             AND j.session_id = s.session_id
+                             AND s.stage = 'SERVICE_START'
+            WHERE j.stage = 'QUEUE_JOIN'
+                AND j.session_id = ?
+                AND datetime(e.timestamp) > datetime(j.timestamp)
+            ORDER BY j.timestamp ASC
+        """,
+            (session_id,)
+        )
+        
+        journeys = cursor.fetchall()
+        total_served = len(journeys)
+        
+        # Calculate wait time statistics
+        wait_times = [j["total_minutes"] for j in journeys if j["total_minutes"] > 0]
+        service_times = [j["service_minutes"] for j in journeys if j["service_minutes"] and j["service_minutes"] > 0]
+        
+        avg_wait_min = int(sum(wait_times) / len(wait_times)) if wait_times else 0
+        median_wait_min = int(sorted(wait_times)[len(wait_times) // 2]) if wait_times else 0
+        avg_service_min = int(sum(service_times) / len(service_times)) if service_times else 0
+        p90_service_min = int(sorted(service_times)[int(len(service_times) * 0.9)]) if len(service_times) > 10 else avg_service_min
+        
+        # Calculate peak queue
+        cursor = self.db.conn.execute(
+            """
+            SELECT 
+                datetime(timestamp) as time,
+                (SELECT COUNT(DISTINCT q.token_id)
+                 FROM events q
+                 LEFT JOIN events e ON q.token_id = e.token_id
+                                    AND q.session_id = e.session_id
+                                    AND e.stage = 'EXIT'
+                                    AND datetime(e.timestamp) <= datetime(events.timestamp)
+                 WHERE q.stage = 'QUEUE_JOIN'
+                   AND q.session_id = ?
+                   AND datetime(q.timestamp) <= datetime(events.timestamp)
+                   AND (e.id IS NULL OR datetime(e.timestamp) > datetime(events.timestamp))
+                ) as queue_length
+            FROM events
+            WHERE session_id = ?
+            ORDER BY queue_length DESC
+            LIMIT 1
+        """,
+            (session_id, session_id)
+        )
+        
+        peak_row = cursor.fetchone()
+        peak_queue = peak_row["queue_length"] if peak_row else 0
+        peak_time = peak_row["time"].split()[1][:5] if peak_row and peak_row["time"] else "N/A"
+        
+        # Calculate service hours and throughput
+        cursor = self.db.conn.execute(
+            "SELECT MIN(timestamp) as first_event, MAX(timestamp) as last_event FROM events WHERE session_id = ?",
+            (session_id,)
+        )
+        time_row = cursor.fetchone()
+        service_hours = 0
+        if time_row and time_row["first_event"] and time_row["last_event"]:
+            first_dt = datetime.fromisoformat(time_row["first_event"])
+            last_dt = datetime.fromisoformat(time_row["last_event"])
+            service_hours = round((last_dt - first_dt).total_seconds() / 3600, 1)
+        
+        throughput = int(total_served / service_hours) if service_hours > 0 else 0
+        
+        # Calculate abandonment rate
+        cursor = self.db.conn.execute(
+            """
+            SELECT COUNT(DISTINCT q.token_id) as abandoned
+            FROM events q
+            LEFT JOIN events e ON q.token_id = e.token_id
+                               AND q.session_id = e.session_id
+                               AND e.stage = 'EXIT'
+            WHERE q.stage = 'QUEUE_JOIN'
+                AND q.session_id = ?
+                AND e.id IS NULL
+        """,
+            (session_id,)
+        )
+        abandoned_count = cursor.fetchone()["abandoned"]
+        total_joined = total_served + abandoned_count
+        abandonment_rate = int((abandoned_count / total_joined) * 100) if total_joined > 0 else 0
+        
+        # Get anomalies summary
+        anomalies = self.db.get_anomalies(session_id)
+        anomalies_summary = {
+            "total_anomalies": anomalies.get("summary", {}).get("total_anomalies", 0),
+            "forgotten_exits": len(anomalies.get("forgotten_exit_taps", [])),
+            "stuck_in_service": len(anomalies.get("stuck_in_service", [])),
+            "rapid_fire_taps": len(anomalies.get("rapid_fire_taps", [])),
+        }
+        
+        # Calculate busiest period (hour with most completions)
+        cursor = self.db.conn.execute(
+            """
+            SELECT 
+                strftime('%H:00', timestamp) as hour,
+                COUNT(*) as count
+            FROM events
+            WHERE session_id = ? AND stage = 'EXIT'
+            GROUP BY hour
+            ORDER BY count DESC
+            LIMIT 1
+        """,
+            (session_id,)
+        )
+        busiest_row = cursor.fetchone()
+        busiest_period = busiest_row["hour"] if busiest_row else "N/A"
+        busiest_count = busiest_row["count"] if busiest_row else 0
+        
+        # Quality assessment
+        if avg_wait_min < 10:
+            quality_assessment = "Excellent - average wait under 10 minutes"
+        elif avg_wait_min < 20:
+            quality_assessment = "Good - average wait under 20 minutes"
+        elif avg_wait_min < 30:
+            quality_assessment = "Fair - average wait 20-30 minutes"
+        else:
+            quality_assessment = "Needs improvement - average wait exceeds 30 minutes"
+        
+        # Capacity assessment
+        if peak_queue < 10:
+            capacity_assessment = "Well-managed - peak queue stayed under 10 people"
+        elif peak_queue < 20:
+            capacity_assessment = "Adequate - peak queue reached 10-20 people"
+        else:
+            capacity_assessment = f"Strained - peak queue reached {peak_queue} people, consider adding capacity"
+        
+        # Sample goals (in production, these would come from config or database)
+        goals = [
+            {
+                "name": "Serve 150+ Participants",
+                "target": 150,
+                "actual": total_served,
+                "unit": "people",
+                "progress_percent": min(100, int((total_served / 150) * 100)),
+                "status_class": "goal-achieved" if total_served >= 150 else ("goal-partial" if total_served >= 100 else "goal-missed"),
+                "status_text": "✓ Achieved" if total_served >= 150 else (f"{int((total_served / 150) * 100)}% Complete" if total_served >= 100 else "Not Met"),
+                "progress_class": "" if total_served >= 150 else ("warning" if total_served >= 100 else "danger")
+            },
+            {
+                "name": "Average Wait <15 Minutes",
+                "target": 15,
+                "actual": avg_wait_min,
+                "unit": "min avg",
+                "progress_percent": min(100, int((15 / max(avg_wait_min, 1)) * 100)),
+                "status_class": "goal-achieved" if avg_wait_min <= 15 else ("goal-partial" if avg_wait_min <= 25 else "goal-missed"),
+                "status_text": "✓ Achieved" if avg_wait_min <= 15 else (f"{avg_wait_min} min" if avg_wait_min <= 25 else "Not Met"),
+                "progress_class": "" if avg_wait_min <= 15 else ("warning" if avg_wait_min <= 25 else "danger")
+            },
+            {
+                "name": "Abandonment Rate <10%",
+                "target": 10,
+                "actual": abandonment_rate,
+                "unit": "%",
+                "progress_percent": min(100, int((10 / max(abandonment_rate, 1)) * 100)) if abandonment_rate > 0 else 100,
+                "status_class": "goal-achieved" if abandonment_rate <= 10 else ("goal-partial" if abandonment_rate <= 20 else "goal-missed"),
+                "status_text": "✓ Achieved" if abandonment_rate <= 10 else (f"{abandonment_rate}%" if abandonment_rate <= 20 else "Not Met"),
+                "progress_class": "" if abandonment_rate <= 10 else ("warning" if abandonment_rate <= 20 else "danger")
+            }
+        ]
+        
+        return {
+            "session_id": session_id,
+            "event_date": datetime.now().strftime("%B %d, %Y"),
+            "total_served": total_served,
+            "avg_wait_min": avg_wait_min,
+            "median_wait_min": median_wait_min,
+            "peak_queue": peak_queue,
+            "peak_time": peak_time,
+            "throughput": throughput,
+            "service_hours": service_hours,
+            "abandonment_rate": abandonment_rate,
+            "abandoned_count": abandoned_count,
+            "avg_service_min": avg_service_min,
+            "p90_service_min": p90_service_min,
+            "anomalies_summary": anomalies_summary,
+            "goals": goals,
+            "busiest_period": busiest_period,
+            "busiest_count": busiest_count,
+            "quality_assessment": quality_assessment,
+            "capacity_assessment": capacity_assessment,
+            "session_timeout_minutes": self.app.config.get('ADMIN_SESSION_TIMEOUT_MINUTES', 60)
+        }
 
 
 def create_app(config_path="config.yaml"):

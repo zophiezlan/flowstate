@@ -6,7 +6,10 @@ ensuring consistent timezone handling and reducing code duplication.
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Union
+from typing import Optional, Union, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -270,3 +273,71 @@ def get_time_window_start_iso(window_minutes: float) -> str:
         ISO format string at start of window
     """
     return to_iso(get_time_window_start(window_minutes))
+
+
+def parse_timestamp(value: Any, default_to_now: bool = True) -> Optional[datetime]:
+    """
+    Parse a timestamp from various formats.
+    
+    This function consolidates timestamp parsing logic that was duplicated
+    across multiple modules (validation.py, nfc_reader.py, web_server.py).
+    
+    Supported formats:
+    - datetime object (returned as-is, with UTC timezone if naive)
+    - int/float (milliseconds since epoch)
+    - string (ISO format or numeric milliseconds)
+    
+    Args:
+        value: Value to parse as timestamp
+        default_to_now: If True and parsing fails, return current time.
+                       If False and parsing fails, return None.
+    
+    Returns:
+        Parsed datetime with UTC timezone, or None/current time if parsing fails
+    
+    Examples:
+        >>> parse_timestamp(1640000000000)  # milliseconds
+        datetime.datetime(2021, 12, 20, 11, 33, 20, tzinfo=timezone.utc)
+        
+        >>> parse_timestamp("2021-12-20T11:33:20Z")  # ISO format
+        datetime.datetime(2021, 12, 20, 11, 33, 20, tzinfo=timezone.utc)
+        
+        >>> parse_timestamp("1640000000000")  # string milliseconds
+        datetime.datetime(2021, 12, 20, 11, 33, 20, tzinfo=timezone.utc)
+    """
+    if value is None:
+        return utc_now() if default_to_now else None
+    
+    # Already a datetime
+    if isinstance(value, datetime):
+        return to_utc(value)
+    
+    # Numeric timestamp (milliseconds since epoch)
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+        except (ValueError, OSError) as e:
+            logger.warning(f"Failed to parse numeric timestamp {value}: {e}")
+            return utc_now() if default_to_now else None
+    
+    # String timestamp
+    if isinstance(value, str):
+        # Try parsing as numeric first
+        if value.isdigit():
+            try:
+                return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc)
+            except (ValueError, OSError) as e:
+                logger.warning(f"Failed to parse string numeric timestamp '{value}': {e}")
+                return utc_now() if default_to_now else None
+        
+        # Try parsing as ISO format
+        try:
+            dt = datetime.fromisoformat(value)
+            return to_utc(dt)
+        except ValueError as e:
+            logger.warning(f"Failed to parse ISO timestamp '{value}': {e}")
+            return utc_now() if default_to_now else None
+    
+    # Unknown type
+    logger.warning(f"Unknown timestamp type: {type(value)}")
+    return utc_now() if default_to_now else None

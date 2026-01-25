@@ -6,6 +6,7 @@ import yaml
 from typing import Any, Dict, Tuple, Callable, Optional, List
 
 from .constants import WorkflowStages
+from .exceptions import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +97,29 @@ class Config:
 
         Args:
             config_path: Path to config.yaml file
+            
+        Raises:
+            ConfigurationError: If config file is missing or invalid
         """
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+            # Provide helpful error message with suggestion
+            error_msg = (
+                f"Configuration file not found: {config_path}\n"
+                f"Please create a config.yaml file from the example:\n"
+                f"  cp config.yaml.example config.yaml\n"
+                f"Then edit config.yaml to set your station's device_id, stage, and session_id."
+            )
+            raise ConfigurationError(error_msg, config_key=config_path)
 
-        with open(config_path, "r") as f:
-            self._config = yaml.safe_load(f)
+        try:
+            with open(config_path, "r") as f:
+                self._config = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            error_msg = f"Invalid YAML syntax in configuration file: {e}"
+            raise ConfigurationError(error_msg, config_key=config_path)
+        except Exception as e:
+            error_msg = f"Failed to read configuration file: {e}"
+            raise ConfigurationError(error_msg, config_key=config_path)
 
         # Cache for computed values
         self._cache: Dict[str, Any] = {}
@@ -201,6 +219,54 @@ class Config:
                 return default
 
         return value
+    
+    def get_required(self, key_path: str) -> Any:
+        """
+        Get a required configuration value with better error message.
+        
+        Args:
+            key_path: Dot-separated path (e.g., "station.device_id")
+            
+        Returns:
+            Configuration value
+            
+        Raises:
+            ConfigurationError: If the required value is missing
+        """
+        value = self.get(key_path)
+        
+        if value is None or value == "":
+            error_msg = (
+                f"Required configuration field '{key_path}' is missing or empty.\n"
+                f"Please add it to your config.yaml file. Example:\n"
+                f"  {self._format_example(key_path)}"
+            )
+            raise ConfigurationError(error_msg, config_key=key_path)
+        
+        return value
+    
+    def _format_example(self, key_path: str) -> str:
+        """
+        Format an example configuration snippet for a given key path.
+        
+        Args:
+            key_path: Dot-separated path
+            
+        Returns:
+            Formatted YAML example
+        """
+        keys = key_path.split(".")
+        indent = "  "
+        
+        # Build nested YAML structure
+        lines = []
+        for i, key in enumerate(keys):
+            if i == len(keys) - 1:
+                lines.append(f"{indent * i}{key}: <your-value-here>")
+            else:
+                lines.append(f"{indent * i}{key}:")
+        
+        return "\n  ".join(lines)
 
     def __getattr__(self, name: str) -> Any:
         """
