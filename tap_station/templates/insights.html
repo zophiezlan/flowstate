@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Service Insights - {{ session }}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: #f5f5f5;
+        color: #333;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        color: white;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+      }
+
+      .header .session-info {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 10px;
+      }
+
+      .nav-link {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+
+      .nav-link:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .quality-score-section {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      .quality-score-circle {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      .quality-score-circle.healthy {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .quality-score-circle.degraded {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+
+      .quality-score-circle.unhealthy {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      }
+
+      .quality-score-circle.critical {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .quality-score-value {
+        font-size: 56px;
+        font-weight: 700;
+        color: white;
+        line-height: 1;
+      }
+
+      .quality-score-label {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.9);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+      }
+
+      .quality-status {
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 15px;
+      }
+
+      .quality-status.healthy {
+        color: #10b981;
+      }
+
+      .quality-status.degraded {
+        color: #3b82f6;
+      }
+
+      .quality-status.unhealthy {
+        color: #f59e0b;
+      }
+
+      .quality-status.critical {
+        color: #ef4444;
+      }
+
+      .component-scores {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+      }
+
+      .component-card {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .component-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #333;
+      }
+
+      .component-label {
+        font-size: 13px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 5px;
+      }
+
+      .slo-section {
+        margin-bottom: 30px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .slo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+
+      .slo-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .slo-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+      }
+
+      .slo-card.met::before {
+        background: #10b981;
+      }
+
+      .slo-card.warning::before {
+        background: #f59e0b;
+      }
+
+      .slo-card.critical::before {
+        background: #ef4444;
+      }
+
+      .slo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+      }
+
+      .slo-name {
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+      }
+
+      .slo-status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .slo-status-badge.met {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .slo-status-badge.warning {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .slo-status-badge.critical {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .slo-description {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 15px;
+      }
+
+      .slo-progress {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .slo-progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+      }
+
+      .slo-progress-bar.met {
+        background: linear-gradient(90deg, #10b981, #059669);
+      }
+
+      .slo-progress-bar.warning {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+      }
+
+      .slo-progress-bar.critical {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+      }
+
+      .slo-values {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+
+      .slo-current {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .slo-target {
+        color: #666;
+      }
+
+      .sli-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+
+      .sli-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+      }
+
+      .sli-item {
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .sli-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+      }
+
+      .sli-label {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .sli-unit {
+        font-size: 14px;
+        color: #999;
+        font-weight: normal;
+      }
+
+      .recommendations-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+
+      .recommendation-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .recommendation-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .recommendation-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        margin-right: 15px;
+        flex-shrink: 0;
+      }
+
+      .recommendation-icon.improve {
+        background: #dbeafe;
+        color: #2563eb;
+      }
+
+      .recommendation-icon.maintain {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      .recommendation-icon.urgent {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      .recommendation-content {
+        flex: 1;
+      }
+
+      .recommendation-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .recommendation-text {
+        font-size: 14px;
+        color: #666;
+      }
+
+      .auto-refresh {
+        text-align: center;
+        padding: 10px;
+        color: #999;
+        font-size: 13px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+      }
+
+      @media (max-width: 768px) {
+        .quality-score-circle {
+          width: 140px;
+          height: 140px;
+        }
+
+        .quality-score-value {
+          font-size: 42px;
+        }
+
+        .component-scores {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>Service Insights</h1>
+        <div class="session-info">Session: {{ session }} | Quality Metrics & SLO Tracking</div>
+      </div>
+      <div class="nav-links">
+        <a href="/dashboard" class="nav-link">Live Dashboard</a>
+        <a href="/control" class="nav-link">Control Panel</a>
+        <a href="/" class="nav-link">Home</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Overall Quality Score -->
+      <div class="quality-score-section">
+        <div class="quality-score-circle" id="quality-circle">
+          <div class="quality-score-value" id="quality-score">--</div>
+          <div class="quality-score-label">Quality Score</div>
+        </div>
+        <div class="quality-status" id="quality-status">Loading...</div>
+
+        <div class="component-scores" id="component-scores">
+          <div class="component-card">
+            <div class="component-value" id="score-timeliness">--</div>
+            <div class="component-label">Timeliness</div>
+          </div>
+          <div class="component-card">
+            <div class="component-value" id="score-throughput">--</div>
+            <div class="component-label">Throughput</div>
+          </div>
+          <div class="component-card">
+            <div class="component-value" id="score-completion">--</div>
+            <div class="component-label">Completion</div>
+          </div>
+          <div class="component-card">
+            <div class="component-value" id="score-reliability">--</div>
+            <div class="component-label">Reliability</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Level Objectives -->
+      <div class="slo-section">
+        <h2 class="section-title">Service Level Objectives (SLOs)</h2>
+        <div class="slo-grid" id="slo-grid">
+          <div class="loading">Loading SLO data...</div>
+        </div>
+      </div>
+
+      <!-- Service Level Indicators -->
+      <div class="sli-section">
+        <h2 class="section-title">Service Level Indicators (SLIs)</h2>
+        <div class="sli-grid" id="sli-grid">
+          <div class="sli-item">
+            <div class="sli-value" id="sli-avg-wait">--</div>
+            <div class="sli-label">Avg Wait Time</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-median-wait">--</div>
+            <div class="sli-label">Median Wait</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-p95-wait">--</div>
+            <div class="sli-label">P95 Wait Time</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-throughput">--</div>
+            <div class="sli-label">Throughput/hr</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-completion">--</div>
+            <div class="sli-label">Completion Rate</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-active">--</div>
+            <div class="sli-label">Active Journeys</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-service-time">--</div>
+            <div class="sli-label">Avg Service Time</div>
+          </div>
+          <div class="sli-item">
+            <div class="sli-value" id="sli-efficiency">--</div>
+            <div class="sli-label">Efficiency</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="recommendations-section">
+        <h2 class="section-title">Recommendations</h2>
+        <div id="recommendations">
+          <div class="loading">Analyzing service data...</div>
+        </div>
+      </div>
+
+      <div class="auto-refresh">
+        Auto-refreshing every 30 seconds | Last update: <span id="last-update">-</span>
+      </div>
+    </div>
+
+    <script>
+      async function fetchInsights() {
+        try {
+          const response = await fetch("/api/service-insights");
+          const data = await response.json();
+          updateInsights(data);
+          document.getElementById("last-update").textContent = new Date().toLocaleTimeString();
+        } catch (error) {
+          console.error("Failed to fetch insights:", error);
+        }
+      }
+
+      function updateInsights(data) {
+        // Update quality score
+        const score = data.quality_score;
+        if (score) {
+          const circle = document.getElementById("quality-circle");
+          const scoreEl = document.getElementById("quality-score");
+          const statusEl = document.getElementById("quality-status");
+
+          scoreEl.textContent = Math.round(score.overall);
+
+          // Update status
+          circle.className = "quality-score-circle " + score.status;
+          statusEl.className = "quality-status " + score.status;
+          statusEl.textContent = score.status.charAt(0).toUpperCase() + score.status.slice(1) + " Service";
+
+          // Update component scores
+          document.getElementById("score-timeliness").textContent =
+            Math.round(score.components.timeliness || 0);
+          document.getElementById("score-throughput").textContent =
+            Math.round(score.components.throughput || 0);
+          document.getElementById("score-completion").textContent =
+            Math.round(score.components.completion || 0);
+          document.getElementById("score-reliability").textContent =
+            Math.round(score.components.reliability || 0);
+        }
+
+        // Update SLOs
+        const sloGrid = document.getElementById("slo-grid");
+        if (data.slos && Object.keys(data.slos).length > 0) {
+          sloGrid.innerHTML = Object.entries(data.slos).map(([key, slo]) => `
+            <div class="slo-card ${slo.status}">
+              <div class="slo-header">
+                <div class="slo-name">${formatSloName(slo.name)}</div>
+                <span class="slo-status-badge ${slo.status}">${slo.status}</span>
+              </div>
+              <div class="slo-description">${slo.description}</div>
+              <div class="slo-progress">
+                <div class="slo-progress-bar ${slo.status}"
+                     style="width: ${Math.min(100, slo.compliance || 0)}%"></div>
+              </div>
+              <div class="slo-values">
+                <span class="slo-current">${formatValue(slo.current, slo.unit)}</span>
+                <span class="slo-target">Target: ${formatValue(slo.target, slo.unit)}</span>
+              </div>
+            </div>
+          `).join("");
+        } else {
+          sloGrid.innerHTML = '<div class="loading">No SLO data available</div>';
+        }
+
+        // Update SLIs
+        if (data.slis) {
+          document.getElementById("sli-avg-wait").innerHTML =
+            formatMinutes(data.slis.avg_wait_time);
+          document.getElementById("sli-median-wait").innerHTML =
+            formatMinutes(data.slis.median_wait_time);
+          document.getElementById("sli-p95-wait").innerHTML =
+            formatMinutes(data.slis.p95_wait_time);
+          document.getElementById("sli-throughput").innerHTML =
+            `${Math.round(data.slis.current_throughput || 0)}`;
+          document.getElementById("sli-completion").innerHTML =
+            `${Math.round(data.slis.completion_rate || 0)}<span class="sli-unit">%</span>`;
+          document.getElementById("sli-active").textContent =
+            data.slis.active_journeys || 0;
+          document.getElementById("sli-service-time").innerHTML =
+            formatMinutes(data.slis.avg_service_time);
+          document.getElementById("sli-efficiency").innerHTML =
+            `${Math.round(data.slis.service_efficiency || 0)}<span class="sli-unit">%</span>`;
+        }
+
+        // Update recommendations
+        updateRecommendations(data);
+      }
+
+      function formatSloName(name) {
+        return name.replace(/_/g, " ").replace(/slo$/i, "").trim()
+          .split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      }
+
+      function formatValue(value, unit) {
+        if (unit === "percent") {
+          return `${Math.round(value || 0)}%`;
+        }
+        return Math.round(value || 0);
+      }
+
+      function formatMinutes(value) {
+        if (!value || value === 0) return "--";
+        return `${Math.round(value)}<span class="sli-unit">min</span>`;
+      }
+
+      function updateRecommendations(data) {
+        const container = document.getElementById("recommendations");
+        const recommendations = [];
+
+        // Generate recommendations based on data
+        if (data.quality_score) {
+          const score = data.quality_score;
+
+          if (score.components.timeliness < 70) {
+            recommendations.push({
+              type: "urgent",
+              title: "Improve Wait Times",
+              text: "Wait times are above target. Consider adding staff or streamlining processes."
+            });
+          }
+
+          if (score.components.throughput < 50) {
+            recommendations.push({
+              type: "improve",
+              title: "Increase Throughput",
+              text: "Service throughput is below capacity. Review bottlenecks in the workflow."
+            });
+          }
+
+          if (score.components.completion < 90) {
+            recommendations.push({
+              type: "improve",
+              title: "Track Completions",
+              text: "Some participants may be leaving without tapping exit. Remind staff to encourage exit taps."
+            });
+          }
+
+          if (score.overall >= 90) {
+            recommendations.push({
+              type: "maintain",
+              title: "Excellent Service Quality",
+              text: "Keep up the great work! All metrics are within healthy ranges."
+            });
+          }
+        }
+
+        if (data.slis && data.slis.active_journeys > 15) {
+          recommendations.push({
+            type: "urgent",
+            title: "High Active Count",
+            text: `${data.slis.active_journeys} active journeys. Monitor for stuck cards or forgotten exits.`
+          });
+        }
+
+        if (recommendations.length === 0) {
+          recommendations.push({
+            type: "maintain",
+            title: "Service Running Normally",
+            text: "No immediate actions required. Continue monitoring."
+          });
+        }
+
+        container.innerHTML = recommendations.map(rec => `
+          <div class="recommendation-item">
+            <div class="recommendation-icon ${rec.type}">
+              ${rec.type === "urgent" ? "⚠️" : rec.type === "improve" ? "📈" : "✅"}
+            </div>
+            <div class="recommendation-content">
+              <div class="recommendation-title">${rec.title}</div>
+              <div class="recommendation-text">${rec.text}</div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      // Initial load
+      fetchInsights();
+
+      // Auto-refresh every 30 seconds
+      setInterval(fetchInsights, 30000);
+    </script>
+  </body>
+</html>

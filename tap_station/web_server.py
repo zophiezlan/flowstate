@@ -1192,6 +1192,90 @@ class StatusWebServer:
                 logger.error(f"API dashboard failed: {e}")
                 return jsonify({"error": str(e)}), 500
 
+        @self.app.route("/insights")
+        def insights():
+            """Service insights and quality metrics page"""
+            return render_template(
+                "insights.html",
+                session=self.config.session_id,
+                device_id=self.config.device_id,
+            )
+
+        @self.app.route("/api/service-insights")
+        def api_service_insights():
+            """
+            API endpoint for service quality insights
+
+            Returns:
+                JSON with SLIs, SLOs, and quality scores
+            """
+            try:
+                insights_data = self._get_service_insights()
+                return jsonify(insights_data), 200
+            except Exception as e:
+                logger.error(f"API service insights failed: {e}")
+                return jsonify({"error": str(e)}), 500
+
+    def _get_service_insights(self) -> dict:
+        """
+        Get service quality insights including SLIs and SLOs
+
+        Returns:
+            Dictionary with quality metrics
+        """
+        try:
+            from .service_quality import ServiceQualityMetrics
+
+            session_id = self.config.session_id
+            quality = ServiceQualityMetrics(self.db.conn)
+
+            # Configure based on service settings
+            if self.svc:
+                quality.configure(
+                    target_wait_minutes=self.svc.get_wait_warning_minutes(),
+                    target_throughput_per_hour=self.svc.get_people_per_hour()
+                )
+
+            # Calculate quality score
+            quality_score = quality.calculate_quality_score(session_id)
+
+            # Evaluate SLOs
+            slos = quality.evaluate_slos(session_id)
+
+            # Get SLIs
+            slis = quality.calculate_slis(session_id)
+
+            return {
+                "session_id": session_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "quality_score": {
+                    "overall": quality_score.overall,
+                    "status": quality_score.status.value,
+                    "components": quality_score.components,
+                },
+                "slos": slos,
+                "slis": slis,
+            }
+        except ImportError:
+            # Service quality module not available
+            logger.warning("Service quality module not available")
+            return {
+                "session_id": self.config.session_id,
+                "error": "Service quality metrics not available",
+                "quality_score": {"overall": 0, "status": "unknown", "components": {}},
+                "slos": {},
+                "slis": {},
+            }
+        except Exception as e:
+            logger.error(f"Error calculating service insights: {e}", exc_info=True)
+            return {
+                "session_id": self.config.session_id,
+                "error": str(e),
+                "quality_score": {"overall": 0, "status": "unknown", "components": {}},
+                "slos": {},
+                "slis": {},
+            }
+
     def _get_dashboard_stats(self) -> dict:
         """
         Get comprehensive dashboard statistics
