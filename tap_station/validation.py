@@ -324,27 +324,33 @@ class EventValidator:
 
 
 class TokenValidator:
-    """Validates token IDs"""
+    """Validates token IDs and stage names"""
 
-    # Pattern for valid token IDs (3-4 digit numbers)
-    TOKEN_ID_PATTERN = re.compile(r"^\d{1,4}$")
+    # Pattern for valid token IDs (alphanumeric, 1-10 chars)
+    TOKEN_ID_PATTERN = re.compile(r"^[A-Za-z0-9]{1,10}$")
 
     # Pattern for UIDs (8+ hex characters)
     UID_PATTERN = re.compile(r"^[0-9A-Fa-f]{8,}$")
 
     @classmethod
-    def is_valid_token_id(cls, token_id: str) -> bool:
+    def is_valid_token_id(cls, token_id: str, strict: bool = False) -> bool:
         """
         Check if a string looks like a valid token ID.
 
         Args:
             token_id: String to check
+            strict: If True, only allow numeric IDs (backward compatibility)
 
         Returns:
             True if it looks like a valid token ID
         """
         if not isinstance(token_id, str):
             return False
+        
+        if strict:
+            # Legacy: only numeric
+            return bool(re.compile(r"^\d{1,4}$").match(token_id))
+        
         return bool(cls.TOKEN_ID_PATTERN.match(token_id))
 
     @classmethod
@@ -374,6 +380,51 @@ class TokenValidator:
             True if the card should be auto-initialized
         """
         return cls.looks_like_uid(token_id) and not cls.is_valid_token_id(token_id)
+
+
+class StageValidator:
+    """Validates workflow stage names"""
+    
+    @classmethod
+    def is_valid_stage(cls, stage: str) -> bool:
+        """
+        Check if a stage name is valid.
+        
+        Args:
+            stage: Stage name to validate
+            
+        Returns:
+            True if stage is recognized
+        """
+        if not isinstance(stage, str):
+            return False
+        
+        normalized = WorkflowStages.normalize(stage)
+        return normalized in WorkflowStages.ALL_STAGES
+    
+    @classmethod
+    def validate_stage_or_raise(cls, stage: str) -> str:
+        """
+        Validate stage and return normalized version, or raise ValueError.
+        
+        Args:
+            stage: Stage name to validate
+            
+        Returns:
+            Normalized stage name
+            
+        Raises:
+            ValueError: If stage is invalid
+        """
+        if not isinstance(stage, str):
+            raise ValueError(f"Stage must be a string, got {type(stage)}")
+        
+        normalized = WorkflowStages.normalize(stage)
+        
+        if normalized == "UNKNOWN":
+            raise ValueError(f"Unknown stage: {stage}. Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}")
+        
+        return normalized
 
 
 # =============================================================================
