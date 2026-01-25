@@ -283,6 +283,87 @@ class FeedbackPatterns:
 
 
 # =============================================================================
+# Time Units
+# =============================================================================
+
+class TimeUnits:
+    """Standard time unit conversions"""
+
+    SECONDS_PER_MINUTE = 60
+    SECONDS_PER_HOUR = 3600
+    SECONDS_PER_DAY = 86400
+
+    MINUTES_PER_HOUR = 60
+    MINUTES_PER_DAY = 1440
+
+    HOURS_PER_DAY = 24
+
+    # Common time windows in minutes
+    WINDOW_5_MIN = 5
+    WINDOW_15_MIN = 15
+    WINDOW_30_MIN = 30
+    WINDOW_1_HOUR = 60
+    WINDOW_4_HOURS = 240
+    WINDOW_12_HOURS = 720
+    WINDOW_24_HOURS = 1440
+
+
+# =============================================================================
+# Storage Units
+# =============================================================================
+
+class StorageUnits:
+    """Storage unit conversions"""
+
+    BYTES_PER_KB = 1024
+    BYTES_PER_MB = 1024 ** 2
+    BYTES_PER_GB = 1024 ** 3
+
+    KB_PER_MB = 1024
+    MB_PER_GB = 1024
+
+
+# =============================================================================
+# Hardware Constants
+# =============================================================================
+
+class HardwareDefaults:
+    """Default hardware-related values"""
+
+    # I2C settings
+    DEFAULT_I2C_BUS = 1
+    DEFAULT_I2C_ADDRESS = 0x24
+
+    # Temperature thresholds (Celsius)
+    TEMP_WARNING = 70
+    TEMP_CRITICAL = 80
+
+    # Disk space thresholds (percent)
+    DISK_WARNING_PERCENT = 80
+    DISK_CRITICAL_PERCENT = 90
+
+    # Raspberry Pi specific paths
+    TEMP_PATH = "/sys/class/thermal/thermal_zone0/temp"
+    THROTTLE_PATH = "/sys/devices/platform/soc/soc:firmware/get_throttled"
+
+
+# =============================================================================
+# API Constants
+# =============================================================================
+
+class APIDefaults:
+    """Default API-related values"""
+
+    MAX_EVENTS_PER_REQUEST = 1000
+    MAX_TOKEN_ID_LENGTH = 100
+    MAX_UID_LENGTH = 100
+    MAX_STAGE_LENGTH = 50
+
+    # Request timeout
+    DEFAULT_TIMEOUT_SECONDS = 30
+
+
+# =============================================================================
 # Global Transitions Instance
 # =============================================================================
 

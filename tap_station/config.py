@@ -53,6 +53,27 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
     "web_server_enabled": ("web_server.enabled", False, bool),
     "web_server_host": ("web_server.host", "0.0.0.0", str),
     "web_server_port": ("web_server.port", 8080, int),
+
+    # API limits and validation
+    "api_max_events_per_request": ("web_server.api.max_events_per_request", 1000, int),
+    "api_max_token_id_length": ("web_server.api.max_token_id_length", 100, int),
+    "api_max_uid_length": ("web_server.api.max_uid_length", 100, int),
+    "api_max_stage_length": ("web_server.api.max_stage_length", 50, int),
+
+    # Analytics and dashboard settings
+    "analytics_wait_sample_size": ("web_server.analytics.wait_sample_size", 20, int),
+    "analytics_recent_completions_limit": ("web_server.analytics.recent_completions_limit", 10, int),
+    "analytics_recent_events_limit": ("web_server.analytics.recent_events_limit", 15, int),
+    "analytics_activity_hours": ("web_server.analytics.activity_hours", 12, int),
+    "analytics_max_estimate_minutes": ("web_server.analytics.max_estimate_minutes", 120, int),
+    "analytics_recent_service_window": ("web_server.analytics.recent_service_window_minutes", 30, int),
+    "analytics_confidence_sample_size": ("web_server.analytics.confidence_sample_size", 5, int),
+
+    # Hardware monitoring thresholds
+    "hardware_temp_warning": ("hardware.temp_warning_celsius", 70, int),
+    "hardware_temp_critical": ("hardware.temp_critical_celsius", 80, int),
+    "hardware_disk_warning": ("hardware.disk_warning_percent", 80, int),
+    "hardware_disk_critical": ("hardware.disk_critical_percent", 90, int),
 }
 
 
