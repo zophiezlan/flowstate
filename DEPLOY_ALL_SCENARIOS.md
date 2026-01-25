@@ -22,7 +22,7 @@ This guide shows how to deploy all three festival scenarios so NSW Health can cl
 1. **New Web Service** → Select your repo
 2. **Settings:**
    - **Name:** `nfc-demo-htid`
-   - **Branch:** `claude/setup-demo-site-TAgnt`
+   - **Branch:** `main`
    - **Build Command:** `pip install -r requirements-web.txt`
    - **Start Command:** `python demo_server.py --scenario htid`
    - **Instance Type:** Free
@@ -42,7 +42,7 @@ This guide shows how to deploy all three festival scenarios so NSW Health can cl
 1. **New Web Service** → Same repo
 2. **Settings:**
    - **Name:** `nfc-demo-lost-paradise-actual`
-   - **Branch:** `claude/setup-demo-site-TAgnt`
+   - **Branch:** `main`
    - **Build Command:** `pip install -r requirements-web.txt`
    - **Start Command:** `python demo_server.py --scenario lost_paradise_actual`
    - **Instance Type:** Free
@@ -62,7 +62,7 @@ This guide shows how to deploy all three festival scenarios so NSW Health can cl
 1. **New Web Service** → Same repo
 2. **Settings:**
    - **Name:** `nfc-demo-lost-paradise-ideal`
-   - **Branch:** `claude/setup-demo-site-TAgnt`
+   - **Branch:** `main`
    - **Build Command:** `pip install -r requirements-web.txt`
    - **Start Command:** `python demo_server.py --scenario lost_paradise_ideal`
    - **Instance Type:** Free

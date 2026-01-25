@@ -125,7 +125,7 @@ Render provides automatic deployments from GitHub with a free tier perfect for d
 
 1. **Push code to GitHub**
    ```bash
-   git push origin claude/setup-demo-site-TAgnt
+   git push origin main
    ```
 
 2. **Create Render account**
@@ -135,12 +135,12 @@ Render provides automatic deployments from GitHub with a free tier perfect for d
 3. **Create New Web Service**
    - Click "New +" → "Web Service"
    - Connect your GitHub repository: `zophiezlan/nfc-tap-logger`
-   - Select branch: `claude/setup-demo-site-TAgnt`
+   - Select branch: `main`
 
 4. **Configure Service**
    - **Name**: `nfc-tap-logger-demo` (or choose your own)
    - **Region**: Oregon (or closest to Australia)
-   - **Branch**: `claude/setup-demo-site-TAgnt`
+   - **Branch**: `main`
    - **Build Command**: `pip install -r requirements-web.txt`
    - **Start Command**: `python demo_server.py`
    - **Plan**: Free

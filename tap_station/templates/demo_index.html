@@ -243,6 +243,93 @@
         margin: 5px 0;
       }
 
+      /* Modal/Notification Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        animation: modalSlideIn 0.3s ease;
+      }
+
+      @keyframes modalSlideIn {
+        from {
+          transform: translateY(-50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        font-size: 1.5em;
+        margin-bottom: 15px;
+        color: #1a1a1a;
+      }
+
+      .modal-body {
+        color: #333;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+
+      .modal-code {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: monospace;
+        margin: 10px 0;
+        font-size: 0.9em;
+        color: #d63031;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .modal-button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1em;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .modal-button.primary {
+        background: #0066cc;
+        color: white;
+      }
+
+      .modal-button.primary:hover {
+        background: #0052a3;
+      }
+
       @media (max-width: 768px) {
         .header h1 {
           font-size: 1.8em;
@@ -343,7 +430,7 @@
           Compare different deployment scenarios based on real-world NSW festival data
         </p>
         <div class="view-cards">
-          <div class="view-card scenario-card" data-scenario="htid" style="cursor: pointer; border: 3px solid transparent;">
+          <button class="view-card scenario-card" data-scenario="htid" style="border: 3px solid transparent; background: #1a1a1a; width: 100%; text-align: left; cursor: pointer;" aria-label="HTID Hardstyle Til I Die scenario">
             <div class="card-icon">🎵</div>
             <div class="card-subtitle">SINGLE DAY FESTIVAL</div>
             <h3>HTID (Hardstyle Til I Die)</h3>
@@ -358,9 +445,9 @@
               <div style="margin: 5px 0; color: #059669;"><strong>✓ Outcome:</strong> Success - good experience</div>
             </div>
             <span class="btn" style="background: #10b981;">View This Scenario →</span>
-          </div>
+          </button>
 
-          <div class="view-card scenario-card" data-scenario="lost_paradise_actual" style="cursor: pointer; border: 3px solid transparent;">
+          <button class="view-card scenario-card" data-scenario="lost_paradise_actual" style="border: 3px solid transparent; background: #1a1a1a; width: 100%; text-align: left; cursor: pointer;" aria-label="Lost Paradise Understaffed scenario">
             <div class="card-icon">🌴</div>
             <div class="card-subtitle">MULTI-DAY FESTIVAL - ACTUAL</div>
             <h3>Lost Paradise (Understaffed)</h3>
@@ -375,9 +462,9 @@
               <div style="margin: 5px 0; color: #dc2626;"><strong>✗ Outcome:</strong> Many turned away, staff burnout</div>
             </div>
             <span class="btn" style="background: #dc2626;">View This Scenario →</span>
-          </div>
+          </button>
 
-          <div class="view-card scenario-card" data-scenario="lost_paradise_ideal" style="cursor: pointer; border: 3px solid transparent;">
+          <button class="view-card scenario-card" data-scenario="lost_paradise_ideal" style="border: 3px solid transparent; background: #1a1a1a; width: 100%; text-align: left; cursor: pointer;" aria-label="Lost Paradise Proper Staffing scenario">
             <div class="card-icon">🌟</div>
             <div class="card-subtitle">MULTI-DAY FESTIVAL - IDEAL</div>
             <h3>Lost Paradise (Proper Staffing)</h3>
@@ -392,7 +479,7 @@
               <div style="margin: 5px 0; color: #059669;"><strong>✓ Outcome:</strong> Success - meets demand, quality service</div>
             </div>
             <span class="btn" style="background: #0066cc;">View This Scenario →</span>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -485,6 +572,17 @@
       </div>
     </div>
 
+    <!-- Modal for scenario switching instructions -->
+    <div id="scenarioModal" class="modal-overlay" role="dialog" aria-labelledby="modalHeader" aria-modal="true">
+      <div class="modal-content">
+        <div id="modalHeader" class="modal-header"></div>
+        <div id="modalBody" class="modal-body"></div>
+        <div class="modal-footer">
+          <button class="modal-button primary" onclick="closeModal()">Got it</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       // Detect which scenario is running by checking API
       let currentScenario = 'htid'; // Default
@@ -521,8 +619,15 @@
       async function detectScenario() {
         try {
           const response = await fetch('/health');
+          
+          if (!response.ok) {
+            console.log('Could not fetch health endpoint, using default scenario');
+            updateCurrentScenarioDisplay();
+            return;
+          }
+          
           const data = await response.json();
-          const sessionId = data.session || '';
+          const sessionId = data?.session || data?.session_id || '';
 
           if (sessionId.includes('htid')) {
             currentScenario = 'htid';
@@ -534,7 +639,7 @@
 
           updateCurrentScenarioDisplay();
         } catch (error) {
-          console.log('Could not detect scenario, using default');
+          console.log('Could not detect scenario, using default:', error);
           updateCurrentScenarioDisplay();
         }
       }
@@ -601,12 +706,95 @@
             // Add click handler to show instructions
             card.style.cursor = 'pointer';
             card.onclick = () => {
-              alert(`To view ${scenarioInfo.name}:\n\n` +
-                    `1. If deployed: Visit the dedicated URL for this scenario\n` +
-                    `2. If local: Stop the server (Ctrl+C) and run:\n\n` +
-                    `   ${scenarioInfo.command}\n\n` +
-                    `💡 Tip: Deploy all 3 scenarios separately for instant switching!`);
+              showModal(
+                `Switch to ${scenarioInfo.name}`,
+                `<p><strong>To view this scenario:</strong></p>
+                 <p style="margin-top: 10px;">1. <strong>If deployed:</strong> Visit the dedicated URL for this scenario</p>
+                 <p style="margin-top: 8px;">2. <strong>If local:</strong> Stop the server (Ctrl+C) and run:</p>
+                 <div class="modal-code">${scenarioInfo.command}</div>
+                 <p style="margin-top: 10px; font-style: italic;">💡 <strong>Tip:</strong> Deploy all 3 scenarios separately for instant switching!</p>`
+              );
             };
+          }
+        });
+      }
+
+      // Modal functions
+      let lastFocusedElement = null;
+      
+      function showModal(title, body) {
+        const modal = document.getElementById('scenarioModal');
+        const closeButton = modal.querySelector('.modal-button');
+        
+        // Store the currently focused element
+        lastFocusedElement = document.activeElement;
+        
+        // Use textContent for title to prevent XSS
+        document.getElementById('modalHeader').textContent = title;
+        
+        // Note: Using innerHTML here is safe because the body content is controlled by us
+        // (scenario data from scenarioData object) and never includes user input.
+        // The command string is hardcoded in the scenarioData object.
+        document.getElementById('modalBody').innerHTML = body;
+        
+        modal.classList.add('active');
+        
+        // Focus the close button
+        setTimeout(() => {
+          closeButton.focus();
+        }, 100);
+        
+        // Trap focus within modal
+        trapFocusInModal(modal);
+        
+        // Close on overlay click
+        modal.onclick = (e) => {
+          if (e.target === modal) {
+            closeModal();
+          }
+        };
+        
+        // Close on Escape key
+        document.addEventListener('keydown', handleEscapeKey);
+      }
+
+      function closeModal() {
+        const modal = document.getElementById('scenarioModal');
+        modal.classList.remove('active');
+        document.removeEventListener('keydown', handleEscapeKey);
+        
+        // Return focus to the element that opened the modal
+        if (lastFocusedElement) {
+          lastFocusedElement.focus();
+        }
+      }
+
+      function handleEscapeKey(e) {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      }
+      
+      function trapFocusInModal(modal) {
+        const focusableElements = modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+
+        modal.addEventListener('keydown', function(e) {
+          if (e.key !== 'Tab') return;
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstFocusable) {
+              lastFocusable.focus();
+              e.preventDefault();
+            }
+          } else {
+            if (document.activeElement === lastFocusable) {
+              firstFocusable.focus();
+              e.preventDefault();
+            }
           }
         });
       }

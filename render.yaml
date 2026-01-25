@@ -4,11 +4,6 @@ services:
     env: python
     region: oregon
     plan: free
-    branch: claude/setup-demo-site-TAgnt
+    branch: main
     buildCommand: pip install -r requirements-web.txt
     startCommand: python demo_server.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.0
-      - key: DEMO_MODE
-        value: "true"

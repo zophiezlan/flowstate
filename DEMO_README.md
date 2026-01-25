@@ -40,7 +40,7 @@ Visit **http://localhost:8080** - the demo landing page will guide you through a
 4. Configure:
    - **Build Command**: `pip install -r requirements-web.txt`
    - **Start Command**: `python demo_server.py`
-   - **Branch**: `claude/setup-demo-site-TAgnt`
+   - **Branch**: `main`
 
 **See [DEMO_DEPLOYMENT.md](DEMO_DEPLOYMENT.md) for detailed deployment guides.**
 
