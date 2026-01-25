@@ -378,7 +378,7 @@ class TestConvenienceFunctions:
 
     def test_get_config_manager(self):
         """Test global manager retrieval"""
-        import tap_station.dynamic_config as module
+        module = sys.modules["tap_station.dynamic_config"]
         module._config_manager = None
 
         manager = get_config_manager()
@@ -389,7 +389,7 @@ class TestConvenienceFunctions:
 
     def test_get_config_function(self):
         """Test get_config convenience function"""
-        import tap_station.dynamic_config as module
+        module = sys.modules["tap_station.dynamic_config"]
         module._config_manager = None
 
         manager = get_config_manager()
@@ -399,7 +399,7 @@ class TestConvenienceFunctions:
 
     def test_update_config_function(self):
         """Test update_config convenience function"""
-        import tap_station.dynamic_config as module
+        module = sys.modules["tap_station.dynamic_config"]
         module._config_manager = None
 
         manager = get_config_manager()

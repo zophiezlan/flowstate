@@ -23,7 +23,7 @@ import hashlib
 import secrets
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Set, Tuple
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 from enum import Enum
 import functools
@@ -152,8 +152,21 @@ class Session:
     active: bool = True
 
     def is_valid(self) -> bool:
-        """Check if session is still valid"""
-        return self.active and utc_now() < self.expires_at
+        """
+        Check if session is still valid.
+        
+        Compares current UTC time with expiration time. Both datetimes must
+        have consistent timezone awareness (both naive or both aware).
+        utc_now() returns a timezone-naive datetime in UTC.
+        """
+        now = utc_now()
+        # Ensure timezone-aware comparison if expires_at is timezone-aware
+        if self.expires_at.tzinfo is not None and now.tzinfo is None:
+            # If expires_at is aware but now is naive, make comparison fail-safe
+            # by treating now as UTC and making it aware
+            from datetime import timezone
+            now = now.replace(tzinfo=timezone.utc)
+        return self.active and now < self.expires_at
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
@@ -300,7 +313,7 @@ class AccessControlManager:
         self._users: Dict[str, User] = {}
         self._sessions: Dict[str, Session] = {}
         self._audit_log: List[AuditLogEntry] = []
-        self._max_audit_log = 10000
+        self._max_audit_log = 5000
         self._audit_counter = 0
 
         # Load system roles
@@ -760,7 +773,17 @@ class AccessControlManager:
     # =========================================================================
 
     def _hash_password(self, password: str) -> str:
-        """Hash a password"""
+        """
+        Hash a password using PBKDF2-HMAC-SHA256.
+        
+        The hash is stored in the format: "salt$hash" where:
+        - salt: 32-character hex string (16 bytes)
+        - hash: PBKDF2-HMAC-SHA256 output with 100,000 iterations
+        
+        This is a standard approach for password storage. The salt prevents
+        rainbow table attacks, and PBKDF2 with high iteration count slows
+        down brute force attacks.
+        """
         salt = secrets.token_hex(16)
         hash_obj = hashlib.pbkdf2_hmac(
             "sha256",

@@ -445,7 +445,7 @@ class TestConvenienceFunctions:
 
     def test_get_hooks_manager(self):
         """Test global manager retrieval"""
-        import tap_station.integration_hooks as module
+        module = sys.modules["tap_station.integration_hooks"]
         module._hooks_manager = None
 
         manager = get_hooks_manager()
@@ -456,7 +456,7 @@ class TestConvenienceFunctions:
 
     def test_emit_event_function(self):
         """Test emit_event convenience function"""
-        import tap_station.integration_hooks as module
+        module = sys.modules["tap_station.integration_hooks"]
         module._hooks_manager = None
 
         # Get manager first

@@ -19,14 +19,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tap_station.access_control import (
     AccessControlManager,
     Role,
-    User,
     Session,
     Permission,
-    AccessDecision,
-    AuditLogEntry,
     get_access_control_manager,
     load_roles_from_config,
-    require_permission,
 )
 
 
@@ -505,7 +501,7 @@ class TestConvenienceFunctions:
 
     def test_get_access_control_manager(self):
         """Test global manager retrieval"""
-        import tap_station.access_control as module
+        module = sys.modules["tap_station.access_control"]
         module._access_manager = None
 
         manager = get_access_control_manager()

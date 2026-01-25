@@ -20,10 +20,9 @@ Service Design Principles:
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable, Union, Tuple
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
-import re
 
 from .datetime_utils import utc_now
 

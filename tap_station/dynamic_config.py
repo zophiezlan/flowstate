@@ -543,17 +543,27 @@ class DynamicConfigurationManager:
 
     def _watch_file(self) -> None:
         """File watching thread"""
+        last_mtime = None
+        
         while self._running:
             try:
                 if self._config_path and os.path.exists(self._config_path):
-                    # Check file modification
-                    with open(self._config_path, "r") as f:
-                        content = f.read()
+                    # First check modification time - much faster than reading file
+                    current_mtime = os.path.getmtime(self._config_path)
+                    
+                    if last_mtime is None:
+                        last_mtime = current_mtime
+                    elif current_mtime != last_mtime:
+                        # File was modified, now read and check content
+                        with open(self._config_path, "r") as f:
+                            content = f.read()
 
-                    checksum = hashlib.md5(content.encode()).hexdigest()
-                    if checksum != self._last_checksum:
-                        logger.info("Configuration file changed, reloading...")
-                        self.load_from_file(self._config_path)
+                        checksum = hashlib.md5(content.encode()).hexdigest()
+                        if checksum != self._last_checksum:
+                            logger.info("Configuration file changed, reloading...")
+                            self.load_from_file(self._config_path)
+                        
+                        last_mtime = current_mtime
 
             except Exception as e:
                 logger.error(f"Error watching configuration file: {e}")
