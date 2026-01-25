@@ -1292,8 +1292,7 @@ class StatusWebServer:
 
         # Check for potential abandonments (people in queue > threshold hours)
         stuck_hours = self.svc.get_stuck_cards_threshold_hours() if self.svc else 2
-        # Build time offset string safely (stuck_hours is a trusted config value)
-        time_offset = f"-{int(stuck_hours)} hours"
+        # Use SQLite concatenation to safely build time offset from parameter
         cursor = self.db.conn.execute(
             """
             SELECT COUNT(*) as count
@@ -1305,9 +1304,9 @@ class StatusWebServer:
             WHERE q.stage = 'QUEUE_JOIN'
                 AND q.session_id = ?
                 AND e.id IS NULL
-                AND q.timestamp < datetime('now', ?)
+                AND q.timestamp < datetime('now', '-' || ? || ' hours')
         """,
-            (session_id, time_offset),
+            (session_id, str(stuck_hours)),
         )
         stuck_count = cursor.fetchone()["count"]
         if stuck_count > 0:
