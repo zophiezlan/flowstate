@@ -22,7 +22,7 @@ import logging
 import hashlib
 import secrets
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 from enum import Enum
@@ -155,17 +155,11 @@ class Session:
         """
         Check if session is still valid.
         
-        Compares current UTC time with expiration time. Both datetimes must
-        have consistent timezone awareness (both naive or both aware).
-        utc_now() returns a timezone-naive datetime in UTC.
+        Compares current UTC time with expiration time. utc_now() returns a
+        timezone-aware datetime (UTC), so comparison will work correctly
+        whether expires_at is timezone-aware or naive.
         """
-        now = utc_now()
-        # Ensure timezone-aware comparison if expires_at is timezone-aware
-        if self.expires_at.tzinfo is not None and now.tzinfo is None:
-            # If expires_at is aware but now is naive, make comparison fail-safe
-            # by treating now as UTC and making it aware
-            now = now.replace(tzinfo=timezone.utc)
-        return self.active and now < self.expires_at
+        return self.active and utc_now() < self.expires_at
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""

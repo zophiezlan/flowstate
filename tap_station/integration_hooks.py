@@ -320,22 +320,33 @@ class IntegrationHooksManager:
         # Try to drain remaining events in the queue with a timeout
         if self._delivery_thread:
             deadline = time.time() + 5.0
-            while not self._event_queue.empty() and time.time() < deadline:
+            drained_count = 0
+            dropped_count = 0
+            
+            while time.time() < deadline:
                 try:
                     event, webhook_id = self._event_queue.get_nowait()
                     webhook = self._webhooks.get(webhook_id)
                     if webhook and webhook.enabled:
                         self._deliver_to_webhook(event, webhook)
+                        drained_count += 1
                     self._event_queue.task_done()
                 except queue.Empty:
                     break
                 except Exception as e:
                     logger.error(f"Error draining event queue during shutdown: {e}")
             
-            # Log if we had to drop events
-            if not self._event_queue.empty():
+            # Log summary of shutdown
+            try:
+                # Approximate remaining items (may not be exact in multithreaded context)
                 remaining = self._event_queue.qsize()
-                logger.warning(f"Dropping {remaining} events during shutdown")
+                if remaining > 0:
+                    logger.warning(f"Shutdown: drained {drained_count} events, dropping approximately {remaining} remaining events")
+                elif drained_count > 0:
+                    logger.info(f"Shutdown: drained {drained_count} events successfully")
+            except Exception:
+                # qsize() may not be available on all platforms
+                pass
             
             self._delivery_thread.join(timeout=5.0)
             logger.info("Integration delivery thread stopped")
