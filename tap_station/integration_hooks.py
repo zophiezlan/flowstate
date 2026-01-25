@@ -321,7 +321,6 @@ class IntegrationHooksManager:
         if self._delivery_thread:
             deadline = time.time() + 5.0
             drained_count = 0
-            dropped_count = 0
             
             while time.time() < deadline:
                 try:
