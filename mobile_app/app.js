@@ -338,12 +338,16 @@ async function syncToPi() {
   const settings = saveSettings();
   if (!settings.piUrl) {
     showToast("Please set Pi Station URL in settings");
+    showSyncStatus("error", "⚠ No Pi URL configured - set in settings to enable sync");
+    setTimeout(() => hideSyncStatus(), 3000);
     return;
   }
 
   const events = await store.getUnsyncedEvents();
   if (!events.length) {
     showToast("No unsynced events");
+    showSyncStatus("success", "✓ All synced - no new events to send");
+    setTimeout(() => hideSyncStatus(), 3000);
     return;
   }
 
@@ -359,6 +363,7 @@ async function syncToPi() {
 
   syncPiBtn.disabled = true;
   syncPiBtn.textContent = "Syncing...";
+  showSyncStatus("syncing", `Syncing ${events.length} events to server...`);
 
   try {
     const response = await fetch(`${settings.piUrl}/api/ingest`, {
@@ -375,16 +380,37 @@ async function syncToPi() {
     if (result.status === "ok") {
       const count = await store.markAllSynced();
       updateStats();
+      const timestamp = new Date().toLocaleTimeString();
       showToast(`Synced ${count} events!`);
+      showSyncStatus("success", `✓ Synced ${count} events to server at ${timestamp}`);
+      setTimeout(() => hideSyncStatus(), 5000);
     } else {
       throw new Error(result.error || "Unknown error");
     }
   } catch (err) {
     console.error("Sync failed", err);
     showToast(`Sync failed: ${err.message}`);
+    showSyncStatus("error", `⚠ Sync failed: ${err.message}. Taps saved locally.`);
+    setTimeout(() => hideSyncStatus(), 5000);
   } finally {
     syncPiBtn.disabled = false;
     syncPiBtn.textContent = "Sync to Pi Station";
+  }
+}
+
+function showSyncStatus(type, message) {
+  const statusEl = document.getElementById("sync-status-message");
+  if (statusEl) {
+    statusEl.className = `sync-message ${type}`;
+    statusEl.textContent = message;
+    statusEl.style.display = "flex";
+  }
+}
+
+function hideSyncStatus() {
+  const statusEl = document.getElementById("sync-status-message");
+  if (statusEl) {
+    statusEl.style.display = "none";
   }
 }
 

@@ -18,43 +18,60 @@
         <h2>Station Settings</h2>
         <form id="settings-form">
           <div class="field">
-            <label for="session-id">Session ID</label>
+            <label for="session-id">
+              Session ID 
+              <span class="help-icon" title="The event name or date (e.g., 'festival-2026-summer'). This groups all taps from the same event together.">ℹ️</span>
+            </label>
             <input
               id="session-id"
               name="sessionId"
               type="text"
-              placeholder="festival-2025"
+              placeholder="festival-2026-summer"
               required
             />
+            <small class="hint">Example: festival-2026-summer</small>
           </div>
           <div class="field">
-            <label for="stage">Stage</label>
+            <label for="stage">
+              Stage 
+              <span class="help-icon" title="Which checkpoint this station represents: QUEUE_JOIN = entry, SERVICE_START = beginning service, EXIT = leaving">ℹ️</span>
+            </label>
             <select id="stage" name="stage">
-              <option value="QUEUE_JOIN">QUEUE_JOIN</option>
-              <option value="EXIT">EXIT</option>
+              <option value="QUEUE_JOIN">QUEUE_JOIN (Entry - people joining queue)</option>
+              <option value="SERVICE_START">SERVICE_START (Service began)</option>
+              <option value="SUBSTANCE_RETURNED">SUBSTANCE_RETURNED (Substance returned)</option>
+              <option value="EXIT">EXIT (Leaving - service complete)</option>
             </select>
           </div>
           <div class="field">
-            <label for="device-id">Device ID</label>
+            <label for="device-id">
+              Device ID 
+              <span class="help-icon" title="Unique name for this phone/device (e.g., 'phone1', 'mobile-entry'). Helps identify which station recorded each tap.">ℹ️</span>
+            </label>
             <input
               id="device-id"
               name="deviceId"
               type="text"
-              placeholder="phone-1"
+              placeholder="phone1"
               required
             />
+            <small class="hint">Example: phone1, mobile-entry</small>
           </div>
           <div class="field">
-            <label for="pi-url">Pi Station URL (Optional)</label>
+            <label for="pi-url">
+              Pi Station URL (Optional)
+              <span class="help-icon" title="IP address of the Raspberry Pi server for automatic syncing. Leave blank to sync manually.">ℹ️</span>
+            </label>
             <input
               id="pi-url"
               name="piUrl"
               type="url"
-              placeholder="http://192.168.1.xxx:5000"
+              placeholder="http://192.168.1.xxx:8080"
             />
+            <small class="hint">Format: http://192.168.1.xxx:8080</small>
           </div>
           <div class="actions">
-            <button type="submit" class="primary">Save</button>
+            <button type="submit" class="primary">Save Settings</button>
             <button type="button" id="clear-cache" class="ghost">
               Clear stored events
             </button>
@@ -68,7 +85,9 @@
             <h2>Scanner</h2>
             <p id="nfc-status" class="muted">NFC idle</p>
           </div>
-          <div class="pill" id="unsynced-count">0 unsynced</div>
+          <div class="pill" id="unsynced-count" title="Number of taps waiting to sync to server. Taps are saved locally and will sync automatically when online.">
+            0 unsynced
+          </div>
         </div>
         <div class="actions stack">
           <button id="start-scan" class="primary">Start NFC scanning</button>
@@ -77,6 +96,7 @@
           </button>
           <button id="manual-add" class="ghost">Add manual token</button>
         </div>
+        <div id="sync-status-message" class="sync-message" style="display: none;"></div>
         <div id="status-grid">
           <div>
             <p class="muted">Last token</p>
