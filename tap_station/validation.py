@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
 from .constants import APIDefaults, WorkflowStages
+from .datetime_utils import parse_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -224,47 +225,34 @@ class EventValidator:
 
     def _validate_timestamp(self, timestamp: Any) -> ValidationResult:
         """Validate a timestamp value"""
-        try:
-            if isinstance(timestamp, (int, float)):
-                # Assume milliseconds since epoch
-                parsed_dt = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
-            elif isinstance(timestamp, str):
-                if timestamp.isdigit():
-                    parsed_dt = datetime.fromtimestamp(int(timestamp) / 1000, tz=timezone.utc)
-                else:
-                    parsed_dt = datetime.fromisoformat(timestamp)
-                    if parsed_dt.tzinfo is None:
-                        parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
-            else:
-                return ValidationResult(
-                    valid=False,
-                    error="Timestamp must be ISO string or milliseconds since epoch"
-                )
-
-            # Validate reasonable time range (not too far in past or future)
-            now = datetime.now(timezone.utc)
-            max_age_hours = 24  # Accept events up to 24 hours old
-            max_future_minutes = 5  # Accept events up to 5 minutes in future
-
-            min_valid = now - timedelta(hours=max_age_hours)
-            max_valid = now + timedelta(minutes=max_future_minutes)
-
-            timestamp_warnings = []
-            if parsed_dt < min_valid:
-                timestamp_warnings.append(
-                    f"Timestamp is more than {max_age_hours} hours in the past"
-                )
-            elif parsed_dt > max_valid:
-                timestamp_warnings.append(
-                    f"Timestamp is more than {max_future_minutes} minutes in the future"
-                )
-
-            return ValidationResult(valid=True, warnings=timestamp_warnings if timestamp_warnings else None)
-        except (ValueError, OSError) as e:
+        # Use centralized parse_timestamp function
+        parsed_dt = parse_timestamp(timestamp, default_to_now=False)
+        
+        if parsed_dt is None:
             return ValidationResult(
                 valid=False,
-                error=str(e)
+                error="Invalid timestamp format: must be ISO string or milliseconds since epoch"
             )
+        
+        # Validate reasonable time range (not too far in past or future)
+        now = datetime.now(timezone.utc)
+        max_age_hours = 24  # Accept events up to 24 hours old
+        max_future_minutes = 5  # Accept events up to 5 minutes in future
+
+        min_valid = now - timedelta(hours=max_age_hours)
+        max_valid = now + timedelta(minutes=max_future_minutes)
+
+        timestamp_warnings = []
+        if parsed_dt < min_valid:
+            timestamp_warnings.append(
+                f"Timestamp is more than {max_age_hours} hours in the past"
+            )
+        elif parsed_dt > max_valid:
+            timestamp_warnings.append(
+                f"Timestamp is more than {max_future_minutes} minutes in the future"
+            )
+
+        return ValidationResult(valid=True, warnings=timestamp_warnings if timestamp_warnings else None)
 
     def normalize_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -298,29 +286,8 @@ class EventValidator:
 
     def _coerce_timestamp(self, value: Any) -> datetime:
         """Convert various timestamp formats to datetime"""
-        if value is None:
-            return datetime.now(timezone.utc)
-
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                return value.replace(tzinfo=timezone.utc)
-            return value
-
-        if isinstance(value, (int, float)):
-            return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
-
-        if isinstance(value, str):
-            try:
-                if value.isdigit():
-                    return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc)
-                dt = datetime.fromisoformat(value)
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                return dt
-            except ValueError:
-                logger.warning(f"Could not parse timestamp '{value}', using current time")
-
-        return datetime.now(timezone.utc)
+        # Use centralized parse_timestamp function with default_to_now=True
+        return parse_timestamp(value, default_to_now=True)
 
 
 class TokenValidator:
