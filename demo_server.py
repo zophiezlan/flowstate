@@ -195,10 +195,11 @@ def setup_app_with_scenario(scenario: str):
     # Override index route to use demo template
     from flask import render_template
 
-    @web_server.app.route("/")
     def demo_index():
         """Demo landing page for NSW Health"""
         return render_template("demo_index.html")
+
+    web_server.app.view_functions["index"] = demo_index
 
     return web_server.app, config_dict
 
