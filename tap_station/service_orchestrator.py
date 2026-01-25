@@ -31,7 +31,7 @@ Usage:
 import logging
 import sqlite3
 from datetime import datetime
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
 
 from .datetime_utils import utc_now
@@ -39,41 +39,34 @@ from .datetime_utils import utc_now
 # Import all managers
 from .service_improvement import (
     ServiceImprovementEngine,
-    get_improvement_engine,
 )
 from .adaptive_thresholds import (
     AdaptiveThresholdManager,
     ThresholdChecker,
-    get_threshold_manager,
 )
 from .custom_slo import (
     CustomSLOManager,
-    get_slo_manager,
     load_slos_from_config,
 )
 from .integration_hooks import (
     IntegrationHooksManager,
     IntegrationEventType,
-    get_hooks_manager,
     load_webhooks_from_config,
 )
 from .access_control import (
     AccessControlManager,
     Permission,
-    get_access_control_manager,
     load_roles_from_config,
 )
 from .workflow_validators import (
     WorkflowValidationManager,
     ValidationAction,
     ValidationSeverity,
-    get_validation_manager,
     load_validators_from_config,
 )
 from .dynamic_config import (
     DynamicConfigurationManager,
     ConfigurationSubscriber,
-    get_config_manager,
 )
 
 logger = logging.getLogger(__name__)
@@ -212,10 +205,19 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         )
 
         # Load custom SLOs from config
+        # Normalize SLO configuration into a canonical {"slos": [...]} format
+        normalized_slo_config: Dict[str, Any] = {"slos": []}
         if isinstance(slo_config, list):
-            load_slos_from_config({"slos": slo_config}, self._slo_manager)
-        elif isinstance(slo_config, dict) and "definitions" in slo_config:
-            load_slos_from_config({"slos": slo_config["definitions"]}, self._slo_manager)
+            normalized_slo_config = {"slos": slo_config}
+        elif isinstance(slo_config, dict):
+            if "definitions" in slo_config:
+                normalized_slo_config = {"slos": slo_config["definitions"]}
+            elif "slos" in slo_config:
+                normalized_slo_config = {"slos": slo_config["slos"]}
+
+        # Load custom SLOs from normalized config
+        if normalized_slo_config.get("slos"):
+            load_slos_from_config(normalized_slo_config, self._slo_manager)
 
         logger.debug("SLO manager initialized")
 
@@ -477,9 +479,6 @@ class ServiceOrchestrator(ConfigurationSubscriber):
 
         # Get SLO summary
         slo_summary = self._slo_manager.get_slo_summary(session_id)
-
-        # Get current thresholds
-        thresholds = self._threshold_manager.get_all_thresholds()
 
         # Get integration health
         integration_health = self._hooks_manager.get_health_status()

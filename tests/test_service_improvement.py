@@ -11,7 +11,6 @@ Tests cover:
 import pytest
 import sqlite3
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
 
 import sys
 from pathlib import Path
@@ -278,7 +277,7 @@ class TestConvenienceFunctions:
     def test_get_improvement_engine(self, db_connection):
         """Test global engine retrieval"""
         # Reset global
-        import tap_station.service_improvement as module
+        module = sys.modules["tap_station.service_improvement"]
         module._improvement_engine = None
 
         engine = get_improvement_engine(db_connection)
@@ -290,7 +289,7 @@ class TestConvenienceFunctions:
 
     def test_analyze_service(self, populated_db):
         """Test convenience analysis function"""
-        import tap_station.service_improvement as module
+        module = sys.modules["tap_station.service_improvement"]
         module._improvement_engine = None
 
         report = analyze_service(populated_db, "session1")

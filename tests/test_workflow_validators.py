@@ -22,13 +22,10 @@ from tap_station.workflow_validators import (
     ValidationResult,
     ValidationSeverity,
     ValidationAction,
-    StageValidator,
     MinimumWaitTimeValidator,
     MaximumWaitTimeValidator,
     DuplicateStageValidator,
-    QueueCapacityValidator,
     ServiceHoursValidator,
-    ConcurrentServiceValidator,
     SubstanceReturnValidator,
     CustomFunctionValidator,
     get_validation_manager,
@@ -552,7 +549,7 @@ class TestConvenienceFunctions:
 
     def test_get_validation_manager(self):
         """Test global manager retrieval"""
-        import tap_station.workflow_validators as module
+        module = sys.modules["tap_station.workflow_validators"]
         module._validation_manager = None
 
         manager = get_validation_manager()

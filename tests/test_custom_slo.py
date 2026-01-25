@@ -24,7 +24,6 @@ from tap_station.custom_slo import (
     SLOBudget,
     SLOMetricType,
     SLOStatus,
-    SLOAggregation,
     get_slo_manager,
     load_slos_from_config,
 )
@@ -400,7 +399,8 @@ class TestConvenienceFunctions:
 
     def test_get_slo_manager(self, db_connection):
         """Test global manager retrieval"""
-        import tap_station.custom_slo as module
+        # Reset the module-level singleton
+        module = sys.modules["tap_station.custom_slo"]
         module._slo_manager = None
 
         manager = get_slo_manager(db_connection)

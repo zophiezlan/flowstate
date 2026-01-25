@@ -9,8 +9,7 @@ Tests cover:
 """
 
 import pytest
-from datetime import datetime, time, timedelta
-from unittest.mock import MagicMock
+from datetime import datetime, time
 
 import sys
 from pathlib import Path
@@ -22,7 +21,6 @@ from tap_station.adaptive_thresholds import (
     ThresholdType,
     ThresholdAdjustment,
     ThresholdRule,
-    ThresholdConfig,
     TimeWindow,
     AdjustmentReason,
     get_threshold_manager,
@@ -311,7 +309,7 @@ class TestConvenienceFunctions:
 
     def test_get_threshold_manager(self):
         """Test global manager retrieval"""
-        import tap_station.adaptive_thresholds as module
+        module = sys.modules["tap_station.adaptive_thresholds"]
         module._threshold_manager = None
 
         manager = get_threshold_manager()
@@ -322,7 +320,7 @@ class TestConvenienceFunctions:
 
     def test_get_threshold_checker(self):
         """Test checker retrieval"""
-        import tap_station.adaptive_thresholds as module
+        module = sys.modules["tap_station.adaptive_thresholds"]
         module._threshold_manager = None
 
         checker = get_threshold_checker()

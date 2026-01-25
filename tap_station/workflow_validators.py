@@ -21,7 +21,7 @@ Service Design Principles:
 
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -820,7 +820,11 @@ def load_validators_from_config(
                 try:
                     validator.severity = ValidationSeverity(v_config["severity"])
                 except ValueError:
-                    pass
+                    logger.warning(
+                        "Invalid validation severity %r for validator %r; keeping existing severity.",
+                        v_config["severity"],
+                        validator_id,
+                    )
             configured += 1
 
     return configured

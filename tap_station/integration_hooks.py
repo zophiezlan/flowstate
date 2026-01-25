@@ -28,13 +28,12 @@ import hashlib
 import hmac
 import threading
 import queue
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable, Tuple
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 import urllib.request
 import urllib.error
-from urllib.parse import urljoin
 import time
 import sqlite3
 
@@ -232,8 +231,6 @@ class EventTransformer:
             # Custom transform - try to evaluate as simple path
             return data
 
-        return data
-
     @staticmethod
     def _flatten(d: Dict, parent_key: str = "", sep: str = "_") -> Dict:
         """Flatten nested dictionary"""
@@ -317,9 +314,39 @@ class IntegrationHooksManager:
                 logger.error(f"Delivery worker error: {e}")
 
     def shutdown(self) -> None:
-        """Shutdown the delivery thread"""
+        """Shutdown the delivery thread and drain pending events"""
         self._running = False
+        
+        # Try to drain remaining events in the queue with a timeout
         if self._delivery_thread:
+            deadline = time.time() + 5.0
+            drained_count = 0
+            
+            while time.time() < deadline:
+                try:
+                    event, webhook_id = self._event_queue.get_nowait()
+                    webhook = self._webhooks.get(webhook_id)
+                    if webhook and webhook.enabled:
+                        self._deliver_to_webhook(event, webhook)
+                        drained_count += 1
+                    self._event_queue.task_done()
+                except queue.Empty:
+                    break
+                except Exception as e:
+                    logger.error(f"Error draining event queue during shutdown: {e}")
+            
+            # Log summary of shutdown
+            try:
+                # Approximate remaining items (may not be exact in multithreaded context)
+                remaining = self._event_queue.qsize()
+                if remaining > 0:
+                    logger.warning(f"Shutdown: drained {drained_count} events, dropping approximately {remaining} remaining events")
+                elif drained_count > 0:
+                    logger.info(f"Shutdown: drained {drained_count} events successfully")
+            except Exception:
+                # qsize() may not be available on all platforms
+                pass
+            
             self._delivery_thread.join(timeout=5.0)
             logger.info("Integration delivery thread stopped")
 
