@@ -144,7 +144,13 @@ class NDEFWriter:
 
 
 class MockNDEFWriter(NDEFWriter):
-    """Mock NDEF writer for testing"""
+    """
+    Mock NDEF writer for testing.
+
+    Note: For new tests, consider using tests/mocks.py which provides
+    a more comprehensive MockNDEFWriter with additional test utilities.
+    This class is kept for backward compatibility.
+    """
 
     def __init__(self, nfc_reader=None):
         """Initialize mock writer"""
@@ -163,3 +169,16 @@ class MockNDEFWriter(NDEFWriter):
         self.written_texts.append(text)
         logger.info(f"Mock NDEF text write: {text}")
         return True
+
+    def get_written_urls(self):
+        """Get list of written URLs for verification"""
+        return self.written_urls.copy()
+
+    def get_written_texts(self):
+        """Get list of written texts for verification"""
+        return self.written_texts.copy()
+
+    def clear(self):
+        """Clear written data for fresh test"""
+        self.written_urls.clear()
+        self.written_texts.clear()

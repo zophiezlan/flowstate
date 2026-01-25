@@ -39,7 +39,7 @@ def test_database_creation(test_db):
 
 def test_log_event(test_db):
     """Test logging an event"""
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id="001",
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
@@ -47,7 +47,7 @@ def test_log_event(test_db):
         session_id="test-session",
     )
 
-    assert success is True
+    assert result["success"] is True
 
     # Verify event was logged
     count = test_db.get_event_count("test-session")
@@ -57,51 +57,56 @@ def test_log_event(test_db):
 def test_duplicate_prevention(test_db):
     """Test that duplicate events are prevented"""
     # Log first event
-    success1 = test_db.log_event(
+    result1 = test_db.log_event(
         token_id="001",
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
         session_id="test-session",
     )
-    assert success1 is True
+    assert result1["success"] is True
 
     # Try to log duplicate (same token, same stage, same session)
-    success2 = test_db.log_event(
+    # Within the grace period, this is detected as an out-of-order transition
+    # (QUEUE_JOIN -> QUEUE_JOIN is not a valid transition)
+    # The event is still logged for data collection but flagged for review
+    result2 = test_db.log_event(
         token_id="001",
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
         session_id="test-session",
     )
-    assert success2 is False
+    # Event is logged but flagged as out-of-order
+    assert result2["success"] is True
+    assert result2["out_of_order"] is True
 
-    # Only one event should exist
+    # Both events exist (logged for data collection, flagged for review)
     count = test_db.get_event_count("test-session")
-    assert count == 1
+    assert count == 2
 
 
 def test_different_stages_allowed(test_db):
     """Test that same token can log at different stages"""
     # Queue join
-    success1 = test_db.log_event(
+    result1 = test_db.log_event(
         token_id="001",
         uid="1234567890ABCDEF",
         stage="QUEUE_JOIN",
         device_id="station1",
         session_id="test-session",
     )
-    assert success1 is True
+    assert result1["success"] is True
 
     # Exit (different stage)
-    success2 = test_db.log_event(
+    result2 = test_db.log_event(
         token_id="001",
         uid="1234567890ABCDEF",
         stage="EXIT",
         device_id="station2",
         session_id="test-session",
     )
-    assert success2 is True
+    assert result2["success"] is True
 
     # Both events should exist
     count = test_db.get_event_count("test-session")
@@ -120,14 +125,14 @@ def test_session_isolation(test_db):
     )
 
     # Log same token/stage in session 2 (should succeed)
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id="001",
         uid="ABC",
         stage="QUEUE_JOIN",
         device_id="station1",
         session_id="session2",
     )
-    assert success is True
+    assert result["success"] is True
 
     # Each session should have 1 event
     assert test_db.get_event_count("session1") == 1

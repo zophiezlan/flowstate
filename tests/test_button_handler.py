@@ -57,11 +57,12 @@ class TestButtonHandler(unittest.TestCase):
             callback_called.append(True)
 
         handler = ButtonHandler(
-            enabled=True, gpio_pin=26, hold_time=0.1, shutdown_callback=test_callback
+            enabled=True, gpio_pin=26, hold_time=10.0, shutdown_callback=test_callback
         )
 
-        # Wait for initialization
-        time.sleep(0.1)
+        # Stop the monitoring thread before testing _trigger_shutdown directly
+        # This prevents race conditions with the monitoring thread
+        handler.stop()
 
         # Trigger shutdown directly
         handler._trigger_shutdown()

@@ -5,6 +5,8 @@ import logging
 import threading
 import subprocess
 
+from .gpio_manager import get_gpio_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,44 +38,37 @@ class ButtonHandler:
         self.shutdown_callback = shutdown_callback
         self.shutdown_delay_minutes = shutdown_delay_minutes
 
-        self.GPIO = None
+        self._gpio = get_gpio_manager()
         self.monitor_thread = None
         self.running = False
 
         if self.enabled:
-            self._setup_gpio()
-            self._start_monitoring()
+            self._setup_button()
+            if self.enabled:  # Re-check in case setup failed
+                self._start_monitoring()
 
-    def _setup_gpio(self):
+    def _setup_button(self):
         """Setup GPIO pin for button with pull-up resistor"""
         if not self.enabled:
             return
 
-        try:
-            import RPi.GPIO as GPIO
+        if not self._gpio.available:
+            logger.warning("GPIO not available - button monitoring disabled")
+            self.enabled = False
+            return
 
-            self.GPIO = GPIO
-
-            # Use BCM pin numbering
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
-
-            # Setup button pin with internal pull-up
-            # Button connects pin to GND when pressed
-            GPIO.setup(self.gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
+        if self._gpio.setup_input(self.gpio_pin, pull_up=True):
             logger.info(
                 f"Shutdown button enabled on GPIO {self.gpio_pin} "
                 f"(hold for {self.hold_time}s)"
             )
-
-        except (ImportError, RuntimeError) as e:
-            logger.warning(f"GPIO not available (not on Pi?): {e}")
+        else:
+            logger.warning("Failed to setup button GPIO - button monitoring disabled")
             self.enabled = False
 
     def _start_monitoring(self):
         """Start background thread to monitor button"""
-        if not self.enabled or not self.GPIO:
+        if not self.enabled or not self._gpio.available:
             return
 
         self.running = True
@@ -86,17 +81,15 @@ class ButtonHandler:
         """Monitor button in background thread"""
         while self.running:
             try:
-                # Check if button is pressed (LOW = pressed, HIGH = released)
-                if self.GPIO.input(self.gpio_pin) == self.GPIO.LOW:
+                # Check if button is pressed (LOW = pressed due to pull-up)
+                if self._gpio.is_low(self.gpio_pin):
                     logger.info("Shutdown button pressed, checking hold time...")
 
                     # Track how long button is held
                     press_start = time.time()
 
                     # Wait while button is held
-                    while (
-                        self.GPIO.input(self.gpio_pin) == self.GPIO.LOW and self.running
-                    ):
+                    while self._gpio.is_low(self.gpio_pin) and self.running:
                         elapsed = time.time() - press_start
 
                         # Check if hold time reached
@@ -213,9 +206,6 @@ class ButtonHandler:
         """Cleanup GPIO on shutdown"""
         self.stop()
 
-        if self.GPIO:
-            try:
-                self.GPIO.cleanup(self.gpio_pin)
-                logger.info("Button GPIO cleaned up")
-            except Exception as e:
-                logger.warning(f"Error cleaning up GPIO: {e}")
+        if self._gpio.available:
+            self._gpio.cleanup([self.gpio_pin])
+            logger.info("Button GPIO cleaned up")

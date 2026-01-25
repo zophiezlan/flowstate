@@ -3,9 +3,16 @@
 import sqlite3
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 import logging
+
+from .constants import (
+    WorkflowStages,
+    DatabaseDefaults,
+    get_workflow_transitions,
+)
+from .datetime_utils import utc_now, from_iso, to_iso, minutes_since
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +121,7 @@ class Database:
             - warning: Human-readable warning message if applicable
         """
         if timestamp is None:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = utc_now()
 
         result = {
             "success": False,
@@ -170,7 +177,8 @@ class Database:
             return result
 
     def _is_duplicate(
-        self, token_id: str, stage: str, session_id: str, grace_minutes: int = 5
+        self, token_id: str, stage: str, session_id: str,
+        grace_minutes: int = DatabaseDefaults.GRACE_PERIOD_MINUTES
     ) -> bool:
         """
         Check if this token has already been logged at this stage in this session
@@ -201,21 +209,16 @@ class Database:
         if not result:
             return False  # No previous tap, not a duplicate
 
-        # Check if within grace period
-        last_tap_time = datetime.fromisoformat(result["timestamp"])
-        if last_tap_time.tzinfo is None:
-            last_tap_time = last_tap_time.replace(tzinfo=timezone.utc)
-
-        now = datetime.now(timezone.utc)
-        minutes_since = (now - last_tap_time).total_seconds() / 60
+        # Check if within grace period using datetime utilities
+        mins_elapsed = minutes_since(result["timestamp"])
 
         # If within grace period, allow it (not a duplicate)
         # This helps with accidental taps at wrong station
-        if minutes_since <= grace_minutes:
+        if mins_elapsed <= grace_minutes:
             logger.info(
                 f"Tap within {grace_minutes}min grace period: "
                 f"token={token_id}, stage={stage}, "
-                f"last_tap={minutes_since:.1f}min ago - allowing correction"
+                f"last_tap={mins_elapsed:.1f}min ago - allowing correction"
             )
             return False
 
@@ -248,62 +251,9 @@ class Database:
 
         existing_stages = [row["stage"] for row in cursor.fetchall()]
 
-        # If no existing stages, any stage is valid (handles late joins)
-        if not existing_stages:
-            # But warn if starting with EXIT or SERVICE_START
-            if stage == "EXIT":
-                return {
-                    "valid": True,  # Allow but warn
-                    "reason": "Card tapped at EXIT without QUEUE_JOIN - possible missed entry tap",
-                    "suggestion": "Verify participant actually used service",
-                }
-            elif stage == "SERVICE_START":
-                return {
-                    "valid": True,  # Allow but warn
-                    "reason": "Card tapped at SERVICE_START without QUEUE_JOIN - possible missed entry tap",
-                    "suggestion": "Add QUEUE_JOIN event if needed",
-                }
-            return {"valid": True, "reason": "First tap for this card"}
-
-        # Define valid state transitions
-        # QUEUE_JOIN can be followed by: SERVICE_START, EXIT, SUBSTANCE_RETURNED
-        # SERVICE_START can be followed by: EXIT, SUBSTANCE_RETURNED
-        # SUBSTANCE_RETURNED can be followed by: EXIT
-        # EXIT is terminal
-
-        last_stage = existing_stages[-1]
-
-        # If already exited, no more taps should happen
-        if "EXIT" in existing_stages:
-            return {
-                "valid": False,
-                "reason": "Card already exited - tapping again may indicate: reused card, or participant returned for second service",
-                "suggestion": "Check if this is a new visit (should use new card/session)",
-            }
-
-        # Validate transition from last stage
-        valid_transitions = {
-            "QUEUE_JOIN": ["SERVICE_START", "EXIT", "SUBSTANCE_RETURNED"],
-            "SERVICE_START": ["SUBSTANCE_RETURNED", "EXIT"],
-            "SUBSTANCE_RETURNED": ["EXIT"],
-        }
-
-        if last_stage in valid_transitions:
-            if stage in valid_transitions[last_stage]:
-                return {"valid": True, "reason": "Valid transition"}
-            else:
-                return {
-                    "valid": False,
-                    "reason": f"Invalid transition: {last_stage} -> {stage}. Expected one of: {', '.join(valid_transitions[last_stage])}",
-                    "suggestion": f"Participant may be at wrong station or using wrong card",
-                }
-
-        # Unknown last stage - allow but warn
-        return {
-            "valid": True,
-            "reason": f"Unknown stage sequence: {last_stage} -> {stage}",
-            "suggestion": "Check service configuration",
-        }
+        # Use centralized workflow transitions for validation
+        transitions = get_workflow_transitions()
+        return transitions.validate_sequence(existing_stages, stage)
 
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -347,20 +297,24 @@ class Database:
 
         try:
             # 1. Forgotten exit taps (>30 min without exit)
-            sql = """
+            stuck_threshold = DatabaseDefaults.STUCK_THRESHOLD_MINUTES
+            high_severity_threshold = DatabaseDefaults.ANOMALY_HIGH_THRESHOLD_MINUTES
+            sql = f"""
                 SELECT q.token_id, q.timestamp,
                        CAST((julianday('now') - julianday(q.timestamp)) * 1440 AS INTEGER) as minutes_stuck
                 FROM events q
                 LEFT JOIN events e ON q.token_id = e.token_id
                                    AND q.session_id = e.session_id
-                                   AND e.stage = 'EXIT'
-                WHERE q.stage = 'QUEUE_JOIN'
+                                   AND e.stage = ?
+                WHERE q.stage = ?
                     AND q.session_id = ?
                     AND e.id IS NULL
-                    AND q.timestamp < datetime('now', '-30 minutes')
+                    AND q.timestamp < datetime('now', '-{stuck_threshold} minutes')
                 ORDER BY q.timestamp ASC
             """
-            cursor = self.conn.execute(sql, (session_id,))
+            cursor = self.conn.execute(
+                sql, (WorkflowStages.EXIT, WorkflowStages.QUEUE_JOIN, session_id)
+            )
 
             for row in cursor.fetchall():
                 anomalies["forgotten_exit_taps"].append(
@@ -368,7 +322,7 @@ class Database:
                         "token_id": row["token_id"],
                         "queue_join_time": row["timestamp"],
                         "minutes_stuck": row["minutes_stuck"],
-                        "severity": "high" if row["minutes_stuck"] > 120 else "medium",
+                        "severity": "high" if row["minutes_stuck"] > high_severity_threshold else "medium",
                         "suggestion": "Participant may have left without tapping exit, or lost card",
                     }
                 )

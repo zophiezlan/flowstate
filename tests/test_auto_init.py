@@ -261,15 +261,15 @@ class TestAutoInitIntegration:
         _, token_id = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         
         # Log event with auto-assigned token ID
-        success = temp_db.log_event(
+        result = temp_db.log_event(
             token_id=token_id,
             uid="04A32FB2C15080",
             stage="QUEUE_JOIN",
             device_id="station1",
             session_id="test-session",
         )
-        
-        assert success is True
+
+        assert result["success"] is True
         
         # Verify event was logged
         events = temp_db.get_recent_events(limit=1)
@@ -296,15 +296,15 @@ class TestAutoInitCardWriting:
         
         # Even if write fails, we can still log the event
         # (This is what happens in main.py - it tries to write but continues anyway)
-        success = temp_db.log_event(
+        result = temp_db.log_event(
             token_id=token_id,
             uid="04A32FB2C15080",
             stage="QUEUE_JOIN",
             device_id="station1",
             session_id="test-session",
         )
-        
-        assert success is True
+
+        assert result["success"] is True
 
 
 if __name__ == "__main__":

@@ -87,7 +87,7 @@ def ingest_events(events: Iterable[Dict], db_path: Path) -> Dict[str, int]:
                     device_id,
                     timestamp,
                 ) = _normalize_event(event)
-                success = db.log_event(
+                result = db.log_event(
                     token_id=token_id,
                     uid=uid,
                     stage=stage,
@@ -95,10 +95,12 @@ def ingest_events(events: Iterable[Dict], db_path: Path) -> Dict[str, int]:
                     session_id=session_id,
                     timestamp=timestamp,
                 )
-                if success:
+                if result["success"]:
                     summary["inserted"] += 1
-                else:
+                elif result["duplicate"]:
                     summary["duplicates"] += 1
+                else:
+                    summary["errors"] += 1
             except Exception as exc:  # pragma: no cover - defensive
                 summary["errors"] += 1
                 logger.error("Failed to ingest event %s: %s", event, exc)

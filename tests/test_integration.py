@@ -86,7 +86,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
         assert result is not None
 
         uid, token_id = result
-        success = db.log_event(
+        result = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="QUEUE_JOIN",
@@ -94,14 +94,14 @@ def test_full_card_lifecycle(temp_config, temp_db):
             session_id=config.session_id,
         )
 
-        assert success is True
+        assert result["success"] is True
 
         # Simulate second card tap at queue join
-        result = nfc.read_card()
-        assert result is not None
+        card_result = nfc.read_card()
+        assert card_result is not None
 
-        uid, token_id = result
-        success = db.log_event(
+        uid, token_id = card_result
+        result = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="QUEUE_JOIN",
@@ -109,7 +109,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
             session_id=config.session_id,
         )
 
-        assert success is True
+        assert result["success"] is True
 
         # Now simulate same cards at exit
         # Reset mock index to first card
@@ -118,10 +118,10 @@ def test_full_card_lifecycle(temp_config, temp_db):
         # Wait for debounce to expire
         time.sleep(0.6)
 
-        result = nfc.read_card()
-        uid, token_id = result
+        card_result = nfc.read_card()
+        uid, token_id = card_result
 
-        success = db.log_event(
+        result = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="EXIT",
@@ -129,7 +129,7 @@ def test_full_card_lifecycle(temp_config, temp_db):
             session_id=config.session_id,
         )
 
-        assert success is True
+        assert result["success"] is True
 
         # Verify database state
         total_events = db.get_event_count(config.session_id)
@@ -172,34 +172,38 @@ def test_duplicate_detection(temp_db):
         result = nfc.read_card()
         uid, token_id = result
 
-        success1 = db.log_event(
+        result1 = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
             session_id="test",
         )
-        assert success1 is True
+        assert result1["success"] is True
 
         # Wait for debounce
         time.sleep(0.6)
 
-        # Second tap at same stage (duplicate)
-        result = nfc.read_card()
-        uid, token_id = result
+        # Second tap at same stage - detected as out-of-order
+        # (QUEUE_JOIN -> QUEUE_JOIN is not a valid transition)
+        # Event is still logged for data collection but flagged for review
+        card_result = nfc.read_card()
+        uid, token_id = card_result
 
-        success2 = db.log_event(
+        result2 = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
             session_id="test",
         )
-        assert success2 is False  # Duplicate detected
+        # Event is logged but flagged as out-of-order
+        assert result2["success"] is True
+        assert result2["out_of_order"] is True
 
-        # Only one event should exist
+        # Both events exist (logged for data collection, flagged for review)
         count = db.get_event_count("test")
-        assert count == 1
+        assert count == 2
 
     finally:
         db.close()
@@ -215,24 +219,24 @@ def test_multi_station_workflow(temp_db):
         uid = f"CARD{i:03d}"
 
         # Queue join at station 1
-        success = db.log_event(
+        result = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="QUEUE_JOIN",
             device_id="station1",
             session_id="festival",
         )
-        assert success is True
+        assert result["success"] is True
 
         # Exit at station 2
-        success = db.log_event(
+        result = db.log_event(
             token_id=token_id,
             uid=uid,
             stage="EXIT",
             device_id="station2",
             session_id="festival",
         )
-        assert success is True
+        assert result["success"] is True
 
     try:
         # Verify all events logged

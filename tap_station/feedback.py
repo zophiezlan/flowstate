@@ -4,6 +4,8 @@ import time
 import logging
 from typing import List
 
+from .gpio_manager import get_gpio_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,42 +47,36 @@ class FeedbackController:
         self.beep_duplicate = beep_duplicate or [0.1, 0.05, 0.1]
         self.beep_error = beep_error or [0.3]
 
-        self.GPIO = None
-        self._setup_gpio()
+        self._gpio = get_gpio_manager()
+        self._setup_pins()
 
-    def _setup_gpio(self):
-        """Setup GPIO pins (only on Raspberry Pi)"""
+    def _setup_pins(self):
+        """Setup GPIO pins for buzzer and LEDs"""
         if not (self.buzzer_enabled or self.led_enabled):
             logger.info("Feedback disabled (no buzzer or LED)")
             return
 
-        try:
-            import RPi.GPIO as GPIO
+        if not self._gpio.available:
+            logger.warning("GPIO not available - feedback disabled")
+            self.buzzer_enabled = False
+            self.led_enabled = False
+            return
 
-            self.GPIO = GPIO
-
-            # Use BCM pin numbering
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
-
-            if self.buzzer_enabled:
-                GPIO.setup(self.gpio_buzzer, GPIO.OUT)
-                GPIO.output(self.gpio_buzzer, GPIO.LOW)
+        if self.buzzer_enabled:
+            if self._gpio.setup_output(self.gpio_buzzer, initial_state=False):
                 logger.info(f"Buzzer enabled on GPIO {self.gpio_buzzer}")
+            else:
+                self.buzzer_enabled = False
 
-            if self.led_enabled:
-                GPIO.setup(self.gpio_led_green, GPIO.OUT)
-                GPIO.setup(self.gpio_led_red, GPIO.OUT)
-                GPIO.output(self.gpio_led_green, GPIO.LOW)
-                GPIO.output(self.gpio_led_red, GPIO.LOW)
+        if self.led_enabled:
+            green_ok = self._gpio.setup_output(self.gpio_led_green, initial_state=False)
+            red_ok = self._gpio.setup_output(self.gpio_led_red, initial_state=False)
+            if green_ok and red_ok:
                 logger.info(
                     f"LEDs enabled on GPIO {self.gpio_led_green}, {self.gpio_led_red}"
                 )
-
-        except (ImportError, RuntimeError) as e:
-            logger.warning(f"GPIO not available (not on Pi?): {e}")
-            self.buzzer_enabled = False
-            self.led_enabled = False
+            else:
+                self.led_enabled = False
 
     def _beep_pattern(self, pattern: List[float]):
         """
@@ -89,17 +85,17 @@ class FeedbackController:
         Args:
             pattern: List of on/off durations in seconds
         """
-        if not self.buzzer_enabled or not self.GPIO:
+        if not self.buzzer_enabled or not self._gpio.available:
             return
 
         for i, duration in enumerate(pattern):
             # Even indices = on, odd indices = off
-            state = self.GPIO.HIGH if i % 2 == 0 else self.GPIO.LOW
-            self.GPIO.output(self.gpio_buzzer, state)
+            state = i % 2 == 0
+            self._gpio.output(self.gpio_buzzer, state)
             time.sleep(duration)
 
         # Ensure buzzer is off
-        self.GPIO.output(self.gpio_buzzer, self.GPIO.LOW)
+        self._gpio.output(self.gpio_buzzer, False)
 
     def _flash_led(self, led_pin: int, duration: float = 0.1):
         """
@@ -109,12 +105,12 @@ class FeedbackController:
             led_pin: GPIO pin number
             duration: Flash duration in seconds
         """
-        if not self.led_enabled or not self.GPIO:
+        if not self.led_enabled or not self._gpio.available:
             return
 
-        self.GPIO.output(led_pin, self.GPIO.HIGH)
+        self._gpio.output(led_pin, True)
         time.sleep(duration)
-        self.GPIO.output(led_pin, self.GPIO.LOW)
+        self._gpio.output(led_pin, False)
 
     def success(self):
         """Signal successful tap"""
@@ -163,6 +159,12 @@ class FeedbackController:
 
     def cleanup(self):
         """Cleanup GPIO on shutdown"""
-        if self.GPIO:
-            self.GPIO.cleanup()
-            logger.info("GPIO cleaned up")
+        pins_to_cleanup = []
+        if self.buzzer_enabled:
+            pins_to_cleanup.append(self.gpio_buzzer)
+        if self.led_enabled:
+            pins_to_cleanup.extend([self.gpio_led_green, self.gpio_led_red])
+
+        if pins_to_cleanup:
+            self._gpio.cleanup(pins_to_cleanup)
+            logger.info("Feedback GPIO cleaned up")

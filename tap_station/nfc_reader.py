@@ -533,7 +533,13 @@ class NFCReader:
 
 
 class MockNFCReader(NFCReader):
-    """Mock NFC reader for testing without hardware"""
+    """
+    Mock NFC reader for testing without hardware.
+
+    Note: For new tests, consider using tests/mocks.py which provides
+    a more comprehensive MockNFCReader with additional test utilities.
+    This class is kept for backward compatibility.
+    """
 
     def __init__(self, *args, **kwargs):
         """Initialize mock reader (skip PN532 setup)"""
@@ -555,6 +561,11 @@ class MockNFCReader(NFCReader):
     def add_mock_card(self, uid: str, token_id: str):
         """Add a mock card for testing"""
         self._mock_cards.append((uid, token_id))
+
+    def clear_mock_cards(self):
+        """Clear all mock cards"""
+        self._mock_cards.clear()
+        self._mock_index = 0
 
     def read_card(self) -> Optional[Tuple[str, str]]:
         """Read next mock card"""
@@ -580,6 +591,11 @@ class MockNFCReader(NFCReader):
     def write_token_id(self, token_id: str) -> bool:
         """Mock write always succeeds"""
         logger.info(f"Mock write: {token_id}")
+        return True
+
+    def write_ndef_tlv(self, tlv_bytes: bytes) -> bool:
+        """Mock NDEF TLV write always succeeds"""
+        logger.info(f"Mock NDEF TLV write: {len(tlv_bytes)} bytes")
         return True
 
     def reset_reader(self):

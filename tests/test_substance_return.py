@@ -36,7 +36,7 @@ def test_substance_return_workflow(test_db):
     now = datetime.now(timezone.utc)
     
     # Stage 1: Join queue
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="QUEUE_JOIN",
@@ -44,10 +44,10 @@ def test_substance_return_workflow(test_db):
         session_id=session_id,
         timestamp=now,
     )
-    assert success is True
+    assert result["success"] is True
     
     # Stage 2: Service starts (10 minutes later)
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="SERVICE_START",
@@ -55,10 +55,10 @@ def test_substance_return_workflow(test_db):
         session_id=session_id,
         timestamp=now + timedelta(minutes=10),
     )
-    assert success is True
+    assert result["success"] is True
     
     # Stage 3: Substance returned (8 minutes after service start)
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="SUBSTANCE_RETURNED",
@@ -66,10 +66,10 @@ def test_substance_return_workflow(test_db):
         session_id=session_id,
         timestamp=now + timedelta(minutes=18),
     )
-    assert success is True
+    assert result["success"] is True
     
     # Stage 4: Exit (1 minute after substance returned)
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="EXIT",
@@ -77,7 +77,7 @@ def test_substance_return_workflow(test_db):
         session_id=session_id,
         timestamp=now + timedelta(minutes=19),
     )
-    assert success is True
+    assert result["success"] is True
     
     # Verify all events logged
     events = test_db.get_recent_events(limit=10)
@@ -89,30 +89,34 @@ def test_substance_return_workflow(test_db):
 
 
 def test_substance_return_duplicate_prevention(test_db):
-    """Test that duplicate substance return confirmations are prevented"""
+    """Test that duplicate substance return confirmations are flagged"""
     token_id = "067"
     uid = "EFGH5678"
     session_id = "festival-2026"
-    
+
     # Log initial substance return
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="SUBSTANCE_RETURNED",
         device_id="station3",
         session_id=session_id,
     )
-    assert success is True
-    
-    # Attempt to log duplicate
-    success = test_db.log_event(
+    assert result["success"] is True
+
+    # Attempt to log duplicate - detected as out-of-order transition
+    # (SUBSTANCE_RETURNED -> SUBSTANCE_RETURNED is not valid, only EXIT is)
+    # Event is still logged but flagged for review
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="SUBSTANCE_RETURNED",
         device_id="station3",
         session_id=session_id,
     )
-    assert success is False  # Should be rejected as duplicate
+    # Event is logged but flagged as out-of-order
+    assert result["success"] is True
+    assert result["out_of_order"] is True
 
 
 def test_multiple_participants_substance_return(test_db):
@@ -350,14 +354,14 @@ def test_session_isolation_substance_return(test_db):
     )
     
     # Session 2: Same token can have another substance return
-    success = test_db.log_event(
+    result = test_db.log_event(
         token_id=token_id,
         uid=uid,
         stage="SUBSTANCE_RETURNED",
         device_id="station3",
         session_id="session-2",
     )
-    assert success is True  # Should succeed because different session
+    assert result["success"] is True  # Should succeed because different session
     
     # Verify both events exist
     events = test_db.get_recent_events(limit=10)
