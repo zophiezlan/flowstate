@@ -563,3 +563,360 @@ advanced:
 #     - {id: "RESULTS", label: "Results", order: 5, required: true, duration_estimate: 7}
 #     - {id: "SUBSTANCE_RETURNED", label: "Substance Returned", order: 6, required: true, duration_estimate: 1, icon: "🤝"}
 #     - {id: "EXIT", label: "Complete", order: 7, required: true, duration_estimate: 0}
+
+# ============================================================================
+# SERVICE QUALITY & CONTINUOUS IMPROVEMENT
+# ============================================================================
+# These advanced features enable data-driven service optimization
+
+# ----------------------------------------------------------------------------
+# SERVICE IMPROVEMENT ENGINE
+# ----------------------------------------------------------------------------
+# Analyzes service data and generates actionable recommendations
+# ----------------------------------------------------------------------------
+service_improvement:
+  enabled: true
+
+  # Analysis parameters
+  analysis_window_hours: 24      # Hours of data to analyze
+  target_wait_minutes: 30        # Target maximum wait time
+  target_throughput_per_hour: 12 # Target service capacity
+
+  # Recommendation settings
+  recommendations:
+    max_quick_wins: 5            # Maximum quick-win recommendations
+    include_informational: true  # Include low-priority insights
+
+  # Pattern detection
+  patterns:
+    detect_recurring: true       # Identify recurring patterns
+    min_data_points: 10          # Minimum events for pattern detection
+
+# ----------------------------------------------------------------------------
+# ADAPTIVE THRESHOLDS
+# ----------------------------------------------------------------------------
+# Context-aware thresholds that adjust based on conditions
+# ----------------------------------------------------------------------------
+adaptive_thresholds:
+  enabled: true
+
+  # Base threshold values (adjusted by rules)
+  base_thresholds:
+    queue_warning: 10
+    queue_critical: 20
+    wait_warning_minutes: 30
+    wait_critical_minutes: 60
+    throughput_warning_per_hour: 6
+    throughput_critical_per_hour: 3
+    inactivity_warning_minutes: 10
+    inactivity_critical_minutes: 20
+
+  # Time-based adjustment rules
+  rules:
+    # Peak hours - more lenient thresholds
+    - id: "peak_evening"
+      name: "Evening Peak Hours"
+      description: "Higher thresholds during evening rush"
+      threshold_types:
+        - queue_warning
+        - queue_critical
+        - wait_warning_minutes
+        - wait_critical_minutes
+      multiplier: 1.3  # 30% higher thresholds
+      time_windows:
+        - start: "20:00"
+          end: "23:59"
+          days: [0, 1, 2, 3, 4, 5, 6]  # All week
+      enabled: true
+
+    # Off-peak - stricter thresholds
+    - id: "off_peak_morning"
+      name: "Morning Off-Peak"
+      description: "Lower thresholds during quiet periods"
+      threshold_types:
+        - queue_warning
+        - inactivity_warning_minutes
+      multiplier: 0.8  # 20% lower thresholds
+      time_windows:
+        - start: "10:00"
+          end: "14:00"
+      enabled: true
+
+  # Allow manual overrides
+  manual_overrides:
+    enabled: true
+    max_duration_hours: 8
+
+# ----------------------------------------------------------------------------
+# SERVICE LEVEL OBJECTIVES (SLOs)
+# ----------------------------------------------------------------------------
+# Define custom SLOs beyond the defaults for your service
+# ----------------------------------------------------------------------------
+service_level_objectives:
+  enabled: true
+
+  # Built-in SLOs (can be customized)
+  defaults:
+    wait_time_slo:
+      enabled: true
+      target_percent: 80        # 80% of people wait less than target
+      warning_percent: 70
+      window_hours: 4
+
+    completion_rate_slo:
+      enabled: true
+      target_percent: 95
+      warning_percent: 90
+      window_hours: 24
+
+    throughput_slo:
+      enabled: true
+      target_percent: 70        # 70% of target capacity
+      warning_percent: 50
+      window_hours: 4
+
+  # Custom SLO definitions
+  custom:
+    []
+    # Example custom SLOs:
+    # - id: "p90_wait_time"
+    #   name: "P90 Wait Time"
+    #   description: "90th percentile wait time under 45 minutes"
+    #   metric_type: "duration"
+    #   metric_id: "wait_time_p90"
+    #   target_operator: "<="
+    #   target_value: 45
+    #   window_hours: 4
+    #   tags: ["participant_experience"]
+    #
+    # - id: "substance_return_rate"
+    #   name: "Substance Return Tracking"
+    #   description: "Percentage of substances returned to participants"
+    #   metric_type: "percentage"
+    #   metric_id: "substance_return_rate"
+    #   target_operator: ">="
+    #   target_value: 98
+    #   warning_threshold: 95
+    #   window_hours: 12
+    #   tags: ["accountability", "safety"]
+
+  # Error budget tracking
+  error_budgets:
+    enabled: false
+    budget_period_hours: 168    # 1 week
+
+# ----------------------------------------------------------------------------
+# WORKFLOW VALIDATION
+# ----------------------------------------------------------------------------
+# Configure per-stage validation rules
+# ----------------------------------------------------------------------------
+workflow_validation:
+  enabled: true
+
+  # Global validation behavior
+  behavior:
+    fail_on_error: true         # Block operations on ERROR severity
+    fail_on_warning: false      # Block operations on WARNING severity
+
+  # Built-in validator configuration
+  validators:
+    min_wait_time:
+      enabled: true
+      min_wait_seconds: 30      # Minimum time between stages
+      severity: "warning"
+
+    max_wait_time:
+      enabled: true
+      max_wait_minutes: 180     # Warning for very long waits
+      severity: "warning"
+
+    duplicate_stage:
+      enabled: true
+      allow_repeat_after_minutes: 60
+      severity: "warning"
+
+    queue_capacity:
+      enabled: true
+      max_queue_size: 50
+      severity: "warning"
+
+    concurrent_service:
+      enabled: true
+      max_concurrent: 10        # Max people in SERVICE_START simultaneously
+      severity: "warning"
+
+    service_hours:
+      enabled: true
+      start_hour: 10
+      end_hour: 23
+      allow_outside_hours: true # Allow with warning
+      severity: "warning"
+
+    substance_return:
+      enabled: true
+      require_return: false     # Warn but don't block if not returned
+      severity: "warning"
+
+  # Custom validators
+  custom_validators:
+    []
+    # Example:
+    # - id: "custom_intake_check"
+    #   name: "Intake Requirements"
+    #   description: "Custom validation for intake stage"
+    #   stages: ["INTAKE"]
+    #   severity: "error"
+    #   # Custom validation logic defined in code
+
+# ----------------------------------------------------------------------------
+# ROLE-BASED ACCESS CONTROL (RBAC)
+# ----------------------------------------------------------------------------
+# Extends the staffing.roles section with full RBAC capabilities
+# ----------------------------------------------------------------------------
+access_control:
+  enabled: false                 # Enable full RBAC system
+
+  # Authentication settings
+  authentication:
+    require_for_dashboard: false
+    require_for_admin: true
+    session_timeout_minutes: 60
+
+  # Permission definitions
+  permissions:
+    - id: "tap:scan"
+      description: "Scan NFC cards"
+    - id: "tap:manual_entry"
+      description: "Manually enter tap events"
+    - id: "queue:view"
+      description: "View queue status"
+    - id: "queue:manage"
+      description: "Force exit and manage queue"
+    - id: "dashboard:view"
+      description: "View dashboard"
+    - id: "dashboard:full"
+      description: "Full dashboard access"
+    - id: "analytics:view"
+      description: "View analytics"
+    - id: "analytics:export"
+      description: "Export data"
+    - id: "alerts:acknowledge"
+      description: "Acknowledge alerts"
+    - id: "config:edit"
+      description: "Edit configuration"
+    - id: "admin:system"
+      description: "System administration"
+
+  # Role definitions (extends staffing.roles)
+  roles:
+    public:
+      permissions:
+        - "public:view"
+
+    peer_worker:
+      permissions:
+        - "tap:scan"
+        - "queue:view"
+        - "dashboard:view"
+        - "alerts:view"
+
+    coordinator:
+      inherits_from: "peer_worker"
+      permissions:
+        - "tap:manual_entry"
+        - "queue:manage"
+        - "dashboard:full"
+        - "analytics:view"
+        - "alerts:acknowledge"
+
+    admin:
+      permissions:
+        - "*"  # All permissions
+
+  # Audit logging
+  audit:
+    enabled: true
+    log_access_decisions: true
+    log_authentication: true
+    retention_days: 365
+
+# ----------------------------------------------------------------------------
+# INTEGRATION HOOKS (WEBHOOKS)
+# ----------------------------------------------------------------------------
+# Configure webhooks for external system integration
+# ----------------------------------------------------------------------------
+integration_hooks:
+  enabled: false
+
+  # Async vs sync delivery
+  async_delivery: true
+
+  # Webhook endpoints
+  webhooks:
+    []
+    # Example configurations:
+    #
+    # Alert notifications to Slack/Discord
+    # - id: "alerts_webhook"
+    #   name: "Alert Notifications"
+    #   url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    #   events:
+    #     - "alert_triggered"
+    #     - "slo_breached"
+    #   enabled: true
+    #   secret: "your-webhook-secret"  # For HMAC signing
+    #   headers:
+    #     Content-Type: "application/json"
+    #   timeout_seconds: 30
+    #   max_retries: 3
+    #   retry_delay_seconds: 5
+    #
+    # Event streaming to analytics platform
+    # - id: "analytics_stream"
+    #   name: "Analytics Events"
+    #   url: "https://your-analytics.com/events"
+    #   events:
+    #     - "queue_join"
+    #     - "service_start"
+    #     - "exit"
+    #   enabled: true
+    #   transform: "minimal"  # Options: full, minimal, flatten
+    #   batch_size: 10
+    #   batch_delay_seconds: 5
+    #
+    # Session events for external dashboard
+    # - id: "session_events"
+    #   name: "Session Tracking"
+    #   url: "https://your-system.com/sessions"
+    #   events:
+    #     - "session_started"
+    #     - "session_ended"
+    #     - "shift_handoff"
+    #   enabled: false
+
+  # Event filtering
+  filters:
+    # Filter events by stage or other criteria
+    []
+    # Example:
+    # - webhook_id: "alerts_webhook"
+    #   filter: "severity!=info"
+
+# ----------------------------------------------------------------------------
+# DYNAMIC CONFIGURATION
+# ----------------------------------------------------------------------------
+# Settings for runtime configuration management
+# ----------------------------------------------------------------------------
+dynamic_config:
+  # Enable hot reload of configuration
+  auto_reload: false
+  reload_interval_seconds: 30
+
+  # Configuration versioning
+  versioning:
+    enabled: true
+    max_history: 10             # Keep last 10 versions
+
+  # Validation on load
+  validation:
+    strict_mode: false          # Reject config with unknown keys
