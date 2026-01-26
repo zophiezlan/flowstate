@@ -85,6 +85,27 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
     "hardware_temp_critical": ("hardware.temp_critical_celsius", 80, int),
     "hardware_disk_warning": ("hardware.disk_warning_percent", 80, int),
     "hardware_disk_critical": ("hardware.disk_critical_percent", 90, int),
+
+    # On-Site Setup Features
+    "onsite_enabled": ("onsite.enabled", True, bool),
+
+    # WiFi Management
+    "onsite_wifi_enabled": ("onsite.wifi.enabled", True, bool),
+    "onsite_wifi_setup_button_gpio": ("onsite.wifi.setup_button_gpio", 23, int),
+    "onsite_wifi_networks_file": ("onsite.wifi.networks_file", "config/wifi_networks.conf", str),
+
+    # mDNS Discovery
+    "onsite_mdns_enabled": ("onsite.mdns.enabled", True, bool),
+
+    # Failover Settings
+    "onsite_failover_enabled": ("onsite.failover.enabled", True, bool),
+    "onsite_failover_peer_hostname": ("onsite.failover.peer_hostname", None, str),
+    "onsite_failover_check_interval": ("onsite.failover.check_interval", 30, int),
+    "onsite_failover_failure_threshold": ("onsite.failover.failure_threshold", 2, int),
+
+    # Status LEDs
+    "onsite_status_leds_enabled": ("onsite.status_leds.enabled", True, bool),
+    "onsite_status_leds_gpio_blue": ("onsite.status_leds.gpio_blue", None, int),
 }
 
 

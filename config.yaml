@@ -102,6 +102,51 @@ web_server:
     # IMPORTANT: Change this before deployment!
     # Use a strong password (min 12 characters, mix of letters/numbers/symbols)
     password: "CHANGE-ME-BEFORE-DEPLOYMENT"
-    
+
     # Session timeout in minutes (auto-logout after inactivity)
     session_timeout_minutes: 60
+
+# On-Site Setup Features (NEW!)
+onsite:
+  # Enable on-site management features
+  enabled: true
+
+  # WiFi Management
+  wifi:
+    # Enable WiFi auto-connect and setup button
+    enabled: true
+
+    # WiFi setup button GPIO (BCM numbering)
+    setup_button_gpio: 23
+
+    # WiFi networks configuration file
+    networks_file: "config/wifi_networks.conf"
+
+  # mDNS/Avahi Discovery
+  mdns:
+    # Enable mDNS service (auto-discovery via hostname.local)
+    enabled: true
+
+  # Peer Monitoring & Failover
+  failover:
+    # Enable automatic failover when peer station fails
+    enabled: true
+
+    # Peer station hostname or IP
+    # For QUEUE_JOIN station: set to "tapstation-exit.local"
+    # For EXIT station: set to "tapstation-queue.local"
+    peer_hostname: "tapstation-exit.local"
+
+    # Health check interval (seconds)
+    check_interval: 30
+
+    # Number of failures before declaring peer down
+    failure_threshold: 2
+
+  # Status LED Indicators
+  status_leds:
+    # Enable status LED patterns (uses existing feedback LEDs)
+    enabled: true
+
+    # Optional blue LED for WiFi status (set to null if not present)
+    gpio_blue: null
