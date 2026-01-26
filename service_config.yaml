@@ -1,7 +1,7 @@
 # ============================================================================
-# NFC-Tap-Logger Service Configuration
+# flowstate Service Configuration
 # ============================================================================
-# This file allows customization of the NFC-Tap-Logger system for different
+# This file allows customization of the flowstate system for different
 # festival-based community drug checking services. Each service can have
 # different workflows, staffing models, capacity, and operational parameters.
 #

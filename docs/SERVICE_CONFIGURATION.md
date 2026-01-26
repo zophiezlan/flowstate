@@ -2,7 +2,7 @@
 
 ## Overview
 
-The NFC-Tap-Logger system is designed to be **fully configurable** for different festival-based community drug checking services. Each service has different needs, workflows, staffing models, capacity, and operational parameters. The service configuration system allows you to customize every aspect of the system without modifying code.
+The flowstate system is designed to be **fully configurable** for different festival-based community drug checking services. Each service has different needs, workflows, staffing models, capacity, and operational parameters. The service configuration system allows you to customize every aspect of the system without modifying code.
 
 ## Quick Start
 
@@ -59,7 +59,7 @@ python service_config_loader.py
 python tap_station/service_integration.py
 
 # Run the system
-sudo systemctl restart nfc-tap-logger  # or your start command
+sudo systemctl restart flowstate  # or your start command
 ```
 
 ## Configuration Sections
@@ -543,7 +543,7 @@ The system maintains **backward compatibility** - if no configuration file exist
 1. Check file location: `service_config.yaml` should be in project root
 2. Check file permissions: `ls -la service_config.yaml`
 3. Check YAML syntax: `python -c "import yaml; yaml.safe_load(open('service_config.yaml'))"`
-4. Check logs: `journalctl -u nfc-tap-logger -n 50`
+4. Check logs: `journalctl -u flowstate -n 50`
 
 ### Stages Not Appearing
 

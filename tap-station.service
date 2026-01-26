@@ -5,13 +5,13 @@ After=network.target
 [Service]
 Type=simple
 User=dc-nfc-1
-WorkingDirectory=/home/dc-nfc-1/nfc-tap-logger
-Environment="PATH=/home/dc-nfc-1/nfc-tap-logger/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/home/dc-nfc-1/nfc-tap-logger/venv/bin/python -m tap_station.main --config /home/dc-nfc-1/nfc-tap-logger/config.yaml
+WorkingDirectory=/home/dc-nfc-1/flowstate
+Environment="PATH=/home/dc-nfc-1/flowstate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/dc-nfc-1/flowstate/venv/bin/python -m tap_station.main --config /home/dc-nfc-1/flowstate/config.yaml
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/dc-nfc-1/nfc-tap-logger/logs/tap-station.log
-StandardError=append:/home/dc-nfc-1/nfc-tap-logger/logs/tap-station-error.log
+StandardOutput=append:/home/dc-nfc-1/flowstate/logs/tap-station.log
+StandardError=append:/home/dc-nfc-1/flowstate/logs/tap-station-error.log
 
 # Restart on failure
 StartLimitInterval=200

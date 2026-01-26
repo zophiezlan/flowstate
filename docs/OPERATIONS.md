@@ -700,7 +700,7 @@ Time    | Participant ID / Description | Stage
 
 ```bash
 ssh pi@<station-ip>
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 python scripts/export_data.py
 ```
@@ -709,7 +709,7 @@ Creates `export_YYYYMMDD_HHMMSS.csv` in current directory.
 
 **Retrieve via:**
 
-- SCP: `scp pi@<station-ip>:~/nfc-tap-logger/export_*.csv .`
+- SCP: `scp pi@<station-ip>:~/flowstate/export_*.csv .`
 - USB drive: Copy file to mounted drive
 - Email: Use `mail` command if configured
 
@@ -833,7 +833,7 @@ A: Yes! System supports custom stages - configure as needed.
 
 - Check [Troubleshooting Guide](TROUBLESHOOTING.md)
 - Review logs: `logs/tap-station.log`
-- GitHub issues: [Project Repository](https://github.com/zophiezlan/nfc-tap-logger)
+- GitHub issues: [Project Repository](https://github.com/zophiezlan/flowstate)
 
 ---
 

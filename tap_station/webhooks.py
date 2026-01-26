@@ -212,7 +212,7 @@ class WebhookDeliveryWorker(threading.Thread):
 
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "NFC-Tap-Logger-Webhook/1.0",
+            "User-Agent": "flowstate-Webhook/1.0",
             "X-Webhook-ID": payload.id,
             "X-Webhook-Timestamp": str(timestamp),
         }

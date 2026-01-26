@@ -140,7 +140,7 @@ Easy navigation hub for all features.
 
 ```bash
 # 1. Start the development server
-cd "c:\Users\AV\Code Adventures\nfc-tap-logger"
+cd "c:\Users\AV\Code Adventures\flowstate"
 python -m tap_station.main --mock
 
 # 2. Test all endpoints in browser
@@ -183,7 +183,7 @@ http://localhost:5000/api/dashboard
 
 ```bash
 # 1. Pull latest code
-cd ~/nfc-tap-logger
+cd ~/flowstate
 git pull
 
 # 2. Restart service

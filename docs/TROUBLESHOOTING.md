@@ -362,7 +362,7 @@ sudo systemctl status tap-station
 
 ```
 Solution:
-cd ~/nfc-tap-logger
+cd ~/flowstate
 cp config.yaml.example config.yaml
 nano config.yaml  # Edit as needed
 sudo systemctl restart tap-station
@@ -372,7 +372,7 @@ sudo systemctl restart tap-station
 
 ```
 Solution:
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 pip install -r requirements.txt
 sudo systemctl restart tap-station
@@ -747,10 +747,10 @@ sudo systemctl start tap-station
 **Check Python environment:**
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 which python
-# Should show: /home/pi/nfc-tap-logger/venv/bin/python
+# Should show: /home/pi/flowstate/venv/bin/python
 ```
 
 **Run export with verbose logging:**
@@ -824,7 +824,7 @@ cp config.yaml ~/backup_$(date +%Y%m%d)/
 cp logs/tap-station.log ~/backup_$(date +%Y%m%d)/
 
 # 3. Reinstall
-cd ~/nfc-tap-logger
+cd ~/flowstate
 git pull
 bash scripts/install.sh
 
@@ -850,8 +850,8 @@ sudo systemctl start tap-station
 
    ```bash
    # Mount SD card (usually automounts)
-   cp /media/<sd-card>/home/pi/nfc-tap-logger/data/events.db ~/backup/
-   cp /media/<sd-card>/home/pi/nfc-tap-logger/config.yaml ~/backup/
+   cp /media/<sd-card>/home/pi/flowstate/data/events.db ~/backup/
+   cp /media/<sd-card>/home/pi/flowstate/config.yaml ~/backup/
    ```
 
 4. **Reflash OS:**
@@ -864,8 +864,8 @@ sudo systemctl start tap-station
 6. **Restore data:**
 
    ```bash
-   cp ~/backup/events.db ~/nfc-tap-logger/data/
-   cp ~/backup/config.yaml ~/nfc-tap-logger/
+   cp ~/backup/events.db ~/flowstate/data/
+   cp ~/backup/config.yaml ~/flowstate/
    ```
 
 ---
@@ -910,7 +910,7 @@ cat config.yaml >> ~/config-check.txt
 
 1. **Check this guide first** - Most issues covered here
 2. **Check logs** - `logs/tap-station.log` often explains the issue
-3. **GitHub Issues** - [Project Repository](https://github.com/zophiezlan/nfc-tap-logger/issues)
+3. **GitHub Issues** - [Project Repository](https://github.com/zophiezlan/flowstate/issues)
 4. **Forum / Community** - If available for your deployment
 
 ---

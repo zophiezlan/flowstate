@@ -58,7 +58,7 @@ Complete guide for using Android phones with NFC as tap stations.
 On your laptop:
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 python -m http.server 8000 --directory mobile_app
 ```
 
@@ -135,7 +135,7 @@ On the phone:
 3. **Ingest into database:**
 
    ```bash
-   cd ~/nfc-tap-logger
+   cd ~/flowstate
    source venv/bin/activate
    python scripts/ingest_mobile_batch.py \
      --input /path/to/mobile-export.jsonl \
@@ -297,7 +297,7 @@ token_id,uid,stage,session_id,device_id,timestamp_ms
 **Basic usage:**
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 
 # JSONL (recommended)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide documents the integration of the service configuration system throughout the NFC-Tap-Logger codebase. It tracks what has been completed and what remains to be done.
+This guide documents the integration of the service configuration system throughout the flowstate codebase. It tracks what has been completed and what remains to be done.
 
 ## Integration Status
 

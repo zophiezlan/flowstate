@@ -193,14 +193,14 @@ After=network.target tap-station.service
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/nfc-tap-logger
-Environment="PATH=/home/pi/nfc-tap-logger/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/home/pi/nfc-tap-logger/venv/bin/python -m tap_station.watchdog_runner
+WorkingDirectory=/home/pi/flowstate
+Environment="PATH=/home/pi/flowstate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/pi/flowstate/venv/bin/python -m tap_station.watchdog_runner
 Restart=always
 RestartSec=30
 
-StandardOutput=append:/home/pi/nfc-tap-logger/logs/watchdog.log
-StandardError=append:/home/pi/nfc-tap-logger/logs/watchdog-error.log
+StandardOutput=append:/home/pi/flowstate/logs/watchdog.log
+StandardError=append:/home/pi/flowstate/logs/watchdog-error.log
 
 [Install]
 WantedBy=multi-user.target

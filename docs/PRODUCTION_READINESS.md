@@ -459,7 +459,7 @@ The NFC Tap Logger v2.0 meets all functional requirements, includes comprehensiv
 
 ## 📞 Contact & Support
 
-**Project Repository:** <https://github.com/zophiezlan/nfc-tap-logger>
+**Project Repository:** <https://github.com/zophiezlan/flowstate>
 
 **Issue Reporting:** GitHub Issues
 

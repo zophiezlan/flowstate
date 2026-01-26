@@ -39,7 +39,7 @@ class MobileStore {
 
   _open() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("nfc-tap-logger", 1);
+      const request = indexedDB.open("flowstate", 1);
 
       request.onupgradeneeded = () => {
         const db = request.result;

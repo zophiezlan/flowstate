@@ -119,7 +119,7 @@ http://station1.local:5000/public
 
 ```bash
 # 1. Start service (if not running)
-cd "c:\Users\AV\Code Adventures\nfc-tap-logger"
+cd "c:\Users\AV\Code Adventures\flowstate"
 python -m pytest tests/  # optional: run tests first
 
 # 2. Open browser to test:

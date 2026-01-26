@@ -23,7 +23,7 @@ The on-site setup system provides:
 
 ```bash
 # Run the on-site features installer
-cd /home/pi/nfc-tap-logger
+cd /home/pi/flowstate
 sudo bash scripts/install_onsite_features.sh
 ```
 

@@ -22,7 +22,7 @@ fi
 # Get the actual user (not root when using sudo)
 ACTUAL_USER=${SUDO_USER:-$USER}
 USER_HOME=$(eval echo ~$ACTUAL_USER)
-INSTALL_DIR="$USER_HOME/nfc-tap-logger"
+INSTALL_DIR="$USER_HOME/flowstate"
 
 echo "Installing as user: $ACTUAL_USER"
 echo "Installation directory: $INSTALL_DIR"

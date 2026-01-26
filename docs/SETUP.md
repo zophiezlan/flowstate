@@ -178,8 +178,8 @@ Before powering on:
 
 ```bash
 cd ~
-git clone https://github.com/zophiezlan/nfc-tap-logger.git
-cd nfc-tap-logger
+git clone https://github.com/zophiezlan/flowstate.git
+cd flowstate
 ```
 
 ### Step 2: Run Installation Script
@@ -223,7 +223,7 @@ Wait 30 seconds, then SSH back in.
 ### Step 4: Verify Hardware
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 python scripts/verify_hardware.py
 ```

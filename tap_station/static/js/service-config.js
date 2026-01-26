@@ -1,5 +1,5 @@
 /**
- * Service Configuration Helper for NFC-Tap-Logger Frontend
+ * Service Configuration Helper for flowstate Frontend
  *
  * This script fetches service configuration from the backend and provides
  * helper functions to access configured values in the UI.

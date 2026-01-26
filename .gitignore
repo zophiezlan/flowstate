@@ -62,3 +62,6 @@ docs/archive/
 secrets.yml
 config.yaml
 .env
+
+# Local Scripts
+replace-with-git.ps1

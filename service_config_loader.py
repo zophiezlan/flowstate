@@ -1,5 +1,5 @@
 """
-Service Configuration Loader for NFC-Tap-Logger
+Service Configuration Loader for flowstate
 
 This module loads and validates service-specific configuration from service_config.yaml,
 allowing different festival drug checking services to customize their deployment.

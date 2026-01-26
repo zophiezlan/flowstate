@@ -630,7 +630,7 @@ class IntegrationHooksManager:
         body = json.dumps(data).encode("utf-8")
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "NFC-Tap-Logger/1.0",
+            "User-Agent": "flowstate/1.0",
             "X-Event-Type": event.event_type.value,
             "X-Event-ID": event.id,
             **webhook.headers,

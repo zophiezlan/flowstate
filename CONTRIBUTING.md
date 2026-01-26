@@ -4,7 +4,7 @@ Thank you for your interest in improving NFC Tap Logger!
 
 ## Quick Links
 
-- **Report bugs:** [GitHub Issues](https://github.com/zophiezlan/nfc-tap-logger/issues)
+- **Report bugs:** [GitHub Issues](https://github.com/zophiezlan/flowstate/issues)
 - **Suggest features:** Open an issue with `[Feature Request]` in the title
 - **Documentation:** [docs/](docs/) folder
 
@@ -22,8 +22,8 @@ Thank you for your interest in improving NFC Tap Logger!
 
 ```bash
 # Clone repository
-git clone https://github.com/zophiezlan/nfc-tap-logger.git
-cd nfc-tap-logger
+git clone https://github.com/zophiezlan/flowstate.git
+cd flowstate
 
 # Create virtual environment
 python -m venv venv
@@ -47,7 +47,7 @@ pytest -v
 ## Project Structure
 
 ```
-nfc-tap-logger/
+flowstate/
 ├── tap_station/           # Core application
 │   ├── main.py           # Service entry point
 │   ├── config.py         # Configuration management
@@ -605,7 +605,7 @@ When requesting features, please include:
 ## Project Structure
 
 ```
-nfc-tap-logger/
+flowstate/
 ├── tap_station/          # Main application code
 │   ├── main.py          # Entry point and service loop
 │   ├── config.py        # Configuration loader

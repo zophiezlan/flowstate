@@ -181,7 +181,7 @@
 1. **Backup Current System**
 
    ```bash
-   cd /home/pi/nfc-tap-logger
+   cd /home/pi/flowstate
    sudo cp tap_station/web_server.py tap_station/web_server.py.backup
    sudo cp tap_station/templates/control.html tap_station/templates/control.html.backup
    sudo cp tap_station/templates/dashboard.html tap_station/templates/dashboard.html.backup

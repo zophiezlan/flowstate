@@ -169,8 +169,8 @@ SCL   → Pin 5 (GPIO 3)
 **2. Install software**
 
 ```bash
-git clone https://github.com/zophiezlan/nfc-tap-logger.git
-cd nfc-tap-logger
+git clone https://github.com/zophiezlan/flowstate.git
+cd flowstate
 bash scripts/install.sh
 sudo reboot
 ```
@@ -470,7 +470,7 @@ print(f"90th percentile: {pivoted['wait_time'].quantile(0.9)}")
 ## Project Structure
 
 ```
-nfc-tap-logger/
+flowstate/
 ├── tap_station/              # Main application
 │   ├── main.py              # Service entry point
 │   ├── config.py            # Configuration management

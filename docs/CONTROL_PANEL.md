@@ -441,7 +441,7 @@ The control panel provides **full system control**. Protect it:
 - **Full documentation:** [OPERATIONS.md](OPERATIONS.md)
 - **Setup guide:** [SETUP.md](SETUP.md)
 - **Troubleshooting:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **Issues:** [GitHub Issues](https://github.com/zophiezlan/nfc-tap-logger/issues)
+- **Issues:** [GitHub Issues](https://github.com/zophiezlan/flowstate/issues)
 
 ---
 

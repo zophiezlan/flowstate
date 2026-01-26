@@ -1,6 +1,6 @@
 # Example Service Configurations
 
-This directory contains example service configurations for different types of festival-based community drug checking services. Each configuration demonstrates how to customize the NFC-Tap-Logger system for specific service models and operational needs.
+This directory contains example service configurations for different types of festival-based community drug checking services. Each configuration demonstrates how to customize the flowstate system for specific service models and operational needs.
 
 ## Available Examples
 

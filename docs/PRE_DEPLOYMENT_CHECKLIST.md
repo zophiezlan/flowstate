@@ -58,7 +58,7 @@ Run these checks on **both** Station 1 and Station 2:
 #### 1. Configuration Check
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 cat config.yaml
 ```
 
@@ -73,7 +73,7 @@ cat config.yaml
 #### 2. Hardware Verification
 
 ```bash
-cd ~/nfc-tap-logger
+cd ~/flowstate
 source venv/bin/activate
 python scripts/verify_hardware.py
 ```
