@@ -243,7 +243,7 @@ network={{
 
             # Clean up temporary config file
             try:
-                config_path.unlink()
+                config_path.unlink(missing_ok=True)
             except Exception as e:
                 logger.warning(f"Could not delete temporary config file: {e}")
 

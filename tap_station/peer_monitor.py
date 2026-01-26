@@ -169,8 +169,8 @@ class PeerMonitor:
                     except Exception as e:
                         logger.error(f"Error in peer_up callback: {e}")
                 
-                callback_thread = threading.Thread(target=_run_callback, daemon=True)
-                callback_thread.start()
+                peer_up_thread = threading.Thread(target=_run_callback, daemon=True)
+                peer_up_thread.start()
 
     def _handle_failure(self):
         """Handle failed health check"""
@@ -198,8 +198,8 @@ class PeerMonitor:
                         except Exception as e:
                             logger.error(f"Error in peer_down callback: {e}")
                     
-                    callback_thread = threading.Thread(target=_run_callback, daemon=True)
-                    callback_thread.start()
+                    peer_down_thread = threading.Thread(target=_run_callback, daemon=True)
+                    peer_down_thread.start()
 
     def get_status(self) -> Dict:
         """
