@@ -17,6 +17,9 @@ pytest-cov==4.1.0
 # Web server (for status checking and health checks)
 Flask==3.0.0
 
+# HTTP requests (for peer monitoring)
+requests==2.32.3
+
 # NDEF writing (for NFC Tools app integration)
 ndeflib==0.3.3
 
