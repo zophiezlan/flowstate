@@ -231,8 +231,26 @@ class StatusWebServer:
             self.svc = None
             logger.warning("Service configuration not available")
 
+        # Cache stage IDs from service configuration for SQL queries
+        # This allows stage names to be configured rather than hardcoded
+        self._init_stage_ids()
+
         # Setup routes
         self._setup_routes()
+
+    def _init_stage_ids(self):
+        """Initialize stage IDs from service configuration"""
+        if self.svc:
+            self.STAGE_QUEUE_JOIN = self.svc.get_first_stage()
+            self.STAGE_EXIT = self.svc.get_last_stage()
+            self.STAGE_SERVICE_START = self.svc.get_service_start_stage()
+            self.STAGE_SUBSTANCE_RETURNED = self.svc.get_substance_returned_stage()
+        else:
+            # Fallback defaults
+            self.STAGE_QUEUE_JOIN = "QUEUE_JOIN"
+            self.STAGE_EXIT = "EXIT"
+            self.STAGE_SERVICE_START = "SERVICE_START"
+            self.STAGE_SUBSTANCE_RETURNED = "SUBSTANCE_RETURNED"
 
     def _setup_routes(self):
         """Setup Flask routes"""
@@ -1437,12 +1455,12 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         in_queue = cursor.fetchone()["count"]
 
@@ -1454,12 +1472,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND date(e.timestamp) = date('now')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         completed_today = cursor.fetchone()["count"]
 
@@ -1564,14 +1582,14 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
             ORDER BY datetime(q.timestamp) ASC
             LIMIT 1
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
 
         longest_wait = 0
@@ -1589,12 +1607,12 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         in_queue = cursor.fetchone()["count"]
         queue_mult = self.svc.get_queue_multiplier() if self.svc else 2
@@ -1629,12 +1647,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND e.timestamp > datetime('now', '-1 hour')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         completed_last_hour = cursor.fetchone()["completed"]
         # Get service capacity from configuration
@@ -1776,12 +1794,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND e.timestamp > datetime('now', '-1 hour')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         row = cursor.fetchone()
         if row and row["avg_time"] and row["max_time"]:
@@ -1812,13 +1830,13 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
                 AND q.timestamp < datetime('now', '-' || ? || ' hours')
         """,
-            (session_id, str(stuck_hours)),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id, str(stuck_hours)),
         )
         stuck_count = cursor.fetchone()["count"]
         if stuck_count > 0:
@@ -1845,18 +1863,23 @@ class StatusWebServer:
                 LEFT JOIN events r
                     ON s.token_id = r.token_id
                     AND s.session_id = r.session_id
-                    AND r.stage = 'SUBSTANCE_RETURNED'
+                    AND r.stage = ?
                 LEFT JOIN events e
                     ON s.token_id = e.token_id
                     AND s.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE s.stage = 'SERVICE_START'
+                    AND e.stage = ?
+                WHERE s.stage = ?
                     AND s.session_id = ?
                     AND r.id IS NULL
                     AND e.id IS NULL
                 ORDER BY s.timestamp ASC
                 """,
-                (session_id,),
+                (
+                    self.STAGE_SUBSTANCE_RETURNED,
+                    self.STAGE_EXIT,
+                    self.STAGE_SERVICE_START,
+                    session_id,
+                ),
             )
 
             unreturned = cursor.fetchall()
@@ -1936,13 +1959,13 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
             ORDER BY datetime(q.timestamp) ASC
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
 
         queue_details = []
@@ -1974,13 +1997,18 @@ class StatusWebServer:
                 JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                WHERE q.stage = 'QUEUE_JOIN'
-                    AND e.stage = 'EXIT'
+                WHERE q.stage = ?
+                    AND e.stage = ?
                     AND q.session_id = ?
                 ORDER BY e.timestamp DESC
                 LIMIT ?
             """,
-                (self.config.session_id, limit),
+                (
+                    self.STAGE_QUEUE_JOIN,
+                    self.STAGE_EXIT,
+                    self.config.session_id,
+                    limit,
+                ),
             )
 
             journeys = cursor.fetchall()
@@ -2014,13 +2042,18 @@ class StatusWebServer:
                 JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                WHERE q.stage = 'QUEUE_JOIN'
-                    AND e.stage = 'EXIT'
+                WHERE q.stage = ?
+                    AND e.stage = ?
                     AND q.session_id = ?
                 ORDER BY e.timestamp DESC
                 LIMIT ?
             """,
-                (self.config.session_id, limit),
+                (
+                    self.STAGE_QUEUE_JOIN,
+                    self.STAGE_EXIT,
+                    self.config.session_id,
+                    limit,
+                ),
             )
 
             completions = []
@@ -2194,13 +2227,13 @@ class StatusWebServer:
                 JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                WHERE q.stage = 'QUEUE_JOIN'
-                    AND e.stage = 'EXIT'
+                WHERE q.stage = ?
+                    AND e.stage = ?
                     AND q.session_id = ?
                 ORDER BY e.timestamp DESC
                 LIMIT 10
             """,
-                (self.config.session_id,),
+                (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, self.config.session_id),
             )
 
             journeys = cursor.fetchall()
@@ -2598,12 +2631,12 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         queue_length = cursor.fetchone()["count"]
 
@@ -2626,12 +2659,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND date(e.timestamp) = date('now')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         completed_today = cursor.fetchone()["count"]
 
@@ -2675,12 +2708,12 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         current_queue = cursor.fetchone()["count"]
 
@@ -2692,12 +2725,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND e.timestamp > datetime('now', '-4 hours')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         completed_shift = cursor.fetchone()["count"]
 
@@ -2710,12 +2743,12 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND e.timestamp > datetime('now', '-4 hours')
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         row = cursor.fetchone()
         avg_wait_shift = int(row["avg_wait"]) if row["avg_wait"] else 0
@@ -2730,15 +2763,15 @@ class StatusWebServer:
             JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-            WHERE q.stage = 'QUEUE_JOIN'
-                AND e.stage = 'EXIT'
+            WHERE q.stage = ?
+                AND e.stage = ?
                 AND q.session_id = ?
                 AND e.timestamp > datetime('now', '-4 hours')
             GROUP BY hour
             ORDER BY count DESC
             LIMIT 1
         """,
-            (session_id,),
+            (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
         )
         busiest = cursor.fetchone()
         busiest_hour = busiest["hour"] if busiest else "N/A"
@@ -2769,12 +2802,12 @@ class StatusWebServer:
             LEFT JOIN events e
                 ON q.token_id = e.token_id
                 AND q.session_id = e.session_id
-                AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         row = cursor.fetchone()
         longest_wait = 0
@@ -2821,18 +2854,24 @@ class StatusWebServer:
                 LEFT JOIN events s
                     ON q.token_id = s.token_id
                     AND q.session_id = s.session_id
-                    AND s.stage = 'SERVICE_START'
+                    AND s.stage = ?
                 LEFT JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE q.stage = 'QUEUE_JOIN'
+                    AND e.stage = ?
+                WHERE q.stage = ?
                     AND q.session_id = ?
                     AND e.timestamp IS NOT NULL
                 ORDER BY e.timestamp DESC
                 LIMIT ?
             """,
-                (session_id, limit),
+                (
+                    self.STAGE_SERVICE_START,
+                    self.STAGE_EXIT,
+                    self.STAGE_QUEUE_JOIN,
+                    session_id,
+                    limit,
+                ),
             )
 
             journeys = cursor.fetchall()
@@ -2928,12 +2967,12 @@ class StatusWebServer:
                 LEFT JOIN events e
                     ON s.token_id = e.token_id
                     AND s.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE s.stage = 'SERVICE_START'
+                    AND e.stage = ?
+                WHERE s.stage = ?
                     AND s.session_id = ?
                     AND e.id IS NULL
             """,
-                (session_id,),
+                (self.STAGE_EXIT, self.STAGE_SERVICE_START, session_id),
             )
 
             return cursor.fetchone()["count"]
@@ -2969,17 +3008,22 @@ class StatusWebServer:
                 LEFT JOIN events r
                     ON s.token_id = r.token_id
                     AND s.session_id = r.session_id
-                    AND r.stage = 'SUBSTANCE_RETURNED'
+                    AND r.stage = ?
                 LEFT JOIN events e
                     ON s.token_id = e.token_id
                     AND s.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE s.stage = 'SERVICE_START'
+                    AND e.stage = ?
+                WHERE s.stage = ?
                     AND s.session_id = ?
                     AND r.id IS NULL
                     AND e.id IS NULL
                 """,
-                (session_id,),
+                (
+                    self.STAGE_SUBSTANCE_RETURNED,
+                    self.STAGE_EXIT,
+                    self.STAGE_SERVICE_START,
+                    session_id,
+                ),
             )
             pending = cursor.fetchone()["pending"]
 
@@ -2988,10 +3032,10 @@ class StatusWebServer:
                 """
                 SELECT COUNT(DISTINCT token_id) as completed
                 FROM events
-                WHERE stage = 'SUBSTANCE_RETURNED'
+                WHERE stage = ?
                     AND session_id = ?
                 """,
-                (session_id,),
+                (self.STAGE_SUBSTANCE_RETURNED, session_id),
             )
             completed = cursor.fetchone()["completed"]
 
@@ -3000,10 +3044,10 @@ class StatusWebServer:
                 """
                 SELECT COUNT(DISTINCT token_id) as total
                 FROM events
-                WHERE stage = 'SERVICE_START'
+                WHERE stage = ?
                     AND session_id = ?
                 """,
-                (session_id,),
+                (self.STAGE_SERVICE_START, session_id),
             )
             total = cursor.fetchone()["total"]
 
@@ -3047,14 +3091,14 @@ class StatusWebServer:
                 LEFT JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE q.stage = 'QUEUE_JOIN'
+                    AND e.stage = ?
+                WHERE q.stage = ?
                     AND q.session_id = ?
                     AND e.id IS NULL
                     AND q.timestamp < datetime('now', '-2 hours')
                 ORDER BY q.timestamp ASC
             """,
-                (session_id,),
+                (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
             )
 
             stuck_cards = []
@@ -3278,12 +3322,12 @@ class StatusWebServer:
                 LEFT JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                    AND e.stage = 'EXIT'
-                WHERE q.stage = 'QUEUE_JOIN'
+                    AND e.stage = ?
+                WHERE q.stage = ?
                     AND q.session_id = ?
                     AND e.id IS NULL
             """,
-                (session_id,),
+                (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
             )
             queue_length = cursor.fetchone()["count"]
 
@@ -3296,12 +3340,12 @@ class StatusWebServer:
                 JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                WHERE q.stage = 'QUEUE_JOIN'
-                    AND e.stage = 'EXIT'
+                WHERE q.stage = ?
+                    AND e.stage = ?
                     AND q.session_id = ?
                     AND e.timestamp > datetime('now', '-30 minutes')
             """,
-                (session_id,),
+                (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
             )
 
             recent_data = cursor.fetchone()
@@ -3310,18 +3354,18 @@ class StatusWebServer:
             # Calculate average service time from recent completions
             cursor = self.db.conn.execute(
                 """
-                SELECT 
+                SELECT
                     AVG((julianday(e.timestamp) - julianday(q.timestamp)) * 1440) as avg_time
                 FROM events q
                 JOIN events e
                     ON q.token_id = e.token_id
                     AND q.session_id = e.session_id
-                WHERE q.stage = 'QUEUE_JOIN'
-                    AND e.stage = 'EXIT'
+                WHERE q.stage = ?
+                    AND e.stage = ?
                     AND q.session_id = ?
                     AND e.timestamp > datetime('now', '-30 minutes')
             """,
-                (session_id,),
+                (self.STAGE_QUEUE_JOIN, self.STAGE_EXIT, session_id),
             )
 
             avg_service_time = cursor.fetchone()["avg_time"] or 0
@@ -3640,18 +3684,23 @@ class StatusWebServer:
                 CAST((julianday(e.timestamp) - julianday(j.timestamp)) * 1440 AS INTEGER) as total_minutes,
                 CAST((julianday(e.timestamp) - julianday(COALESCE(s.timestamp, j.timestamp))) * 1440 AS INTEGER) as service_minutes
             FROM events j
-            JOIN events e ON j.token_id = e.token_id 
+            JOIN events e ON j.token_id = e.token_id
                         AND j.session_id = e.session_id
-                        AND e.stage = 'EXIT'
+                        AND e.stage = ?
             LEFT JOIN events s ON j.token_id = s.token_id
                              AND j.session_id = s.session_id
-                             AND s.stage = 'SERVICE_START'
-            WHERE j.stage = 'QUEUE_JOIN'
+                             AND s.stage = ?
+            WHERE j.stage = ?
                 AND j.session_id = ?
                 AND datetime(e.timestamp) > datetime(j.timestamp)
             ORDER BY j.timestamp ASC
         """,
-            (session_id,),
+            (
+                self.STAGE_EXIT,
+                self.STAGE_SERVICE_START,
+                self.STAGE_QUEUE_JOIN,
+                session_id,
+            ),
         )
 
         journeys = cursor.fetchall()
@@ -3687,15 +3736,15 @@ class StatusWebServer:
         # Calculate peak queue
         cursor = self.db.conn.execute(
             """
-            SELECT 
+            SELECT
                 datetime(timestamp) as time,
                 (SELECT COUNT(DISTINCT q.token_id)
                  FROM events q
                  LEFT JOIN events e ON q.token_id = e.token_id
                                     AND q.session_id = e.session_id
-                                    AND e.stage = 'EXIT'
+                                    AND e.stage = ?
                                     AND datetime(e.timestamp) <= datetime(events.timestamp)
-                 WHERE q.stage = 'QUEUE_JOIN'
+                 WHERE q.stage = ?
                    AND q.session_id = ?
                    AND datetime(q.timestamp) <= datetime(events.timestamp)
                    AND (e.id IS NULL OR datetime(e.timestamp) > datetime(events.timestamp))
@@ -3705,7 +3754,12 @@ class StatusWebServer:
             ORDER BY queue_length DESC
             LIMIT 1
         """,
-            (session_id, session_id),
+            (
+                self.STAGE_EXIT,
+                self.STAGE_QUEUE_JOIN,
+                session_id,
+                session_id,
+            ),
         )
 
         peak_row = cursor.fetchone()
@@ -3741,12 +3795,12 @@ class StatusWebServer:
             FROM events q
             LEFT JOIN events e ON q.token_id = e.token_id
                                AND q.session_id = e.session_id
-                               AND e.stage = 'EXIT'
-            WHERE q.stage = 'QUEUE_JOIN'
+                               AND e.stage = ?
+            WHERE q.stage = ?
                 AND q.session_id = ?
                 AND e.id IS NULL
         """,
-            (session_id,),
+            (self.STAGE_EXIT, self.STAGE_QUEUE_JOIN, session_id),
         )
         abandoned_count = cursor.fetchone()["abandoned"]
         total_joined = total_served + abandoned_count
@@ -3770,16 +3824,16 @@ class StatusWebServer:
         # Calculate busiest period (hour with most completions)
         cursor = self.db.conn.execute(
             """
-            SELECT 
+            SELECT
                 strftime('%H:00', timestamp) as hour,
                 COUNT(*) as count
             FROM events
-            WHERE session_id = ? AND stage = 'EXIT'
+            WHERE session_id = ? AND stage = ?
             GROUP BY hour
             ORDER BY count DESC
             LIMIT 1
         """,
-            (session_id,),
+            (session_id, self.STAGE_EXIT),
         )
         busiest_row = cursor.fetchone()
         busiest_period = busiest_row["hour"] if busiest_row else "N/A"
