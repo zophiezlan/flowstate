@@ -147,9 +147,9 @@ class MockNDEFWriter(NDEFWriter):
     """
     Mock NDEF writer for testing.
 
-    Note: For new tests, consider using tests/mocks.py which provides
-    a more comprehensive MockNDEFWriter with additional test utilities.
-    This class is kept for backward compatibility.
+    This mock provides a drop-in replacement for testing scenarios.
+    Written URLs and texts are stored in written_urls and written_texts
+    lists for test verification.
     """
 
     def __init__(self, nfc_reader=None):

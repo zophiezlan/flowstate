@@ -9,6 +9,7 @@ Provides:
 - /login endpoint for admin authentication
 """
 
+import csv
 import sys
 import logging
 import subprocess
@@ -17,6 +18,7 @@ import shutil
 import time
 import secrets
 from collections import defaultdict
+from io import StringIO
 from threading import Lock
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, current_app
@@ -26,6 +28,9 @@ from datetime import datetime, timezone, timedelta
 from .datetime_utils import parse_timestamp, from_iso
 from .path_utils import ensure_dir
 
+# Initialize logger at module level (before try block to avoid duplication)
+logger = logging.getLogger(__name__)
+
 # Import service configuration integration
 try:
     from .service_integration import get_service_integration
@@ -33,10 +38,7 @@ try:
     SERVICE_CONFIG_AVAILABLE = True
 except ImportError:
     SERVICE_CONFIG_AVAILABLE = False
-    logger = logging.getLogger(__name__)
     logger.warning("Service configuration not available, using defaults")
-
-logger = logging.getLogger(__name__)
 
 
 # Simple rate limiting implementation
@@ -941,9 +943,6 @@ class StatusWebServer:
         def api_export():
             """Export data as CSV"""
             try:
-                from io import StringIO
-                import csv
-
                 # Get filter parameters
                 filter_type = request.args.get("filter", "all")
                 session_id = self.config.session_id

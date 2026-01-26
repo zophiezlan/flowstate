@@ -1,7 +1,7 @@
 """SQLite database operations for event logging"""
 
+import csv
 import sqlite3
-import os
 import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -678,8 +678,6 @@ class Database:
         Returns:
             Number of rows exported
         """
-        import csv
-
         # Build query
         if session_id:
             query = "SELECT * FROM events WHERE session_id = ? ORDER BY timestamp"

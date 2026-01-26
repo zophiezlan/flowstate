@@ -5,7 +5,6 @@ This module provides centralized logging configuration for the tap station
 application. It consolidates logging setup from main.py and other modules.
 """
 
-import os
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import Optional
