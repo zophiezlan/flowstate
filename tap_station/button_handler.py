@@ -20,6 +20,7 @@ class ButtonHandler:
         hold_time: float = 3.0,
         shutdown_callback=None,
         shutdown_delay_minutes: int = 1,
+        feedback_controller=None,
     ):
         """
         Initialize button handler
@@ -31,12 +32,14 @@ class ButtonHandler:
             shutdown_callback: Optional callback to execute before shutdown
             shutdown_delay_minutes: Minutes delay before shutdown (default: 1)
                                    Set to 0 for immediate shutdown
+            feedback_controller: Optional FeedbackController for button feedback
         """
         self.enabled = enabled
         self.gpio_pin = gpio_pin
         self.hold_time = hold_time
         self.shutdown_callback = shutdown_callback
         self.shutdown_delay_minutes = shutdown_delay_minutes
+        self.feedback = feedback_controller
 
         self._gpio = get_gpio_manager()
         self.monitor_thread = None
@@ -85,6 +88,10 @@ class ButtonHandler:
                 if self._gpio.is_low(self.gpio_pin):
                     logger.info("Shutdown button pressed, checking hold time...")
 
+                    # Immediate feedback on button press
+                    if self.feedback:
+                        self.feedback.button_press()
+
                     # Track how long button is held
                     press_start = time.time()
 
@@ -98,6 +105,11 @@ class ButtonHandler:
                                 f"Shutdown button held for {self.hold_time}s - "
                                 "initiating shutdown"
                             )
+
+                            # Confirmation feedback
+                            if self.feedback:
+                                self.feedback.button_hold_confirm()
+
                             self._trigger_shutdown()
                             return  # Exit monitoring after shutdown triggered
 

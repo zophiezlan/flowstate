@@ -57,9 +57,17 @@ feedback:
 
   # Beep patterns (on/off times in seconds)
   # Format: [on, off, on, off, ...]
-  beep_success: [0.1, 0.1, 0.1]      # Short beep
-  beep_duplicate: [0.1, 0.05, 0.1]   # Double beep
+  # These can be customized for different audio signatures
+  beep_success: [0.1]                # Short single beep
+  beep_duplicate: [0.1, 0.05, 0.1]   # Quick double beep
   beep_error: [0.3]                  # Long beep
+  
+  # LED Behavior:
+  # - Solid green = Ready/idle state
+  # - Flashing green (3x) = Success
+  # - Flashing yellow (2x) = Duplicate/Warning
+  # - Flashing red (3x) = Error
+  # Events automatically return to solid green after feedback
 
 shutdown_button:
   # Enable shutdown button (GPIO 26)

@@ -6,6 +6,23 @@ Provides LED patterns for:
 - System status (ready/error/failover)
 - Boot sequence
 - Operation modes
+
+IMPORTANT: StatusLEDManager and FeedbackController use the same GPIO pins by
+default (GPIO 27 and 22). To avoid conflicts:
+
+1. RECOMMENDED: Disable StatusLEDManager if using FeedbackController for tap
+   events. FeedbackController provides better event-specific feedback with
+   solid base states and clear event patterns.
+
+2. OR: Use separate GPIO pins for StatusLEDManager if you need both systems.
+   Add a third LED for WiFi status on a different GPIO pin.
+
+3. OR: Coordinate between both systems (not currently implemented) to pause
+   status LEDs during event feedback.
+
+Current implementation: FeedbackController is the primary feedback system for
+tap events. StatusLEDManager is intended for network/system status but shares
+pins and may conflict.
 """
 
 import logging
@@ -58,7 +75,7 @@ class StatusLEDManager:
         enabled: bool = True,
         gpio_green: int = 27,
         gpio_red: int = 22,
-        gpio_blue: Optional[int] = None  # Optional third LED for WiFi
+        gpio_blue: Optional[int] = None,  # Optional third LED for WiFi
     ):
         """
         Initialize status LED manager
@@ -97,9 +114,13 @@ class StatusLEDManager:
 
         if self.gpio_blue:
             success &= self._gpio.setup_output(self.gpio_blue, initial_state=False)
-            logger.info(f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}, Blue={self.gpio_blue}")
+            logger.info(
+                f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}, Blue={self.gpio_blue}"
+            )
         else:
-            logger.info(f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}")
+            logger.info(
+                f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}"
+            )
 
         if not success:
             logger.warning("Failed to setup some status LEDs")
@@ -124,9 +145,7 @@ class StatusLEDManager:
             self._current_pattern = pattern
             self._running = True
             self._pattern_thread = threading.Thread(
-                target=self._run_pattern,
-                args=(pattern,),
-                daemon=True
+                target=self._run_pattern, args=(pattern,), daemon=True
             )
             self._pattern_thread.start()
 
@@ -264,7 +283,9 @@ class StatusLEDManager:
         """Show ready pattern (green solid)"""
         self.set_pattern(LEDPattern.READY)
 
-    def show_wifi_status(self, connected: bool, connecting: bool = False, ap_mode: bool = False):
+    def show_wifi_status(
+        self, connected: bool, connecting: bool = False, ap_mode: bool = False
+    ):
         """
         Show WiFi status pattern
 

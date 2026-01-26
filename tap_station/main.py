@@ -87,6 +87,7 @@ class TapStation:
                     hold_time=self.config.shutdown_button_hold_time,
                     shutdown_callback=self._shutdown_callback,
                     shutdown_delay_minutes=self.config.shutdown_button_delay_minutes,
+                    feedback_controller=self.feedback,  # Pass feedback controller
                 )
                 self.logger.info("Shutdown button handler initialized")
             except Exception as e:
@@ -127,7 +128,7 @@ class TapStation:
                     web_port=self.config.web_server_port,
                     peer_hostname=self.config.onsite_failover_peer_hostname,
                     wifi_enabled=self.config.onsite_wifi_enabled,
-                    failover_enabled=self.config.onsite_failover_enabled
+                    failover_enabled=self.config.onsite_failover_enabled,
                 )
                 self.logger.info("On-site manager initialized")
             except Exception as e:
@@ -194,6 +195,10 @@ class TapStation:
         self.feedback.startup()
         self.logger.info("Station ready - waiting for cards...")
 
+        # Set ready state after startup (solid green)
+        if self.feedback.led_enabled:
+            self.feedback.set_ready_state()
+
         try:
             while self.running:
                 # Wait for card tap
@@ -232,20 +237,19 @@ class TapStation:
         # Check if in failover mode and determine appropriate stage
         if self.onsite_manager and self.onsite_manager.failover_manager:
             failover_mgr = self.onsite_manager.failover_manager
-            
+
             if failover_mgr.failover_active:
                 # Get participant's tap count to determine stage alternation
                 tap_count = self.db.get_participant_tap_count(
-                    token_id=token_id,
-                    session_id=self.config.session_id
+                    token_id=token_id, session_id=self.config.session_id
                 )
-                
+
                 # Next tap will be tap_count + 1 (since we're about to log it)
                 next_tap_number = tap_count + 1
-                
+
                 # Get the appropriate stage for this tap based on alternation logic
                 stage = failover_mgr.get_stage_for_tap_number(next_tap_number)
-                
+
                 use_alternate_beep = True
                 self.logger.info(
                     f"FAILOVER MODE: tap #{next_tap_number} → stage {stage} "
@@ -298,27 +302,27 @@ class TapStation:
         if result["success"]:
             if result["out_of_order"]:
                 # Logged but with sequence warning
-                self.feedback.duplicate()  # Use duplicate beep to indicate issue
+                self.feedback.warning()  # Use warning for out-of-order
                 self.logger.warning(
                     f"Event logged with warning: {result['warning']}. "
                     f"Suggestion: {result.get('suggestion', 'N/A')}"
                 )
             else:
                 # Success with no issues
-                # Use alternate beep pattern in failover mode
+                # Use warning pattern in failover mode to distinguish from normal
                 if use_alternate_beep:
-                    self.feedback.duplicate()  # Different pattern for failover
+                    self.feedback.warning()  # Yellow flash for failover mode
                     self.logger.info("Event logged successfully (FAILOVER MODE)")
                 else:
-                    self.feedback.success()
+                    self.feedback.success()  # Green flash for normal
                     self.logger.info("Event logged successfully")
         elif result["duplicate"]:
             # Duplicate tap
-            self.feedback.duplicate()
+            self.feedback.duplicate()  # Double beep + yellow flash
             self.logger.info(f"Duplicate tap ignored: {result['warning']}")
         else:
             # Some other error
-            self.feedback.error()
+            self.feedback.error()  # Long beep + red flash
             self.logger.error(
                 f"Failed to log event: {result.get('warning', 'Unknown error')}"
             )
