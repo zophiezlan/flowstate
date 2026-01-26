@@ -9,7 +9,7 @@
 set -e  # Exit on error
 
 echo "=============================================="
-echo "  NFC Tap Station - On-Site Features Setup"
+echo "  FlowState Station - On-Site Features Setup"
 echo "=============================================="
 echo
 
@@ -163,7 +163,7 @@ WATCHDOG_SERVICE="/etc/systemd/system/tap-watchdog.service"
 
 cat > "$WATCHDOG_SERVICE" << EOF
 [Unit]
-Description=NFC Tap Station Watchdog
+Description=FlowState Station Watchdog
 After=network.target tap-station.service
 
 [Service]

@@ -38,7 +38,7 @@ class TapStation:
 
         self.logger = logging.getLogger(__name__)
         self.logger.info("=" * 60)
-        self.logger.info("NFC Tap Station Starting")
+        self.logger.info("FlowState Station Starting")
         self.logger.info(f"Device: {self.config.device_id}")
         self.logger.info(f"Stage: {self.config.stage}")
         self.logger.info(f"Session: {self.config.session_id}")
@@ -410,7 +410,7 @@ def main():
     """Entry point for tap station service"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="NFC Tap Station Service")
+    parser = argparse.ArgumentParser(description="FlowState Station Service")
     parser.add_argument(
         "--config",
         default="config.yaml",

@@ -1,4 +1,4 @@
-const CACHE_NAME = "nfc-tap-mobile-v1";
+const CACHE_NAME = "flowstate-mobile-v1";
 const ASSETS = [
   "./",
   "./index.html",

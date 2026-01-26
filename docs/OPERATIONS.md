@@ -1,6 +1,6 @@
 # Operations Guide
 
-Day-of-event guide for peer workers and operators running NFC tap stations.
+Day-of-event guide for peer workers and operators running FlowState stations.
 
 **Audience:** Festival volunteers and peer workers who need a simple, reliable workflow.
 

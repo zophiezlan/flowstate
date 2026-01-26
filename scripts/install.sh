@@ -229,7 +229,7 @@ echo "Step 9: Installing systemd service..."
 SERVICE_FILE="/etc/systemd/system/tap-station.service"
 sudo tee "$SERVICE_FILE" > /dev/null << EOF
 [Unit]
-Description=NFC Tap Station Service
+Description=FlowState Station Service
 After=network.target
 
 [Service]

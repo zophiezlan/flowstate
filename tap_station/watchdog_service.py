@@ -187,7 +187,7 @@ def create_watchdog_systemd_service():
         Service file content as string
     """
     service_content = """[Unit]
-Description=NFC Tap Station Watchdog
+Description=FlowState Station Watchdog
 After=network.target tap-station.service
 
 [Service]

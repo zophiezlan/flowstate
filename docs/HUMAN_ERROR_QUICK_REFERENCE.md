@@ -1,6 +1,6 @@
 # Quick Reference: Handling Human Errors
 
-**For festival staff operating NFC tap stations**
+**For festival staff operating FlowState stations**
 
 ---
 

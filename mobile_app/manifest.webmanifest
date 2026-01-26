@@ -1,6 +1,6 @@
 {
   "name": "FlowState (Mobile)",
-  "short_name": "NFC Tap",
+  "short_name": "FlowState",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0b1220",

@@ -362,7 +362,7 @@ Connected → Green solid (ready)
 
 **System Operations** (Use with caution)
 
-- `[Restart Tap Logger]` ⚠️ - Brief interruption (10s)
+- `[Restart FlowState]` ⚠️ - Brief interruption (10s)
 - `[Reboot System]` ⚠️⚠️ - Full system reboot (60s)
 
 ### On-Site Status Dashboard

@@ -512,7 +512,7 @@ python -m tap_station.main --config config.yaml
 
 ```
 ============================================================
-NFC Tap Station Starting
+FlowState Station Starting
 Device: station1
 Stage: QUEUE_JOIN
 Session: festival-2026-01
@@ -547,7 +547,7 @@ sudo systemctl status tap-station
 **Expected:**
 
 ```
-● tap-station.service - NFC Tap Station
+● tap-station.service - FlowState Station
    Active: active (running) since ...
    Main PID: 1234 (python)
 ```
