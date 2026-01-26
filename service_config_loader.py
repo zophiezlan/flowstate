@@ -67,6 +67,8 @@ class ServiceConfig:
     temperature_critical_celsius: int = 80
     disk_warning_percent: int = 80
     disk_critical_percent: int = 90
+    unreturned_substance_warning_minutes: int = 15
+    unreturned_substance_critical_minutes: int = 30
 
     # Alert messages
     alert_messages: Dict[str, str] = field(default_factory=dict)
@@ -336,6 +338,20 @@ class ServiceConfigLoader:
                 )
                 config.disk_critical_percent = alerts["system"].get(
                     "disk_usage_critical_percent", config.disk_critical_percent
+                )
+
+            if "unreturned_substances" in alerts:
+                config.unreturned_substance_warning_minutes = alerts[
+                    "unreturned_substances"
+                ].get(
+                    "warning_minutes",
+                    config.unreturned_substance_warning_minutes,
+                )
+                config.unreturned_substance_critical_minutes = alerts[
+                    "unreturned_substances"
+                ].get(
+                    "critical_minutes",
+                    config.unreturned_substance_critical_minutes,
                 )
 
             # Alert messages

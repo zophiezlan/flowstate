@@ -347,6 +347,17 @@ class StatusWebServer:
                             str(event.get("stage") or "").strip().upper()
                             or "UNKNOWN"
                         )
+
+                        # Validate stage against service configuration
+                        if self.svc and not self.svc.is_valid_stage(stage):
+                            logger.warning(
+                                f"Invalid stage '{stage}' in event for token "
+                                f"'{event.get('token_id')}'. Valid stages: "
+                                f"{self.svc.get_all_stage_ids()}"
+                            )
+                            # Continue processing - log event but flag it
+                            # This allows review of misconfigured stages later
+
                         session_id = str(
                             event.get("session_id")
                             or event.get("sessionId")
@@ -541,9 +552,14 @@ class StatusWebServer:
                                         "order": 2,
                                     },
                                     {
+                                        "id": "SUBSTANCE_RETURNED",
+                                        "label": "Substance Returned",
+                                        "order": 3,
+                                    },
+                                    {
                                         "id": "EXIT",
                                         "label": "Completed",
-                                        "order": 3,
+                                        "order": 4,
                                     },
                                 ],
                                 "ui_labels": {
@@ -1474,6 +1490,9 @@ class StatusWebServer:
         # Smart wait estimate
         smart_estimate = self._calculate_smart_wait_estimate()
 
+        # Substance return tracking stats
+        substance_return_stats = self._get_substance_return_stats()
+
         return {
             "device_id": self.config.device_id,
             "stage": self.config.stage,
@@ -1518,6 +1537,7 @@ class StatusWebServer:
                 "alerts": operational_metrics["alerts"],
                 "queue_health": operational_metrics["queue_health"],
             },
+            "substance_return": substance_return_stats,
             "queue_details": queue_details,
             "recent_completions": recent_completions,
             "hourly_activity": hourly_activity,
@@ -1808,6 +1828,75 @@ class StatusWebServer:
                     "message": f"⚠️ {stuck_count} people in queue >{stuck_hours} hours - possible abandonments or missed exits",
                 }
             )
+
+        # Check for unreturned substances (SUBSTANCE_RETURNED stage tracking)
+        if self.svc and self.svc.has_substance_returned_stage():
+            unreturned_warn = self.svc.get_unreturned_substance_warning_minutes()
+            unreturned_crit = self.svc.get_unreturned_substance_critical_minutes()
+
+            # Find people who have SERVICE_START but no SUBSTANCE_RETURNED
+            cursor = self.db.conn.execute(
+                """
+                SELECT
+                    s.token_id,
+                    s.timestamp as service_start_time,
+                    (julianday('now') - julianday(s.timestamp)) * 1440 as minutes_waiting
+                FROM events s
+                LEFT JOIN events r
+                    ON s.token_id = r.token_id
+                    AND s.session_id = r.session_id
+                    AND r.stage = 'SUBSTANCE_RETURNED'
+                LEFT JOIN events e
+                    ON s.token_id = e.token_id
+                    AND s.session_id = e.session_id
+                    AND e.stage = 'EXIT'
+                WHERE s.stage = 'SERVICE_START'
+                    AND s.session_id = ?
+                    AND r.id IS NULL
+                    AND e.id IS NULL
+                ORDER BY s.timestamp ASC
+                """,
+                (session_id,),
+            )
+
+            unreturned = cursor.fetchall()
+            unreturned_warning_count = 0
+            unreturned_critical_count = 0
+            oldest_unreturned_minutes = 0
+
+            for row in unreturned:
+                minutes = int(row["minutes_waiting"]) if row["minutes_waiting"] else 0
+                if minutes > unreturned_crit:
+                    unreturned_critical_count += 1
+                    if minutes > oldest_unreturned_minutes:
+                        oldest_unreturned_minutes = minutes
+                elif minutes > unreturned_warn:
+                    unreturned_warning_count += 1
+
+            if unreturned_critical_count > 0:
+                message = (
+                    self.svc.get_alert_message(
+                        "unreturned_substance_critical",
+                        count=unreturned_critical_count,
+                        minutes=oldest_unreturned_minutes,
+                        token=unreturned[0]["token_id"] if unreturned else "unknown",
+                    )
+                    if self.svc
+                    else f"🚨 URGENT: {unreturned_critical_count} substances not returned for >{unreturned_crit} min"
+                )
+                alerts.append({"level": "critical", "message": message})
+            elif unreturned_warning_count > 0:
+                message = (
+                    self.svc.get_alert_message(
+                        "unreturned_substance_warning",
+                        count=unreturned_warning_count,
+                        minutes=unreturned_warn,
+                        token=unreturned[0]["token_id"] if unreturned else "unknown",
+                    )
+                    if self.svc
+                    else f"⚠️ {unreturned_warning_count} substances not returned for >{unreturned_warn} min"
+                )
+                alerts.append({"level": "warning", "message": message})
 
         # Queue health assessment (use same thresholds as alerts)
         if in_queue > queue_crit or longest_wait > wait_crit:
@@ -2852,6 +2941,90 @@ class StatusWebServer:
         except Exception as e:
             logger.warning(f"Failed to get in-service count: {e}")
             return 0
+
+    def _get_substance_return_stats(self) -> dict:
+        """
+        Get substance return tracking statistics
+
+        Returns:
+            Dictionary with substance return metrics
+        """
+        session_id = self.config.session_id
+
+        # Check if SUBSTANCE_RETURNED stage is configured
+        if not self.svc or not self.svc.has_substance_returned_stage():
+            return {
+                "enabled": False,
+                "pending_returns": 0,
+                "completed_returns": 0,
+                "return_rate_percent": 0,
+            }
+
+        try:
+            # Count people with SERVICE_START but no SUBSTANCE_RETURNED
+            cursor = self.db.conn.execute(
+                """
+                SELECT COUNT(DISTINCT s.token_id) as pending
+                FROM events s
+                LEFT JOIN events r
+                    ON s.token_id = r.token_id
+                    AND s.session_id = r.session_id
+                    AND r.stage = 'SUBSTANCE_RETURNED'
+                LEFT JOIN events e
+                    ON s.token_id = e.token_id
+                    AND s.session_id = e.session_id
+                    AND e.stage = 'EXIT'
+                WHERE s.stage = 'SERVICE_START'
+                    AND s.session_id = ?
+                    AND r.id IS NULL
+                    AND e.id IS NULL
+                """,
+                (session_id,),
+            )
+            pending = cursor.fetchone()["pending"]
+
+            # Count completed substance returns
+            cursor = self.db.conn.execute(
+                """
+                SELECT COUNT(DISTINCT token_id) as completed
+                FROM events
+                WHERE stage = 'SUBSTANCE_RETURNED'
+                    AND session_id = ?
+                """,
+                (session_id,),
+            )
+            completed = cursor.fetchone()["completed"]
+
+            # Count total service starts
+            cursor = self.db.conn.execute(
+                """
+                SELECT COUNT(DISTINCT token_id) as total
+                FROM events
+                WHERE stage = 'SERVICE_START'
+                    AND session_id = ?
+                """,
+                (session_id,),
+            )
+            total = cursor.fetchone()["total"]
+
+            return_rate = int((completed / total * 100)) if total > 0 else 0
+
+            return {
+                "enabled": True,
+                "pending_returns": pending,
+                "completed_returns": completed,
+                "total_served": total,
+                "return_rate_percent": return_rate,
+            }
+
+        except Exception as e:
+            logger.warning(f"Failed to get substance return stats: {e}")
+            return {
+                "enabled": True,
+                "pending_returns": 0,
+                "completed_returns": 0,
+                "return_rate_percent": 0,
+            }
 
     def _get_stuck_cards(self) -> dict:
         """

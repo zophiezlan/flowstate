@@ -45,10 +45,11 @@ class ServiceIntegration:
     """
 
     # Default values (used as fallbacks)
-    _DEFAULT_STAGES = ["QUEUE_JOIN", "SERVICE_START", "EXIT"]
+    _DEFAULT_STAGES = ["QUEUE_JOIN", "SERVICE_START", "SUBSTANCE_RETURNED", "EXIT"]
     _DEFAULT_LABELS = {
         "QUEUE_JOIN": "In Queue",
         "SERVICE_START": "Being Served",
+        "SUBSTANCE_RETURNED": "Substance Returned",
         "EXIT": "Completed",
     }
     _DEFAULT_UI_LABELS = {
@@ -164,10 +165,41 @@ class ServiceIntegration:
         return self._DEFAULT_LABELS.copy()
 
     def has_service_start_stage(self) -> bool:
-        """Check if the workflow includes a service start stage"""
+        """Check if the workflow includes a SERVICE_START stage"""
         if self._config:
-            return len(self._config.workflow_stages) > 2
+            return any(
+                stage.id == "SERVICE_START" for stage in self._config.workflow_stages
+            )
         return True
+
+    def has_substance_returned_stage(self) -> bool:
+        """Check if the workflow includes a SUBSTANCE_RETURNED stage"""
+        if self._config:
+            return any(
+                stage.id == "SUBSTANCE_RETURNED"
+                for stage in self._config.workflow_stages
+            )
+        return False  # Not in default 3-stage workflow
+
+    def get_substance_returned_stage(self) -> Optional[str]:
+        """Get the ID of the substance returned stage, if it exists"""
+        if self._config:
+            for stage in self._config.workflow_stages:
+                if stage.id == "SUBSTANCE_RETURNED":
+                    return stage.id
+        return None
+
+    def has_stage(self, stage_id: str) -> bool:
+        """Check if a specific stage exists in the workflow"""
+        if self._config:
+            return any(
+                stage.id == stage_id for stage in self._config.workflow_stages
+            )
+        return stage_id in self._DEFAULT_STAGES
+
+    def is_valid_stage(self, stage_id: str) -> bool:
+        """Check if a stage ID is valid for this service configuration"""
+        return self.has_stage(stage_id)
 
     # =========================================================================
     # Capacity & Throughput (using _get helper)
@@ -224,6 +256,12 @@ class ServiceIntegration:
 
     def get_disk_critical_percent(self) -> int:
         return self._get("disk_critical_percent", 90)
+
+    def get_unreturned_substance_warning_minutes(self) -> int:
+        return self._get("unreturned_substance_warning_minutes", 15)
+
+    def get_unreturned_substance_critical_minutes(self) -> int:
+        return self._get("unreturned_substance_critical_minutes", 30)
 
     # =========================================================================
     # UI Labels & Messages
