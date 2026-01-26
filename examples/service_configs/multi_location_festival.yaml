@@ -153,7 +153,7 @@ staffing:
 # Multi-location configuration
 locations:
   multi_location: true
-  shared_queue: false  # Each location has its own queue
+  shared_queue: false # Each location has its own queue
 
   sites:
     - id: "main_stage"
@@ -182,13 +182,13 @@ locations:
         - device_id: "dance_station1"
           description: "Dance Tent Station 1"
 
-  show_all_locations: true  # Public display shows all locations
+  show_all_locations: true # Public display shows all locations
 
 metrics:
   windows:
     recent_events: 20
     recent_completions: 15
-    activity_history_hours: 24  # Longer for multi-day festival
+    activity_history_hours: 24 # Longer for multi-day festival
     shift_summary_hours: 6
     wait_time_sample_size: 25
 
@@ -199,9 +199,9 @@ metrics:
 
 data_collection:
   anonymize_data: true
-  data_retention_days: 365  # Keep for annual analysis
+  data_retention_days: 365 # Keep for annual analysis
 
 advanced:
   features:
     advanced_analytics: true
-    predictive_wait_times: false  # Complex with multiple locations
+    predictive_wait_times: false # Complex with multiple locations

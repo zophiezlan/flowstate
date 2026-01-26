@@ -5,11 +5,13 @@ This directory contains example service configurations for different types of fe
 ## Available Examples
 
 ### 1. Simple Queue (`simple_queue.yaml`)
+
 **Use case:** Small festival or popup service with limited staff
 
 **Workflow:** Join Queue → Exit (2 stages)
 
 **Characteristics:**
+
 - Simple two-stage workflow
 - Lower capacity (8 people/hour)
 - Conservative alert thresholds
@@ -17,6 +19,7 @@ This directory contains example service configurations for different types of fe
 - Single location
 
 **Best for:**
+
 - Small festivals (< 500 people)
 - Popup harm reduction events
 - Services with 1-2 staff members
@@ -25,11 +28,13 @@ This directory contains example service configurations for different types of fe
 ---
 
 ### 2. Comprehensive Service (`comprehensive_service.yaml`)
+
 **Use case:** Large festival with full harm reduction program
 
 **Workflow:** Queue → Intake → Testing → Results → Substance Returned → Exit (6 stages)
 
 **Characteristics:**
+
 - Multi-stage workflow with detailed tracking
 - Higher capacity (15 people/hour)
 - Staff role differentiation (intake, technician, counselor)
@@ -39,6 +44,7 @@ This directory contains example service configurations for different types of fe
 - **Substance return confirmation for accountability**
 
 **Best for:**
+
 - Large festivals (> 2,000 people)
 - Services with specialized staff roles
 - Detailed substance analysis programs
@@ -48,11 +54,13 @@ This directory contains example service configurations for different types of fe
 ---
 
 ### 3. Substance Return Tracking (`substance_return_tracking.yaml`)
+
 **Use case:** Services requiring accountability for substance custody and return
 
 **Workflow:** Queue → Service Start → Substance Returned → Exit (4 stages)
 
 **Characteristics:**
+
 - Substance return confirmation stage
 - Alerts for unreturned substances
 - Audit trail for accountability
@@ -60,6 +68,7 @@ This directory contains example service configurations for different types of fe
 - Staff accountability tracking
 
 **Best for:**
+
 - Services where trust is paramount
 - Preventing "left behind" incidents
 - Legal/insurance requirements for custody chain
@@ -67,6 +76,7 @@ This directory contains example service configurations for different types of fe
 - Building participant confidence
 
 **Key Features:**
+
 - Alerts if substances not returned within threshold time
 - Dashboard shows "awaiting return" status
 - Shift handoff includes unreturned substance review
@@ -75,11 +85,13 @@ This directory contains example service configurations for different types of fe
 ---
 
 ### 4. Multi-Location Festival (`multi_location_festival.yaml`)
+
 **Use case:** Large festival with services at multiple locations
 
 **Workflow:** Queue → Service Start → Exit (3 stages)
 
 **Characteristics:**
+
 - Multiple service locations across festival site
 - Independent queues per location
 - Location-specific staffing and alerts
@@ -87,6 +99,7 @@ This directory contains example service configurations for different types of fe
 - Extended data retention for annual analysis
 
 **Best for:**
+
 - Multi-day festivals
 - Large venue with multiple stages/areas
 - Distributed service model
@@ -97,19 +110,24 @@ This directory contains example service configurations for different types of fe
 ## How to Use These Examples
 
 ### Option 1: Copy and Customize
+
 1. Choose the example closest to your service model
 2. Copy it to your project root as `service_config.yaml`:
+
    ```bash
    cp examples/service_configs/simple_queue.yaml service_config.yaml
    ```
+
 3. Edit `service_config.yaml` to match your specific needs
 
 ### Option 2: Use as Reference
+
 1. Start with the default `service_config.yaml` in the project root
 2. Refer to these examples for ideas and configuration patterns
 3. Mix and match settings from different examples
 
 ### Option 3: Create Your Own
+
 1. Use the main `service_config.yaml` template
 2. Uncomment and customize sections based on your needs
 3. Test thoroughly before deployment
@@ -119,6 +137,7 @@ This directory contains example service configurations for different types of fe
 ## Key Configuration Areas to Customize
 
 ### Must Customize
+
 - **Service identity** - Name, description, organization
 - **Service hours** - Operating schedule
 - **Workflow stages** - Match your actual service process
@@ -126,12 +145,14 @@ This directory contains example service configurations for different types of fe
 - **Alert thresholds** - Based on your capacity and queue expectations
 
 ### Should Customize
+
 - **UI labels** - Match your terminology and language
 - **Staffing roles** - Define your staff types and permissions
 - **Alert messages** - Customize for your team's communication style
 - **Locations** - Configure stations and service points
 
 ### Optional Customization
+
 - **Peak hours** - Define busy periods for capacity adjustment
 - **Shift management** - Enable if you have formal shift handoffs
 - **Custom data fields** - Add service-specific tracking
@@ -142,33 +163,42 @@ This directory contains example service configurations for different types of fe
 ## Configuration Tips
 
 ### Starting Simple
+
 If you're new to the system or setting up for the first time:
+
 1. Start with `simple_queue.yaml` configuration
 2. Test with your team during setup
 3. Gradually add complexity as needed
 4. Monitor what works and what doesn't
 
 ### Matching Workflow to Reality
+
 Your configured workflow should match your actual service process:
+
 - **Don't add stages you won't actually track** - Keep it simple
 - **Do match participant experience** - Stages should represent real steps
 - **Consider staff workflow** - Stages should be easy for staff to identify
 - **Test the workflow** - Walk through with your team before the event
 
 ### Capacity and Wait Time Accuracy
+
 For accurate wait time estimates:
+
 1. **Measure your actual service time** - Time several participants
 2. **Count staff capacity** - How many can you serve simultaneously?
 3. **Account for complexity** - More stages = more time
 4. **Be conservative** - Better to overestimate wait time
 
 Example calculation:
+
 - Average service time: 5 minutes per person
 - Staff can serve 3 people simultaneously
 - Capacity = (60 min / 5 min) × 3 = 36 people per hour
 
 ### Alert Thresholds
+
 Set thresholds based on your capacity and goals:
+
 - **Queue warning** - When you should consider adding staff
 - **Queue critical** - When you must add staff or risk service breakdown
 - **Wait time warning** - Acceptable maximum wait
@@ -189,6 +219,7 @@ Example for different service sizes:
 Before deploying at an event:
 
 1. **Syntax check** - Run the configuration loader:
+
    ```bash
    python service_config_loader.py
    ```
@@ -206,6 +237,7 @@ Before deploying at an event:
 ## Common Configuration Patterns
 
 ### Pattern: Fast-Track Queue
+
 Some services want to differentiate between simple checks and complex analysis:
 
 ```yaml
@@ -231,6 +263,7 @@ workflow:
 ```
 
 ### Pattern: Separate Entry/Exit Stations
+
 For services with physical separation between intake and results:
 
 ```yaml
@@ -248,6 +281,7 @@ locations:
 ```
 
 ### Pattern: Peak Hour Adjustment
+
 Reduce capacity during busy times when service may slow down:
 
 ```yaml
@@ -276,6 +310,7 @@ capacity:
 ## Contributing
 
 If you create a configuration for a different service model that might be useful to others, consider contributing it as an example! Open a pull request with:
+
 - The configuration file
 - A description of the service model
 - Key characteristics and use case

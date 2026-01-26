@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class IntegrityStatus(Enum):
     """Status of integrity verification"""
+
     VALID = "valid"
     INVALID = "invalid"
     UNKNOWN = "unknown"
@@ -37,6 +38,7 @@ class IntegrityStatus(Enum):
 @dataclass
 class IntegrityCheckResult:
     """Result of an integrity check"""
+
     status: IntegrityStatus
     checked_at: datetime
     details: str = ""
@@ -54,7 +56,7 @@ class IntegrityCheckResult:
             "details": self.details,
             "issues": self.issues,
             "is_valid": self.is_valid,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
@@ -73,11 +75,7 @@ class ChecksumCalculator:
         "blake2b": hashlib.blake2b,
     }
 
-    def __init__(
-        self,
-        algorithm: str = "sha256",
-        secret_key: Optional[str] = None
-    ):
+    def __init__(self, algorithm: str = "sha256", secret_key: Optional[str] = None):
         """
         Initialize checksum calculator.
 
@@ -104,15 +102,11 @@ class ChecksumCalculator:
         """
         # Normalize data to JSON for consistent hashing
         normalized = self._normalize(data)
-        data_bytes = normalized.encode('utf-8')
+        data_bytes = normalized.encode("utf-8")
 
         if self._secret_key:
             # Use HMAC for keyed checksum
-            return hmac.new(
-                self._secret_key,
-                data_bytes,
-                self._hash_func
-            ).hexdigest()
+            return hmac.new(self._secret_key, data_bytes, self._hash_func).hexdigest()
         else:
             # Use simple hash
             return self._hash_func(data_bytes).hexdigest()
@@ -144,6 +138,7 @@ class ChecksumCalculator:
 @dataclass
 class EventChecksum:
     """Checksum record for an event"""
+
     event_id: int
     checksum: str
     algorithm: str
@@ -164,15 +159,19 @@ class IntegrityManager:
 
     # Fields included in event checksums
     EVENT_CHECKSUM_FIELDS = [
-        "token_id", "uid", "stage", "timestamp",
-        "device_id", "session_id"
+        "token_id",
+        "uid",
+        "stage",
+        "timestamp",
+        "device_id",
+        "session_id",
     ]
 
     def __init__(
         self,
         conn: sqlite3.Connection,
         secret_key: Optional[str] = None,
-        algorithm: str = "sha256"
+        algorithm: str = "sha256",
     ):
         """
         Initialize integrity manager.
@@ -189,7 +188,8 @@ class IntegrityManager:
 
     def _ensure_tables(self) -> None:
         """Create integrity-related tables if needed"""
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS event_checksums (
                 event_id INTEGER PRIMARY KEY,
                 checksum TEXT NOT NULL,
@@ -197,9 +197,11 @@ class IntegrityManager:
                 created_at TEXT NOT NULL,
                 previous_checksum TEXT
             )
-        """)
+        """
+        )
 
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS integrity_checks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 check_type TEXT NOT NULL,
@@ -208,7 +210,8 @@ class IntegrityManager:
                 details TEXT,
                 issues_json TEXT
             )
-        """)
+        """
+        )
 
         self._conn.commit()
 
@@ -223,16 +226,11 @@ class IntegrityManager:
             Checksum string
         """
         # Extract only the fields we want to checksum
-        checksum_data = {
-            k: event.get(k) for k in self.EVENT_CHECKSUM_FIELDS
-        }
+        checksum_data = {k: event.get(k) for k in self.EVENT_CHECKSUM_FIELDS}
         return self._calculator.calculate(checksum_data)
 
     def store_event_checksum(
-        self,
-        event_id: int,
-        event_data: Dict[str, Any],
-        chain: bool = True
+        self, event_id: int, event_data: Dict[str, Any], chain: bool = True
     ) -> str:
         """
         Calculate and store checksum for an event.
@@ -250,10 +248,12 @@ class IntegrityManager:
         # Get previous checksum for chaining
         previous = None
         if chain:
-            cursor = self._conn.execute("""
+            cursor = self._conn.execute(
+                """
                 SELECT checksum FROM event_checksums
                 ORDER BY event_id DESC LIMIT 1
-            """)
+            """
+            )
             row = cursor.fetchone()
             if row:
                 previous = row[0]
@@ -261,11 +261,14 @@ class IntegrityManager:
                 chain_data = {"event": event_data, "previous": previous}
                 checksum = self._calculator.calculate(chain_data)
 
-        self._conn.execute("""
+        self._conn.execute(
+            """
             INSERT OR REPLACE INTO event_checksums
             (event_id, checksum, algorithm, created_at, previous_checksum)
             VALUES (?, ?, ?, ?, ?)
-        """, (event_id, checksum, self._algorithm, to_iso(utc_now()), previous))
+        """,
+            (event_id, checksum, self._algorithm, to_iso(utc_now()), previous),
+        )
 
         self._conn.commit()
         return checksum
@@ -285,23 +288,21 @@ class IntegrityManager:
         try:
             # Get event data
             cursor = self._conn.execute(
-                "SELECT * FROM events WHERE id = ?",
-                (event_id,)
+                "SELECT * FROM events WHERE id = ?", (event_id,)
             )
             event_row = cursor.fetchone()
             if not event_row:
                 return IntegrityCheckResult(
                     status=IntegrityStatus.ERROR,
                     checked_at=utc_now(),
-                    details=f"Event {event_id} not found"
+                    details=f"Event {event_id} not found",
                 )
 
             event = dict(event_row)
 
             # Get stored checksum
             cursor = self._conn.execute(
-                "SELECT * FROM event_checksums WHERE event_id = ?",
-                (event_id,)
+                "SELECT * FROM event_checksums WHERE event_id = ?", (event_id,)
             )
             checksum_row = cursor.fetchone()
             if not checksum_row:
@@ -309,7 +310,7 @@ class IntegrityManager:
                     status=IntegrityStatus.UNKNOWN,
                     checked_at=utc_now(),
                     details="No checksum stored for event",
-                    issues=["Missing checksum record"]
+                    issues=["Missing checksum record"],
                 )
 
             # Verify checksum
@@ -333,29 +334,25 @@ class IntegrityManager:
                     metadata={
                         "event_id": event_id,
                         "stored": stored_checksum,
-                        "calculated": calculated
-                    }
+                        "calculated": calculated,
+                    },
                 )
 
             return IntegrityCheckResult(
                 status=IntegrityStatus.VALID,
                 checked_at=utc_now(),
                 details="Event integrity verified",
-                metadata={"event_id": event_id}
+                metadata={"event_id": event_id},
             )
 
         except Exception as e:
             logger.error(f"Error verifying event {event_id}: {e}")
             return IntegrityCheckResult(
-                status=IntegrityStatus.ERROR,
-                checked_at=utc_now(),
-                details=str(e)
+                status=IntegrityStatus.ERROR, checked_at=utc_now(), details=str(e)
             )
 
     def verify_chain(
-        self,
-        session_id: Optional[str] = None,
-        limit: int = 1000
+        self, session_id: Optional[str] = None, limit: int = 1000
     ) -> IntegrityCheckResult:
         """
         Verify integrity chain for events.
@@ -424,22 +421,20 @@ class IntegrityManager:
                     checked_at=utc_now(),
                     details=f"Chain verification failed ({len(issues)} issues)",
                     issues=issues,
-                    metadata={"verified_count": verified_count}
+                    metadata={"verified_count": verified_count},
                 )
 
             return IntegrityCheckResult(
                 status=IntegrityStatus.VALID,
                 checked_at=utc_now(),
                 details=f"Chain verification passed ({verified_count} events)",
-                metadata={"verified_count": verified_count}
+                metadata={"verified_count": verified_count},
             )
 
         except Exception as e:
             logger.error(f"Error verifying chain: {e}")
             return IntegrityCheckResult(
-                status=IntegrityStatus.ERROR,
-                checked_at=utc_now(),
-                details=str(e)
+                status=IntegrityStatus.ERROR, checked_at=utc_now(), details=str(e)
             )
 
     def verify_database(self) -> IntegrityCheckResult:
@@ -459,30 +454,36 @@ class IntegrityManager:
                 issues.append(f"SQLite integrity check failed: {result}")
 
             # Check for orphaned checksums
-            cursor = self._conn.execute("""
+            cursor = self._conn.execute(
+                """
                 SELECT COUNT(*) FROM event_checksums
                 WHERE event_id NOT IN (SELECT id FROM events)
-            """)
+            """
+            )
             orphaned = cursor.fetchone()[0]
             if orphaned > 0:
                 issues.append(f"Found {orphaned} orphaned checksum records")
 
             # Check for missing checksums
-            cursor = self._conn.execute("""
+            cursor = self._conn.execute(
+                """
                 SELECT COUNT(*) FROM events
                 WHERE id NOT IN (SELECT event_id FROM event_checksums)
-            """)
+            """
+            )
             missing = cursor.fetchone()[0]
             if missing > 0:
                 issues.append(f"Found {missing} events without checksums")
 
             # Check for duplicate tokens in same stage/session
-            cursor = self._conn.execute("""
+            cursor = self._conn.execute(
+                """
                 SELECT token_id, stage, session_id, COUNT(*) as cnt
                 FROM events
                 GROUP BY token_id, stage, session_id
                 HAVING cnt > 1
-            """)
+            """
+            )
             duplicates = cursor.fetchall()
             if duplicates:
                 for dup in duplicates[:5]:  # Limit to first 5
@@ -495,15 +496,13 @@ class IntegrityManager:
                 status=status,
                 checked_at=utc_now(),
                 details=f"Database integrity check complete ({len(issues)} issues)",
-                issues=issues
+                issues=issues,
             )
 
         except Exception as e:
             logger.error(f"Error checking database integrity: {e}")
             return IntegrityCheckResult(
-                status=IntegrityStatus.ERROR,
-                checked_at=utc_now(),
-                details=str(e)
+                status=IntegrityStatus.ERROR, checked_at=utc_now(), details=str(e)
             )
 
     def log_check_result(self, check_type: str, result: IntegrityCheckResult) -> None:
@@ -514,23 +513,24 @@ class IntegrityManager:
             check_type: Type of check performed
             result: The check result
         """
-        self._conn.execute("""
+        self._conn.execute(
+            """
             INSERT INTO integrity_checks
             (check_type, status, checked_at, details, issues_json)
             VALUES (?, ?, ?, ?, ?)
-        """, (
-            check_type,
-            result.status.value,
-            to_iso(result.checked_at),
-            result.details,
-            json.dumps(result.issues)
-        ))
+        """,
+            (
+                check_type,
+                result.status.value,
+                to_iso(result.checked_at),
+                result.details,
+                json.dumps(result.issues),
+            ),
+        )
         self._conn.commit()
 
     def get_check_history(
-        self,
-        check_type: Optional[str] = None,
-        limit: int = 100
+        self, check_type: Optional[str] = None, limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
         Get history of integrity checks.
@@ -571,8 +571,7 @@ _integrity_manager: Optional[IntegrityManager] = None
 
 
 def get_integrity_manager(
-    conn: sqlite3.Connection,
-    secret_key: Optional[str] = None
+    conn: sqlite3.Connection, secret_key: Optional[str] = None
 ) -> IntegrityManager:
     """Get or create the integrity manager"""
     global _integrity_manager

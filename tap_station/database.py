@@ -45,7 +45,7 @@ class Database:
             logger.info("WAL mode enabled for crash resistance")
 
         self._create_tables()
-        
+
         # Initialize anomaly detector
         self.anomaly_detector = AnomalyDetector()
 
@@ -171,7 +171,7 @@ class Database:
                 logger.warning(f"Invalid token_id format: {token_id}")
                 result["warning"] = f"Invalid token ID format: {token_id}"
                 # Still allow it to proceed for backward compatibility
-            
+
             # Validate and normalize stage
             try:
                 stage = StageNameValidator.validate_stage_or_raise(stage)
@@ -179,7 +179,7 @@ class Database:
                 logger.error(f"Invalid stage: {e}")
                 result["warning"] = str(e)
                 return result
-                
+
         except Exception as e:
             logger.error(f"Validation error: {e}")
             result["warning"] = f"Validation error: {str(e)}"
@@ -233,8 +233,11 @@ class Database:
             return result
 
     def _is_duplicate(
-        self, token_id: str, stage: str, session_id: str,
-        grace_minutes: int = DatabaseDefaults.GRACE_PERIOD_MINUTES
+        self,
+        token_id: str,
+        stage: str,
+        session_id: str,
+        grace_minutes: int = DatabaseDefaults.GRACE_PERIOD_MINUTES,
     ) -> bool:
         """
         Check if this token has already been logged at this stage in this session
@@ -335,9 +338,9 @@ class Database:
     def get_anomalies(self, session_id: str) -> Dict[str, Any]:
         """
         Detect various human error patterns and anomalies in real-time.
-        
+
         This method now delegates most detection logic to AnomalyDetector class.
-        
+
         Args:
             session_id: Session ID to check
 
@@ -346,7 +349,7 @@ class Database:
         """
         # Use the anomaly detector for most detection logic
         anomalies = self.anomaly_detector.get_anomalies(self.conn, session_id)
-        
+
         # Add incomplete journeys detection (database-specific query)
         try:
             sql = """
@@ -393,16 +396,20 @@ class Database:
                 ORDER BY e.timestamp DESC
             """
             cursor = self.conn.execute(sql, (session_id,))
-            
+
             workflow = get_workflow_transitions()
             for row in cursor.fetchall():
                 # Parse sequence and check validity
-                stages = row["sequence_so_far"].split(" → ") if row["sequence_so_far"] else []
+                stages = (
+                    row["sequence_so_far"].split(" → ")
+                    if row["sequence_so_far"]
+                    else []
+                )
                 if len(stages) > 1:
                     # Check if the last transition was valid
                     prev_stage = stages[-2]
                     curr_stage = stages[-1]
-                    
+
                     if not workflow.is_valid_transition(prev_stage, curr_stage):
                         anomalies["out_of_order_events"].append(
                             {
@@ -419,21 +426,26 @@ class Database:
 
         # Calculate summary statistics
         summary = {
-            "total_anomalies": sum(len(v) for v in anomalies.values() if isinstance(v, list)),
+            "total_anomalies": sum(
+                len(v) for v in anomalies.values() if isinstance(v, list)
+            ),
             "high_severity": sum(
-                1 for category in anomalies.values()
+                1
+                for category in anomalies.values()
                 if isinstance(category, list)
                 for item in category
                 if isinstance(item, dict) and item.get("severity") == "high"
             ),
             "medium_severity": sum(
-                1 for category in anomalies.values()
+                1
+                for category in anomalies.values()
                 if isinstance(category, list)
                 for item in category
                 if isinstance(item, dict) and item.get("severity") == "medium"
             ),
             "low_severity": sum(
-                1 for category in anomalies.values()
+                1
+                for category in anomalies.values()
                 if isinstance(category, list)
                 for item in category
                 if isinstance(item, dict) and item.get("severity") == "low"
@@ -466,20 +478,20 @@ class Database:
     def get_participant_tap_count(self, token_id: str, session_id: str) -> int:
         """
         Get the number of taps for a specific participant in a session
-        
+
         This is used for failover stage alternation to determine which stage
         should handle the next tap (odd taps vs even taps).
-        
+
         Args:
             token_id: Token ID to count taps for
             session_id: Session ID to filter by
-            
+
         Returns:
             Number of taps for this participant in this session
         """
         cursor = self.conn.execute(
             "SELECT COUNT(*) as count FROM events WHERE token_id = ? AND session_id = ?",
-            (token_id, session_id)
+            (token_id, session_id),
         )
         row = cursor.fetchone()
         return row["count"] if row else 0
@@ -604,7 +616,9 @@ class Database:
             )
             self.conn.commit()
 
-            logger.info(f"✓ Event {event_id} removed and archived to deleted_events table")
+            logger.info(
+                f"✓ Event {event_id} removed and archived to deleted_events table"
+            )
 
             return {
                 "success": True,

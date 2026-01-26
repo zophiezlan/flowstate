@@ -23,9 +23,7 @@ def test_detection_only():
     print()
 
     manager = NFCCleanupManager(auto_fix=False, require_sudo=False)
-    success, messages = manager.check_and_cleanup(
-        stop_service=False, reset_i2c=False
-    )
+    success, messages = manager.check_and_cleanup(stop_service=False, reset_i2c=False)
 
     print("Results:")
     for msg in messages:
@@ -46,9 +44,7 @@ def test_auto_fix():
     print()
 
     manager = NFCCleanupManager(auto_fix=True, require_sudo=True)
-    success, messages = manager.check_and_cleanup(
-        stop_service=True, reset_i2c=False
-    )
+    success, messages = manager.check_and_cleanup(stop_service=True, reset_i2c=False)
 
     print("Results:")
     for msg in messages:

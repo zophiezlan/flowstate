@@ -167,10 +167,17 @@ class MockGPIOManager:
         self._pins[pin] = {"mode": "OUT", "state": initial_state}
         return True
 
-    def setup_input(self, pin: int, pull_up: bool = False, pull_down: bool = False) -> bool:
+    def setup_input(
+        self, pin: int, pull_up: bool = False, pull_down: bool = False
+    ) -> bool:
         if not self._available:
             return False
-        self._pins[pin] = {"mode": "IN", "pull_up": pull_up, "pull_down": pull_down, "state": pull_up}
+        self._pins[pin] = {
+            "mode": "IN",
+            "pull_up": pull_up,
+            "pull_down": pull_down,
+            "state": pull_up,
+        }
         return True
 
     def output(self, pin: int, state: bool) -> bool:
@@ -237,7 +244,12 @@ class MockDatabase:
         }
         self.events.append(event)
         self._next_id += 1
-        return {"success": True, "duplicate": False, "out_of_order": False, "warning": None}
+        return {
+            "success": True,
+            "duplicate": False,
+            "out_of_order": False,
+            "warning": None,
+        }
 
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         return self.events[-limit:][::-1]

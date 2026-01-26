@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WorkflowStage:
     """Represents a single workflow stage"""
+
     id: str
     label: str
     description: str
@@ -117,7 +118,9 @@ class ServiceConfig:
 
     def get_all_stage_ids(self) -> List[str]:
         """Get list of all stage IDs in order"""
-        return [stage.id for stage in sorted(self.workflow_stages, key=lambda s: s.order)]
+        return [
+            stage.id for stage in sorted(self.workflow_stages, key=lambda s: s.order)
+        ]
 
     def get_public_stages(self) -> List[WorkflowStage]:
         """Get only stages that should be visible to the public"""
@@ -140,7 +143,7 @@ class ServiceConfig:
         Get a value from the raw config using dot notation
         Example: get_raw('integrations.webhooks.enabled')
         """
-        keys = path.split('.')
+        keys = path.split(".")
         value = self._raw_config
         for key in keys:
             if isinstance(value, dict):
@@ -175,11 +178,13 @@ class ServiceConfigLoader:
             ServiceConfig object with all configuration
         """
         if not self.config_path.exists():
-            logger.warning(f"Service config not found at {self.config_path}, using defaults")
+            logger.warning(
+                f"Service config not found at {self.config_path}, using defaults"
+            )
             return self._create_default_config()
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, "r") as f:
                 raw_config = yaml.safe_load(f)
 
             if not raw_config:
@@ -209,27 +214,29 @@ class ServiceConfigLoader:
         config._raw_config = raw
 
         # Parse service identity
-        if 'service' in raw:
-            service = raw['service']
-            config.service_name = service.get('name', config.service_name)
-            config.service_description = service.get('description', config.service_description)
-            config.service_type = service.get('type', config.service_type)
-            config.organization = service.get('organization', config.organization)
+        if "service" in raw:
+            service = raw["service"]
+            config.service_name = service.get("name", config.service_name)
+            config.service_description = service.get(
+                "description", config.service_description
+            )
+            config.service_type = service.get("type", config.service_type)
+            config.organization = service.get("organization", config.organization)
 
         # Parse workflow stages
-        if 'workflow' in raw:
-            workflow = raw['workflow']
+        if "workflow" in raw:
+            workflow = raw["workflow"]
 
             # Load standard stages
-            if 'stages' in workflow:
+            if "stages" in workflow:
                 config.workflow_stages = [
-                    WorkflowStage(**stage) for stage in workflow['stages']
+                    WorkflowStage(**stage) for stage in workflow["stages"]
                 ]
 
             # Add custom stages if defined
-            if 'custom_stages' in workflow:
+            if "custom_stages" in workflow:
                 custom_stages = [
-                    WorkflowStage(**stage) for stage in workflow['custom_stages']
+                    WorkflowStage(**stage) for stage in workflow["custom_stages"]
                 ]
                 config.workflow_stages.extend(custom_stages)
 
@@ -237,93 +244,153 @@ class ServiceConfigLoader:
             config.workflow_stages.sort(key=lambda s: s.order)
 
             # Workflow behavior
-            config.allow_skip_stages = workflow.get('allow_skip_stages', config.allow_skip_stages)
-            config.allow_repeat_stages = workflow.get('allow_repeat_stages', config.allow_repeat_stages)
-            config.enforce_stage_order = workflow.get('enforce_stage_order', config.enforce_stage_order)
+            config.allow_skip_stages = workflow.get(
+                "allow_skip_stages", config.allow_skip_stages
+            )
+            config.allow_repeat_stages = workflow.get(
+                "allow_repeat_stages", config.allow_repeat_stages
+            )
+            config.enforce_stage_order = workflow.get(
+                "enforce_stage_order", config.enforce_stage_order
+            )
 
         # Parse capacity settings
-        if 'capacity' in raw:
-            capacity = raw['capacity']
-            config.people_per_hour = capacity.get('people_per_hour', config.people_per_hour)
-            config.avg_service_minutes = capacity.get('avg_service_minutes', config.avg_service_minutes)
-            config.default_wait_estimate = capacity.get('default_wait_estimate', config.default_wait_estimate)
-            config.queue_multiplier = capacity.get('queue_multiplier', config.queue_multiplier)
+        if "capacity" in raw:
+            capacity = raw["capacity"]
+            config.people_per_hour = capacity.get(
+                "people_per_hour", config.people_per_hour
+            )
+            config.avg_service_minutes = capacity.get(
+                "avg_service_minutes", config.avg_service_minutes
+            )
+            config.default_wait_estimate = capacity.get(
+                "default_wait_estimate", config.default_wait_estimate
+            )
+            config.queue_multiplier = capacity.get(
+                "queue_multiplier", config.queue_multiplier
+            )
 
         # Parse alert thresholds
-        if 'alerts' in raw:
-            alerts = raw['alerts']
+        if "alerts" in raw:
+            alerts = raw["alerts"]
 
-            if 'queue' in alerts:
-                config.queue_warning_threshold = alerts['queue'].get('warning_threshold', config.queue_warning_threshold)
-                config.queue_critical_threshold = alerts['queue'].get('critical_threshold', config.queue_critical_threshold)
+            if "queue" in alerts:
+                config.queue_warning_threshold = alerts["queue"].get(
+                    "warning_threshold", config.queue_warning_threshold
+                )
+                config.queue_critical_threshold = alerts["queue"].get(
+                    "critical_threshold", config.queue_critical_threshold
+                )
 
-            if 'wait_time' in alerts:
-                config.wait_warning_minutes = alerts['wait_time'].get('warning_minutes', config.wait_warning_minutes)
-                config.wait_critical_minutes = alerts['wait_time'].get('critical_minutes', config.wait_critical_minutes)
+            if "wait_time" in alerts:
+                config.wait_warning_minutes = alerts["wait_time"].get(
+                    "warning_minutes", config.wait_warning_minutes
+                )
+                config.wait_critical_minutes = alerts["wait_time"].get(
+                    "critical_minutes", config.wait_critical_minutes
+                )
 
-            if 'service_inactivity' in alerts:
-                config.service_inactivity_warning_minutes = alerts['service_inactivity'].get('warning_minutes', config.service_inactivity_warning_minutes)
-                config.service_inactivity_critical_minutes = alerts['service_inactivity'].get('critical_minutes', config.service_inactivity_critical_minutes)
+            if "service_inactivity" in alerts:
+                config.service_inactivity_warning_minutes = alerts[
+                    "service_inactivity"
+                ].get("warning_minutes", config.service_inactivity_warning_minutes)
+                config.service_inactivity_critical_minutes = alerts[
+                    "service_inactivity"
+                ].get("critical_minutes", config.service_inactivity_critical_minutes)
 
-            if 'stuck_cards' in alerts:
-                config.stuck_cards_threshold_hours = alerts['stuck_cards'].get('threshold_hours', config.stuck_cards_threshold_hours)
+            if "stuck_cards" in alerts:
+                config.stuck_cards_threshold_hours = alerts["stuck_cards"].get(
+                    "threshold_hours", config.stuck_cards_threshold_hours
+                )
 
-            if 'service_time_variance' in alerts:
-                config.service_variance_multiplier = alerts['service_time_variance'].get('multiplier', config.service_variance_multiplier)
+            if "service_time_variance" in alerts:
+                config.service_variance_multiplier = alerts[
+                    "service_time_variance"
+                ].get("multiplier", config.service_variance_multiplier)
 
-            if 'capacity_utilization' in alerts:
-                config.capacity_critical_percent = alerts['capacity_utilization'].get('critical_percent', config.capacity_critical_percent)
+            if "capacity_utilization" in alerts:
+                config.capacity_critical_percent = alerts["capacity_utilization"].get(
+                    "critical_percent", config.capacity_critical_percent
+                )
 
-            if 'system' in alerts:
-                config.temperature_critical_celsius = alerts['system'].get('temperature_critical_celsius', config.temperature_critical_celsius)
-                config.disk_warning_percent = alerts['system'].get('disk_usage_warning_percent', config.disk_warning_percent)
-                config.disk_critical_percent = alerts['system'].get('disk_usage_critical_percent', config.disk_critical_percent)
+            if "system" in alerts:
+                config.temperature_critical_celsius = alerts["system"].get(
+                    "temperature_critical_celsius", config.temperature_critical_celsius
+                )
+                config.disk_warning_percent = alerts["system"].get(
+                    "disk_usage_warning_percent", config.disk_warning_percent
+                )
+                config.disk_critical_percent = alerts["system"].get(
+                    "disk_usage_critical_percent", config.disk_critical_percent
+                )
 
             # Alert messages
-            if 'messages' in alerts:
-                config.alert_messages = alerts['messages']
+            if "messages" in alerts:
+                config.alert_messages = alerts["messages"]
 
         # Parse UI labels
-        if 'ui' in raw:
-            ui = raw['ui']
+        if "ui" in raw:
+            ui = raw["ui"]
 
-            if 'labels' in ui:
-                config.ui_labels = ui['labels']
+            if "labels" in ui:
+                config.ui_labels = ui["labels"]
 
-            if 'public_display' in ui:
-                pd = ui['public_display']
-                config.show_queue_positions = pd.get('show_queue_positions', config.show_queue_positions)
-                config.show_wait_estimates = pd.get('show_wait_estimates', config.show_wait_estimates)
-                config.show_served_count = pd.get('show_served_count', config.show_served_count)
-                config.show_avg_time = pd.get('show_avg_time', config.show_avg_time)
-                config.public_refresh_interval = pd.get('refresh_interval_seconds', config.public_refresh_interval)
+            if "public_display" in ui:
+                pd = ui["public_display"]
+                config.show_queue_positions = pd.get(
+                    "show_queue_positions", config.show_queue_positions
+                )
+                config.show_wait_estimates = pd.get(
+                    "show_wait_estimates", config.show_wait_estimates
+                )
+                config.show_served_count = pd.get(
+                    "show_served_count", config.show_served_count
+                )
+                config.show_avg_time = pd.get("show_avg_time", config.show_avg_time)
+                config.public_refresh_interval = pd.get(
+                    "refresh_interval_seconds", config.public_refresh_interval
+                )
 
-            if 'dashboard' in ui:
-                dash = ui['dashboard']
-                config.max_recent_events = dash.get('max_recent_events', config.max_recent_events)
-                config.max_recent_completions = dash.get('max_recent_completions', config.max_recent_completions)
-                config.analytics_history_hours = dash.get('analytics_history_hours', config.analytics_history_hours)
+            if "dashboard" in ui:
+                dash = ui["dashboard"]
+                config.max_recent_events = dash.get(
+                    "max_recent_events", config.max_recent_events
+                )
+                config.max_recent_completions = dash.get(
+                    "max_recent_completions", config.max_recent_completions
+                )
+                config.analytics_history_hours = dash.get(
+                    "analytics_history_hours", config.analytics_history_hours
+                )
 
         # Parse staffing
-        if 'staffing' in raw:
-            staffing = raw['staffing']
-            config.roles = staffing.get('roles', [])
-            config.require_staff_id = staffing.get('require_staff_id', config.require_staff_id)
+        if "staffing" in raw:
+            staffing = raw["staffing"]
+            config.roles = staffing.get("roles", [])
+            config.require_staff_id = staffing.get(
+                "require_staff_id", config.require_staff_id
+            )
 
         # Parse locations
-        if 'locations' in raw:
-            locations = raw['locations']
-            config.multi_location = locations.get('multi_location', config.multi_location)
-            config.sites = locations.get('sites', [])
-            config.shared_queue = locations.get('shared_queue', config.shared_queue)
+        if "locations" in raw:
+            locations = raw["locations"]
+            config.multi_location = locations.get(
+                "multi_location", config.multi_location
+            )
+            config.sites = locations.get("sites", [])
+            config.shared_queue = locations.get("shared_queue", config.shared_queue)
 
         # Parse metrics
-        if 'metrics' in raw:
-            metrics = raw['metrics']
-            if 'windows' in metrics:
-                windows = metrics['windows']
-                config.wait_time_sample_size = windows.get('wait_time_sample_size', config.wait_time_sample_size)
-                config.shift_summary_hours = windows.get('shift_summary_hours', config.shift_summary_hours)
+        if "metrics" in raw:
+            metrics = raw["metrics"]
+            if "windows" in metrics:
+                windows = metrics["windows"]
+                config.wait_time_sample_size = windows.get(
+                    "wait_time_sample_size", config.wait_time_sample_size
+                )
+                config.shift_summary_hours = windows.get(
+                    "shift_summary_hours", config.shift_summary_hours
+                )
 
         return config
 
@@ -340,7 +407,7 @@ class ServiceConfigLoader:
                 order=1,
                 required=True,
                 visible_to_public=True,
-                duration_estimate=0
+                duration_estimate=0,
             ),
             WorkflowStage(
                 id="SERVICE_START",
@@ -349,7 +416,7 @@ class ServiceConfigLoader:
                 order=2,
                 required=False,
                 visible_to_public=True,
-                duration_estimate=5
+                duration_estimate=5,
             ),
             WorkflowStage(
                 id="EXIT",
@@ -358,30 +425,30 @@ class ServiceConfigLoader:
                 order=3,
                 required=True,
                 visible_to_public=True,
-                duration_estimate=0
+                duration_estimate=0,
             ),
         ]
 
         # Default UI labels
         config.ui_labels = {
-            'queue_count': 'people in queue',
-            'wait_time': 'estimated wait',
-            'served_today': 'served today',
-            'avg_service_time': 'avg service time',
-            'service_status': 'service status',
-            'status_active': 'ACTIVE',
-            'status_idle': 'IDLE',
-            'status_stopped': 'STOPPED',
+            "queue_count": "people in queue",
+            "wait_time": "estimated wait",
+            "served_today": "served today",
+            "avg_service_time": "avg service time",
+            "service_status": "service status",
+            "status_active": "ACTIVE",
+            "status_idle": "IDLE",
+            "status_stopped": "STOPPED",
         }
 
         # Default alert messages
         config.alert_messages = {
-            'queue_warning': 'Queue is getting long ({count} people)',
-            'queue_critical': 'Queue is very long ({count} people) - consider adding staff',
-            'wait_warning': 'Estimated wait time is high ({minutes} min)',
-            'wait_critical': 'Estimated wait time is very high ({minutes} min)',
-            'inactivity_warning': 'No service activity for {minutes} minutes',
-            'inactivity_critical': 'Service appears stopped - no activity for {minutes} minutes',
+            "queue_warning": "Queue is getting long ({count} people)",
+            "queue_critical": "Queue is very long ({count} people) - consider adding staff",
+            "wait_warning": "Estimated wait time is high ({minutes} min)",
+            "wait_critical": "Estimated wait time is very high ({minutes} min)",
+            "inactivity_warning": "No service activity for {minutes} minutes",
+            "inactivity_critical": "Service appears stopped - no activity for {minutes} minutes",
         }
 
         logger.info("Using default service configuration")
@@ -474,7 +541,9 @@ if __name__ == "__main__":
     print(f"\nWorkflow stages ({len(config.workflow_stages)}):")
     for stage in config.workflow_stages:
         print(f"  {stage.order}. {stage.id} - {stage.label}")
-        print(f"     Required: {stage.required}, Public: {stage.visible_to_public}, Duration: {stage.duration_estimate}min")
+        print(
+            f"     Required: {stage.required}, Public: {stage.visible_to_public}, Duration: {stage.duration_estimate}min"
+        )
 
     print(f"\nCapacity: {config.people_per_hour} people/hour")
     print(f"Avg service time: {config.avg_service_minutes} minutes")

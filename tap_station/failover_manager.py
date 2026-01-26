@@ -28,7 +28,7 @@ class FailoverManager:
         primary_stage: str,
         fallback_stages: List[str],
         on_failover_enable: Optional[Callable] = None,
-        on_failover_disable: Optional[Callable] = None
+        on_failover_disable: Optional[Callable] = None,
     ):
         """
         Initialize failover manager
@@ -93,7 +93,11 @@ class FailoverManager:
         if not self.failover_active:
             return False
 
-        duration = datetime.now() - self.failover_start_time if self.failover_start_time else None
+        duration = (
+            datetime.now() - self.failover_start_time
+            if self.failover_start_time
+            else None
+        )
         logger.info("✅ EXITING FAILOVER MODE - Peer station recovered")
 
         if duration:
@@ -130,12 +134,16 @@ class FailoverManager:
             Status dictionary
         """
         return {
-            'failover_active': self.failover_active,
-            'primary_stage': self.primary_stage,
-            'active_stages': self.active_stages,
-            'fallback_stages': self.fallback_stages,
-            'failover_start_time': self.failover_start_time.isoformat() if self.failover_start_time else None,
-            'tap_counts': self.tap_counts
+            "failover_active": self.failover_active,
+            "primary_stage": self.primary_stage,
+            "active_stages": self.active_stages,
+            "fallback_stages": self.fallback_stages,
+            "failover_start_time": (
+                self.failover_start_time.isoformat()
+                if self.failover_start_time
+                else None
+            ),
+            "tap_counts": self.tap_counts,
         }
 
     def get_stage_for_tap_number(self, tap_number: int) -> str:

@@ -29,7 +29,7 @@ class WiFiSetupButton:
         gpio_pin: int = 23,
         hold_time: float = 3.0,
         setup_callback: Optional[Callable] = None,
-        rescan_callback: Optional[Callable] = None
+        rescan_callback: Optional[Callable] = None,
     ):
         """
         Initialize WiFi setup button handler
@@ -78,10 +78,7 @@ class WiFiSetupButton:
             return
 
         self.running = True
-        self.monitor_thread = threading.Thread(
-            target=self._monitor_button,
-            daemon=True
-        )
+        self.monitor_thread = threading.Thread(target=self._monitor_button, daemon=True)
         self.monitor_thread.start()
         logger.info("WiFi setup button monitoring started")
 
@@ -103,7 +100,9 @@ class WiFiSetupButton:
 
                         # Check if hold time reached
                         if elapsed >= self.hold_time and not held_long_enough:
-                            logger.info(f"Button held for {self.hold_time}s - triggering rescan")
+                            logger.info(
+                                f"Button held for {self.hold_time}s - triggering rescan"
+                            )
                             held_long_enough = True
                             self._trigger_rescan()
 

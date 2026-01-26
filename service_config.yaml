@@ -14,7 +14,7 @@
 service:
   name: "Drug Checking Service"
   description: "Festival Community Drug Checking"
-  type: "festival"  # Options: festival, venue, popup, mobile
+  type: "festival" # Options: festival, venue, popup, mobile
   organization: "Your Organization Name"
   contact:
     display: true
@@ -57,7 +57,7 @@ workflow:
       label: "Service Started"
       description: "Service interaction begins"
       order: 2
-      required: false  # Some services may skip this
+      required: false # Some services may skip this
       visible_to_public: true
       duration_estimate: 5
       icon: "🔬"
@@ -66,7 +66,7 @@ workflow:
       label: "Substance Returned"
       description: "Substance handed back to participant"
       order: 3
-      required: false  # Optional but recommended for accountability
+      required: false # Optional but recommended for accountability
       visible_to_public: true
       duration_estimate: 1
       icon: "🤝"
@@ -109,13 +109,13 @@ workflow:
   #     duration_estimate: 7
 
   # Workflow behavior
-  allow_skip_stages: false  # Can participants skip optional stages?
-  allow_repeat_stages: false  # Can participants go through a stage multiple times?
-  enforce_stage_order: true  # Must stages be completed in order?
+  allow_skip_stages: false # Can participants skip optional stages?
+  allow_repeat_stages: false # Can participants go through a stage multiple times?
+  enforce_stage_order: true # Must stages be completed in order?
 
   # Stage transition rules
   auto_transitions:
-    enabled: false  # Automatically advance stages based on time?
+    enabled: false # Automatically advance stages based on time?
     rules: []
     # Example:
     # - from: "TESTING"
@@ -136,8 +136,8 @@ capacity:
 
   # Multipliers for different conditions
   multipliers:
-    peak_hours: 0.8  # Reduce capacity during peak (e.g., 12 * 0.8 = 9.6 people/hour)
-    off_peak: 1.2    # Increase during off-peak
+    peak_hours: 0.8 # Reduce capacity during peak (e.g., 12 * 0.8 = 9.6 people/hour)
+    off_peak: 1.2 # Increase during off-peak
 
   # Default wait time estimate when no data is available (minutes)
   # This is the queue wait time (time before being served)
@@ -185,30 +185,30 @@ capacity:
 # ----------------------------------------------------------------------------
 alerts:
   queue:
-    warning_threshold: 10    # People in queue
-    critical_threshold: 20   # People in queue
+    warning_threshold: 10 # People in queue
+    critical_threshold: 20 # People in queue
 
   wait_time:
     warning_minutes: 45
     critical_minutes: 90
 
   service_inactivity:
-    warning_minutes: 5   # No SERVICE_START events
+    warning_minutes: 5 # No SERVICE_START events
     critical_minutes: 10
 
   stuck_cards:
-    threshold_hours: 2   # Card hasn't exited after this many hours
+    threshold_hours: 2 # Card hasn't exited after this many hours
 
   unreturned_substances:
-    warning_minutes: 15  # Alert if substance not returned 15 min after SERVICE_START
-    critical_minutes: 30  # Critical alert 30 min after SERVICE_START
+    warning_minutes: 15 # Alert if substance not returned 15 min after SERVICE_START
+    critical_minutes: 30 # Critical alert 30 min after SERVICE_START
 
   service_time_variance:
     # Alert if max service time > average * this multiplier
     multiplier: 3
 
   capacity_utilization:
-    critical_percent: 90  # % of capacity being used
+    critical_percent: 90 # % of capacity being used
 
   system:
     temperature_critical_celsius: 80
@@ -259,7 +259,7 @@ ui:
   branding:
     show_logo: false
     logo_url: ""
-    color_scheme: "default"  # Options: default, dark, accessible
+    color_scheme: "default" # Options: default, dark, accessible
 
   public_display:
     show_queue_positions: true
@@ -305,10 +305,10 @@ staffing:
       label: "Administrator"
       description: "System administrator"
       permissions:
-        - "*"  # All permissions
+        - "*" # All permissions
 
   # Track staff on duty
-  require_staff_id: false  # Require staff to identify themselves?
+  require_staff_id: false # Require staff to identify themselves?
 
   # Shift management
   shifts:
@@ -358,8 +358,8 @@ locations:
   #       - device_id: "camp_station1"
 
   # Cross-location coordination
-  shared_queue: false  # Do all locations share one queue?
-  show_all_locations: true  # Show all locations on public display?
+  shared_queue: false # Do all locations share one queue?
+  show_all_locations: true # Show all locations on public display?
 
 # ----------------------------------------------------------------------------
 # DATA COLLECTION & CUSTOM FIELDS
@@ -407,11 +407,11 @@ data_collection:
 metrics:
   # Time windows for analytics
   windows:
-    recent_events: 15        # Number of recent events to show
-    recent_completions: 10   # Number of recent completions
+    recent_events: 15 # Number of recent events to show
+    recent_completions: 10 # Number of recent completions
     activity_history_hours: 12
     shift_summary_hours: 4
-    wait_time_sample_size: 20  # Number of recent completions for avg wait
+    wait_time_sample_size: 20 # Number of recent completions for avg wait
 
   # Performance targets (for reporting)
   targets:
@@ -442,7 +442,7 @@ integrations:
   # External analytics
   analytics:
     enabled: false
-    provider: null  # "google_analytics", "matomo", etc.
+    provider: null # "google_analytics", "matomo", etc.
     tracking_id: ""
 
   # API access
@@ -483,7 +483,7 @@ security:
   # Authentication
   authentication:
     enabled: false
-    method: "simple"  # Options: simple, oauth, ldap
+    method: "simple" # Options: simple, oauth, ldap
 
   # Access control
   access_control:
@@ -494,7 +494,7 @@ security:
   # Audit logging
   audit:
     enabled: true
-    log_level: "info"  # Options: debug, info, warning, error
+    log_level: "info" # Options: debug, info, warning, error
     retention_days: 365
 
   # Network security
@@ -578,19 +578,19 @@ service_improvement:
   enabled: true
 
   # Analysis parameters
-  analysis_window_hours: 24      # Hours of data to analyze
-  target_wait_minutes: 30        # Target maximum wait time
+  analysis_window_hours: 24 # Hours of data to analyze
+  target_wait_minutes: 30 # Target maximum wait time
   target_throughput_per_hour: 12 # Target service capacity
 
   # Recommendation settings
   recommendations:
-    max_quick_wins: 5            # Maximum quick-win recommendations
-    include_informational: true  # Include low-priority insights
+    max_quick_wins: 5 # Maximum quick-win recommendations
+    include_informational: true # Include low-priority insights
 
   # Pattern detection
   patterns:
-    detect_recurring: true       # Identify recurring patterns
-    min_data_points: 10          # Minimum events for pattern detection
+    detect_recurring: true # Identify recurring patterns
+    min_data_points: 10 # Minimum events for pattern detection
 
 # ----------------------------------------------------------------------------
 # ADAPTIVE THRESHOLDS
@@ -622,11 +622,11 @@ adaptive_thresholds:
         - queue_critical
         - wait_warning_minutes
         - wait_critical_minutes
-      multiplier: 1.3  # 30% higher thresholds
+      multiplier: 1.3 # 30% higher thresholds
       time_windows:
         - start: "20:00"
           end: "23:59"
-          days: [0, 1, 2, 3, 4, 5, 6]  # All week
+          days: [0, 1, 2, 3, 4, 5, 6] # All week
       enabled: true
 
     # Off-peak - stricter thresholds
@@ -636,7 +636,7 @@ adaptive_thresholds:
       threshold_types:
         - queue_warning
         - inactivity_warning_minutes
-      multiplier: 0.8  # 20% lower thresholds
+      multiplier: 0.8 # 20% lower thresholds
       time_windows:
         - start: "10:00"
           end: "14:00"
@@ -659,7 +659,7 @@ service_level_objectives:
   defaults:
     wait_time_slo:
       enabled: true
-      target_percent: 80        # 80% of people wait less than target
+      target_percent: 80 # 80% of people wait less than target
       warning_percent: 70
       window_hours: 4
 
@@ -671,13 +671,12 @@ service_level_objectives:
 
     throughput_slo:
       enabled: true
-      target_percent: 70        # 70% of target capacity
+      target_percent: 70 # 70% of target capacity
       warning_percent: 50
       window_hours: 4
 
   # Custom SLO definitions
-  custom:
-    []
+  custom: []
     # Example custom SLOs:
     # - id: "p90_wait_time"
     #   name: "P90 Wait Time"
@@ -703,7 +702,7 @@ service_level_objectives:
   # Error budget tracking
   error_budgets:
     enabled: false
-    budget_period_hours: 168    # 1 week
+    budget_period_hours: 168 # 1 week
 
 # ----------------------------------------------------------------------------
 # WORKFLOW VALIDATION
@@ -715,19 +714,19 @@ workflow_validation:
 
   # Global validation behavior
   behavior:
-    fail_on_error: true         # Block operations on ERROR severity
-    fail_on_warning: false      # Block operations on WARNING severity
+    fail_on_error: true # Block operations on ERROR severity
+    fail_on_warning: false # Block operations on WARNING severity
 
   # Built-in validator configuration
   validators:
     min_wait_time:
       enabled: true
-      min_wait_seconds: 30      # Minimum time between stages
+      min_wait_seconds: 30 # Minimum time between stages
       severity: "warning"
 
     max_wait_time:
       enabled: true
-      max_wait_minutes: 180     # Warning for very long waits
+      max_wait_minutes: 180 # Warning for very long waits
       severity: "warning"
 
     duplicate_stage:
@@ -742,7 +741,7 @@ workflow_validation:
 
     concurrent_service:
       enabled: true
-      max_concurrent: 10        # Max people in SERVICE_START simultaneously
+      max_concurrent: 10 # Max people in SERVICE_START simultaneously
       severity: "warning"
 
     service_hours:
@@ -754,12 +753,11 @@ workflow_validation:
 
     substance_return:
       enabled: true
-      require_return: false     # Warn but don't block if not returned
+      require_return: false # Warn but don't block if not returned
       severity: "warning"
 
   # Custom validators
-  custom_validators:
-    []
+  custom_validators: []
     # Example:
     # - id: "custom_intake_check"
     #   name: "Intake Requirements"
@@ -774,7 +772,7 @@ workflow_validation:
 # Extends the staffing.roles section with full RBAC capabilities
 # ----------------------------------------------------------------------------
 access_control:
-  enabled: false                 # Enable full RBAC system
+  enabled: false # Enable full RBAC system
 
   # Authentication settings
   authentication:
@@ -831,7 +829,7 @@ access_control:
 
     admin:
       permissions:
-        - "*"  # All permissions
+        - "*" # All permissions
 
   # Audit logging
   audit:
@@ -852,8 +850,7 @@ integration_hooks:
   async_delivery: true
 
   # Webhook endpoints
-  webhooks:
-    []
+  webhooks: []
     # Example configurations:
     #
     # Alert notifications to Slack/Discord
@@ -895,9 +892,7 @@ integration_hooks:
     #   enabled: false
 
   # Event filtering
-  filters:
-    # Filter events by stage or other criteria
-    []
+  filters: [] # Filter events by stage or other criteria
     # Example:
     # - webhook_id: "alerts_webhook"
     #   filter: "severity!=info"
@@ -915,8 +910,8 @@ dynamic_config:
   # Configuration versioning
   versioning:
     enabled: true
-    max_history: 10             # Keep last 10 versions
+    max_history: 10 # Keep last 10 versions
 
   # Validation on load
   validation:
-    strict_mode: false          # Reject config with unknown keys
+    strict_mode: false # Reject config with unknown keys

@@ -155,22 +155,21 @@ def test_login_with_valid_password(client, mock_config):
     # Set the admin password
     mock_config.admin_password = "testpass123"
     mock_config.admin_session_timeout_minutes = 60
-    
+
     # Recreate server with updated config
     from tap_station.web_server import StatusWebServer
     from unittest.mock import MagicMock
+
     mock_db = MagicMock()
     server = StatusWebServer(mock_config, mock_db)
     server.app.config["TESTING"] = True
-    
+
     with server.app.test_client() as test_client:
         # Try to login
         response = test_client.post(
-            "/login",
-            data={"password": "testpass123"},
-            follow_redirects=False
+            "/login", data={"password": "testpass123"}, follow_redirects=False
         )
-        
+
         assert response.status_code == 302  # Redirect after successful login
         assert "/control" in response.location
 
@@ -178,11 +177,9 @@ def test_login_with_valid_password(client, mock_config):
 def test_login_with_invalid_password(client):
     """Test login failure with incorrect password"""
     response = client.post(
-        "/login",
-        data={"password": "wrongpassword"},
-        follow_redirects=True
+        "/login", data={"password": "wrongpassword"}, follow_redirects=True
     )
-    
+
     assert response.status_code == 200
     assert b"Invalid password" in response.data
 
@@ -192,22 +189,23 @@ def test_logout_clears_session(client, mock_config):
     # Setup authenticated session
     mock_config.admin_password = "testpass123"
     mock_config.admin_session_timeout_minutes = 60
-    
+
     from tap_station.web_server import StatusWebServer
     from unittest.mock import MagicMock
+
     mock_db = MagicMock()
     server = StatusWebServer(mock_config, mock_db)
     server.app.config["TESTING"] = True
-    
+
     with server.app.test_client() as test_client:
         # Login first
         test_client.post("/login", data={"password": "testpass123"})
-        
+
         # Logout
         response = test_client.get("/logout", follow_redirects=False)
         assert response.status_code == 302
         assert "/login" in response.location
-        
+
         # Try to access control panel - should redirect to login
         response = test_client.get("/control")
         assert response.status_code == 302
@@ -225,17 +223,15 @@ def test_control_api_endpoints_require_auth(client):
         ("/api/control/backup-database", "GET"),
         ("/api/control/hardware-status", "GET"),
     ]
-    
+
     for endpoint, method in endpoints:
         if method == "GET":
             response = client.get(endpoint)
         else:
             response = client.post(
-                endpoint,
-                data=json.dumps({}),
-                content_type="application/json"
+                endpoint, data=json.dumps({}), content_type="application/json"
             )
-        
+
         # Should redirect to login
         assert response.status_code == 302, f"Endpoint {endpoint} should require auth"
         assert "/login" in response.location
@@ -245,19 +241,20 @@ def test_authenticated_control_api_access(client, mock_config):
     """Test that authenticated users can access control API"""
     mock_config.admin_password = "testpass123"
     mock_config.admin_session_timeout_minutes = 60
-    
+
     from tap_station.web_server import StatusWebServer
     from unittest.mock import MagicMock
+
     mock_db = MagicMock()
     mock_db.get_event_count.return_value = 100
-    
+
     server = StatusWebServer(mock_config, mock_db)
     server.app.config["TESTING"] = True
-    
+
     with server.app.test_client() as test_client:
         # Login first
         test_client.post("/login", data={"password": "testpass123"})
-        
+
         # Now access control status endpoint
         response = test_client.get("/api/control/status")
         assert response.status_code == 200

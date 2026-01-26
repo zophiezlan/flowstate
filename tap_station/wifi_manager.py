@@ -57,29 +57,27 @@ class WiFiManager:
             return False
 
         try:
-            with open(self.config_file, 'r') as f:
+            with open(self.config_file, "r") as f:
                 lines = f.readlines()
 
             self.networks = []
             for line in lines:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
 
-                parts = line.split('|')
+                parts = line.split("|")
                 if len(parts) >= 2:
                     ssid = parts[0].strip()
                     password = parts[1].strip()
                     priority = int(parts[2].strip()) if len(parts) >= 3 else 99
 
-                    self.networks.append({
-                        'ssid': ssid,
-                        'password': password,
-                        'priority': priority
-                    })
+                    self.networks.append(
+                        {"ssid": ssid, "password": password, "priority": priority}
+                    )
 
             # Sort by priority (lower number = higher priority)
-            self.networks.sort(key=lambda x: x['priority'])
+            self.networks.sort(key=lambda x: x["priority"])
 
             logger.info(f"Loaded {len(self.networks)} WiFi networks")
             return len(self.networks) > 0
@@ -109,7 +107,7 @@ class WiFiManager:
 #Volunteer|volunteerpass|22
 """
 
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 f.write(default_config)
 
             logger.info(f"Created default WiFi config at {self.config_file}")
@@ -126,10 +124,7 @@ class WiFiManager:
         """
         try:
             result = subprocess.run(
-                ["iwgetid", "-r"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                ["iwgetid", "-r"], capture_output=True, text=True, timeout=2
             )
 
             if result.returncode == 0:
@@ -164,7 +159,7 @@ class WiFiManager:
                 ["sudo", "iwlist", "wlan0", "scan"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
             if result.returncode != 0:
@@ -173,8 +168,8 @@ class WiFiManager:
 
             # Parse SSIDs from scan output
             ssids = []
-            for line in result.stdout.split('\n'):
-                if 'ESSID:' in line:
+            for line in result.stdout.split("\n"):
+                if "ESSID:" in line:
                     match = re.search(r'ESSID:"(.+)"', line)
                     if match:
                         ssid = match.group(1)
@@ -231,14 +226,14 @@ network={{
                 ["set_network", "0", "ssid", f'"{ssid}"'],
                 ["set_network", "0", "psk", f'"{password}"'],
                 ["enable_network", "0"],
-                ["save_config"]
+                ["save_config"],
             ]
 
             for cmd in commands:
                 subprocess.run(
                     ["sudo", "wpa_cli", "-i", "wlan0"] + cmd,
                     capture_output=True,
-                    timeout=5
+                    timeout=5,
                 )
 
             # Clean up temporary config file
@@ -292,11 +287,11 @@ network={{
         if not available:
             logger.warning("No networks found in scan")
             # Try connecting anyway (network might be hidden)
-            available = [net['ssid'] for net in self.networks]
+            available = [net["ssid"] for net in self.networks]
 
         # Try each known network in priority order
         for network in self.networks:
-            ssid = network['ssid']
+            ssid = network["ssid"]
 
             # Skip if not available (unless we couldn't scan)
             if available and ssid not in available:
@@ -307,7 +302,7 @@ network={{
             logger.info(f"Trying network '{ssid}' (priority {network['priority']})")
 
             for attempt in range(max_attempts):
-                if self.connect_to_network(ssid, network['password']):
+                if self.connect_to_network(ssid, network["password"]):
                     return True
 
                 if attempt < max_attempts - 1:
@@ -331,12 +326,10 @@ network={{
         """
         try:
             # Add to in-memory list
-            self.networks.append({
-                'ssid': ssid,
-                'password': password,
-                'priority': priority
-            })
-            self.networks.sort(key=lambda x: x['priority'])
+            self.networks.append(
+                {"ssid": ssid, "password": password, "priority": priority}
+            )
+            self.networks.sort(key=lambda x: x["priority"])
 
             # Append to config file with restricted permissions
             self.config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -344,9 +337,9 @@ network={{
             # Set restrictive umask before writing
             old_umask = os.umask(0o077)
             try:
-                with open(self.config_file, 'a') as f:
+                with open(self.config_file, "a") as f:
                     f.write(f"\n{ssid}|{password}|{priority}\n")
-                
+
                 # Ensure the file has correct permissions (0600)
                 os.chmod(self.config_file, 0o600)
             finally:
@@ -368,10 +361,7 @@ network={{
         """
         try:
             result = subprocess.run(
-                ["hostname", "-I"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                ["hostname", "-I"], capture_output=True, text=True, timeout=2
             )
 
             if result.returncode == 0:
@@ -386,7 +376,9 @@ network={{
             logger.debug(f"Could not get IP address: {e}")
             return None
 
-    def enable_ap_mode(self, ssid: str = "TapStation-Setup", password: str = "tapstation123") -> bool:
+    def enable_ap_mode(
+        self, ssid: str = "TapStation-Setup", password: str = "tapstation123"
+    ) -> bool:
         """
         Enable Access Point mode for WiFi setup
 
@@ -404,19 +396,20 @@ network={{
             # We'll create a simple AP configuration
 
             # Check if required packages are installed
-            result = subprocess.run(
-                ["which", "hostapd"],
-                capture_output=True
-            )
+            result = subprocess.run(["which", "hostapd"], capture_output=True)
 
             if result.returncode != 0:
-                logger.error("hostapd not installed. Install with: sudo apt install hostapd dnsmasq")
+                logger.error(
+                    "hostapd not installed. Install with: sudo apt install hostapd dnsmasq"
+                )
                 return False
 
             # Note: Full AP setup requires complex configuration
             # For now, we'll log that this feature requires setup
             logger.warning("AP mode requires hostapd/dnsmasq configuration")
-            logger.info("See: https://www.raspberrypi.com/documentation/computers/configuration.html#setting-up-a-routed-wireless-access-point")
+            logger.info(
+                "See: https://www.raspberrypi.com/documentation/computers/configuration.html#setting-up-a-routed-wireless-access-point"
+            )
 
             self.ap_mode_active = True
             return True
@@ -439,9 +432,7 @@ network={{
             logger.info("Disabling AP mode")
             # Stop hostapd service
             subprocess.run(
-                ["sudo", "systemctl", "stop", "hostapd"],
-                capture_output=True,
-                timeout=5
+                ["sudo", "systemctl", "stop", "hostapd"], capture_output=True, timeout=5
             )
 
             self.ap_mode_active = False

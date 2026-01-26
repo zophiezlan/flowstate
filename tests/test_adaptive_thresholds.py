@@ -13,6 +13,7 @@ from datetime import datetime, time
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tap_station.adaptive_thresholds import (
@@ -45,22 +46,14 @@ class TestTimeWindow:
 
     def test_contains_within_window(self):
         """Test time within window"""
-        window = TimeWindow(
-            start=time(10, 0),
-            end=time(18, 0),
-            days=list(range(7))
-        )
+        window = TimeWindow(start=time(10, 0), end=time(18, 0), days=list(range(7)))
         # 2pm on a Monday (weekday 0)
         dt = datetime(2024, 1, 8, 14, 0)  # Monday
         assert window.contains(dt) is True
 
     def test_contains_outside_window(self):
         """Test time outside window"""
-        window = TimeWindow(
-            start=time(10, 0),
-            end=time(18, 0),
-            days=list(range(7))
-        )
+        window = TimeWindow(start=time(10, 0), end=time(18, 0), days=list(range(7)))
         # 9am
         dt = datetime(2024, 1, 8, 9, 0)
         assert window.contains(dt) is False
@@ -68,9 +61,7 @@ class TestTimeWindow:
     def test_contains_wrong_day(self):
         """Test excluded day of week"""
         window = TimeWindow(
-            start=time(10, 0),
-            end=time(18, 0),
-            days=[0, 1, 2, 3, 4]  # Weekdays only
+            start=time(10, 0), end=time(18, 0), days=[0, 1, 2, 3, 4]  # Weekdays only
         )
         # Saturday (weekday 5)
         dt = datetime(2024, 1, 6, 14, 0)  # Saturday
@@ -78,11 +69,7 @@ class TestTimeWindow:
 
     def test_window_crossing_midnight(self):
         """Test window that crosses midnight"""
-        window = TimeWindow(
-            start=time(22, 0),
-            end=time(2, 0),
-            days=list(range(7))
-        )
+        window = TimeWindow(start=time(22, 0), end=time(2, 0), days=list(range(7)))
         # 11pm should be in window
         dt = datetime(2024, 1, 8, 23, 0)
         assert window.contains(dt) is True
@@ -94,10 +81,7 @@ class TestTimeWindow:
     def test_to_dict(self):
         """Test serialization"""
         window = TimeWindow(
-            start=time(10, 0),
-            end=time(18, 0),
-            days=[0, 1, 2],
-            label="Test"
+            start=time(10, 0), end=time(18, 0), days=[0, 1, 2], label="Test"
         )
         result = window.to_dict()
         assert result["start"] == "10:00:00"
@@ -138,7 +122,7 @@ class TestAdaptiveThresholdManager:
             ThresholdType.QUEUE_WARNING,
             value=25,
             duration_minutes=60,
-            reason="High event day"
+            reason="High event day",
         )
 
         assert override.adjusted_value == 25
@@ -169,7 +153,7 @@ class TestAdaptiveThresholdManager:
             multiplier=1.5,
             condition=lambda dt, ctx: True,
             reason=AdjustmentReason.HIGH_DEMAND,
-            priority=100
+            priority=100,
         )
         manager.add_rule(rule)
         assert any(r.id == "test_rule" for r in manager._rules)
@@ -184,7 +168,7 @@ class TestAdaptiveThresholdManager:
             multiplier=1.0,
             condition=lambda dt, ctx: True,
             reason=AdjustmentReason.SYSTEM_DEFAULT,
-            priority=0
+            priority=0,
         )
         manager.add_rule(rule)
         result = manager.remove_rule("removable_rule")
@@ -208,16 +192,14 @@ class TestAdaptiveThresholdManager:
     def test_check_threshold_not_exceeded(self, manager):
         """Test threshold check when not exceeded"""
         result = manager.check_threshold(
-            ThresholdType.QUEUE_WARNING,
-            current_value=5  # Below default threshold
+            ThresholdType.QUEUE_WARNING, current_value=5  # Below default threshold
         )
         assert result["exceeded"] is False
 
     def test_check_threshold_exceeded(self, manager):
         """Test threshold check when exceeded"""
         result = manager.check_threshold(
-            ThresholdType.QUEUE_WARNING,
-            current_value=100  # Well above threshold
+            ThresholdType.QUEUE_WARNING, current_value=100  # Well above threshold
         )
         assert result["exceeded"] is True
 
@@ -229,7 +211,7 @@ class TestAdaptiveThresholdManager:
             threshold_types=[ThresholdType.QUEUE_WARNING],
             multiplier=1.2,
             start_time=time(12, 0),
-            end_time=time(14, 0)
+            end_time=time(14, 0),
         )
         assert rule.id == "lunch_rush"
         assert len(rule.time_windows) == 1
@@ -263,7 +245,7 @@ class TestThresholdChecker:
             "queue_size": 10,
             "wait_time": 25,
             "throughput": 8,
-            "inactivity_minutes": 5
+            "inactivity_minutes": 5,
         }
         result = checker.check_all(metrics)
 
@@ -294,7 +276,7 @@ class TestThresholdAdjustment:
             adjusted_value=13,
             multiplier=1.3,
             reason=AdjustmentReason.PEAK_HOURS,
-            explanation="Peak hours adjustment"
+            explanation="Peak hours adjustment",
         )
         result = adj.to_dict()
 

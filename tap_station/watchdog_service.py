@@ -34,7 +34,7 @@ class WatchdogService:
         web_port: int = 8080,
         check_interval: int = 10,
         restart_threshold: int = 3,
-        max_restarts_per_hour: int = 5
+        max_restarts_per_hour: int = 5,
     ):
         """
         Initialize watchdog service
@@ -67,8 +67,7 @@ class WatchdogService:
         """
         try:
             response = requests.get(
-                f"http://localhost:{self.web_port}/health",
-                timeout=5
+                f"http://localhost:{self.web_port}/health", timeout=5
             )
 
             if response.status_code == 200:
@@ -108,10 +107,7 @@ class WatchdogService:
 
         # Check if we've exceeded restart rate limit
         one_hour_ago = datetime.now() - timedelta(hours=1)
-        recent_restarts = [
-            ts for ts in self.restart_history
-            if ts > one_hour_ago
-        ]
+        recent_restarts = [ts for ts in self.restart_history if ts > one_hour_ago]
 
         if len(recent_restarts) >= self.max_restarts_per_hour:
             logger.error(
@@ -141,10 +137,10 @@ class WatchdogService:
 
         # Record restart attempt (even though we don't actually restart)
         self.restart_history.append(datetime.now())
-        
+
         # Reset failure count to avoid spam
         self.web_consecutive_failures = 0
-        
+
         return False
 
     def get_status(self) -> dict:
@@ -155,22 +151,21 @@ class WatchdogService:
             Status dictionary
         """
         one_hour_ago = datetime.now() - timedelta(hours=1)
-        recent_restarts = [
-            ts for ts in self.restart_history
-            if ts > one_hour_ago
-        ]
+        recent_restarts = [ts for ts in self.restart_history if ts > one_hour_ago]
 
         return {
-            'web_server': {
-                'consecutive_failures': self.web_consecutive_failures,
-                'last_success': self.web_last_success.isoformat(),
-                'health': 'healthy' if self.web_consecutive_failures == 0 else 'unhealthy'
+            "web_server": {
+                "consecutive_failures": self.web_consecutive_failures,
+                "last_success": self.web_last_success.isoformat(),
+                "health": (
+                    "healthy" if self.web_consecutive_failures == 0 else "unhealthy"
+                ),
             },
-            'restart_history': {
-                'total': len(self.restart_history),
-                'last_hour': len(recent_restarts),
-                'rate_limited': len(recent_restarts) >= self.max_restarts_per_hour
-            }
+            "restart_history": {
+                "total": len(self.restart_history),
+                "last_hour": len(recent_restarts),
+                "rate_limited": len(recent_restarts) >= self.max_restarts_per_hour,
+            },
         }
 
 
@@ -208,16 +203,13 @@ def main():
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     logger.info("Starting watchdog service...")
 
     watchdog = WatchdogService(
-        web_port=8080,
-        check_interval=10,
-        restart_threshold=3,
-        max_restarts_per_hour=5
+        web_port=8080, check_interval=10, restart_threshold=3, max_restarts_per_hour=5
     )
 
     watchdog._running = True

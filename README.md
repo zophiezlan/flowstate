@@ -348,12 +348,15 @@ See the [Operations Guide](docs/OPERATIONS.md) for detailed guidance on interpre
 **Authentication Required:** The control panel now requires password authentication to protect administrative functions.
 
 **First Time Setup:**
+
 1. Set your admin password in `config.yaml`:
+
    ```yaml
    web_server:
      admin:
        password: "your-secure-password-here"
    ```
+
 2. All staff members can use this password to access admin functions during shift
 
 Execute common tasks through a web interface:
@@ -373,7 +376,8 @@ Execute common tasks through a web interface:
 - One-click data export and backup
 - All staff members can be admins via UI
 
-**Security:** 
+**Security:**
+
 - Password-protected admin access
 - Session-based authentication with timeout
 - Keep your Pi on a private network

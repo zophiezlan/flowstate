@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 class WebhookEventType(Enum):
     """Types of events that can trigger webhooks"""
+
     # Event lifecycle
     EVENT_CREATED = "event.created"
     EVENT_UPDATED = "event.updated"
@@ -73,6 +74,7 @@ class WebhookEventType(Enum):
 @dataclass
 class WebhookEndpoint:
     """Configuration for a webhook endpoint"""
+
     id: str
     url: str
     secret: Optional[str] = None
@@ -94,6 +96,7 @@ class WebhookEndpoint:
 @dataclass
 class WebhookPayload:
     """Payload for a webhook delivery"""
+
     id: str
     event_type: WebhookEventType
     timestamp: datetime
@@ -106,7 +109,7 @@ class WebhookPayload:
             "event": self.event_type.value,
             "timestamp": to_iso(self.timestamp),
             "data": self.data,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     def to_json(self) -> str:
@@ -116,6 +119,7 @@ class WebhookPayload:
 @dataclass
 class DeliveryRecord:
     """Record of a webhook delivery attempt"""
+
     id: str
     endpoint_id: str
     payload_id: str
@@ -134,14 +138,12 @@ class WebhookSigner:
     ALGORITHM = "sha256"
 
     def __init__(self, secret: str):
-        self._secret = secret.encode('utf-8')
+        self._secret = secret.encode("utf-8")
 
     def sign(self, payload: str) -> str:
         """Generate HMAC signature for payload"""
         return hmac.new(
-            self._secret,
-            payload.encode('utf-8'),
-            hashlib.sha256
+            self._secret, payload.encode("utf-8"), hashlib.sha256
         ).hexdigest()
 
     def get_signature_header(self, payload: str, timestamp: int) -> str:
@@ -154,11 +156,7 @@ class WebhookSigner:
 class WebhookDeliveryWorker(threading.Thread):
     """Background worker for webhook delivery"""
 
-    def __init__(
-        self,
-        delivery_queue: queue.Queue,
-        manager: 'WebhookManager'
-    ):
+    def __init__(self, delivery_queue: queue.Queue, manager: "WebhookManager"):
         super().__init__(daemon=True)
         self._queue = delivery_queue
         self._manager = manager
@@ -191,9 +189,7 @@ class WebhookDeliveryWorker(threading.Thread):
                 if success:
                     return
             except Exception as e:
-                logger.warning(
-                    f"Webhook delivery attempt {attempt} failed: {e}"
-                )
+                logger.warning(f"Webhook delivery attempt {attempt} failed: {e}")
 
             if attempt < endpoint.max_retries:
                 # Exponential backoff
@@ -206,10 +202,7 @@ class WebhookDeliveryWorker(threading.Thread):
         )
 
     def _send_request(
-        self,
-        endpoint: WebhookEndpoint,
-        payload: WebhookPayload,
-        attempt: int
+        self, endpoint: WebhookEndpoint, payload: WebhookPayload, attempt: int
     ) -> bool:
         """Send HTTP request to endpoint"""
         payload_json = payload.to_json()
@@ -235,39 +228,45 @@ class WebhookDeliveryWorker(threading.Thread):
         try:
             request = Request(
                 endpoint.url,
-                data=payload_json.encode('utf-8'),
+                data=payload_json.encode("utf-8"),
                 headers=headers,
-                method='POST'
+                method="POST",
             )
 
             with urlopen(request, timeout=endpoint.timeout_seconds) as response:
                 status_code = response.status
-                response_body = response.read().decode('utf-8', errors='replace')
+                response_body = response.read().decode("utf-8", errors="replace")
 
                 if 200 <= status_code < 300:
                     self._manager._log_delivery(
-                        endpoint.id, payload.id, DeliveryStatus.DELIVERED,
-                        attempt, status_code, response_body[:500]
+                        endpoint.id,
+                        payload.id,
+                        DeliveryStatus.DELIVERED,
+                        attempt,
+                        status_code,
+                        response_body[:500],
                     )
                     return True
                 else:
                     self._manager._log_delivery(
-                        endpoint.id, payload.id, DeliveryStatus.FAILED,
-                        attempt, status_code, response_body[:500]
+                        endpoint.id,
+                        payload.id,
+                        DeliveryStatus.FAILED,
+                        attempt,
+                        status_code,
+                        response_body[:500],
                     )
                     return False
 
         except HTTPError as e:
             self._manager._log_delivery(
-                endpoint.id, payload.id, DeliveryStatus.FAILED,
-                attempt, e.code, str(e)
+                endpoint.id, payload.id, DeliveryStatus.FAILED, attempt, e.code, str(e)
             )
             return False
 
         except URLError as e:
             self._manager._log_delivery(
-                endpoint.id, payload.id, DeliveryStatus.FAILED,
-                attempt, None, str(e)
+                endpoint.id, payload.id, DeliveryStatus.FAILED, attempt, None, str(e)
             )
             return False
 
@@ -284,9 +283,7 @@ class WebhookManager:
     """
 
     def __init__(
-        self,
-        conn: Optional[sqlite3.Connection] = None,
-        worker_count: int = 2
+        self, conn: Optional[sqlite3.Connection] = None, worker_count: int = 2
     ):
         """
         Initialize webhook manager.
@@ -314,7 +311,8 @@ class WebhookManager:
 
     def _ensure_tables(self):
         """Create webhook tables if needed"""
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS webhook_endpoints (
                 id TEXT PRIMARY KEY,
                 url TEXT NOT NULL,
@@ -328,9 +326,11 @@ class WebhookManager:
                 description TEXT,
                 created_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS webhook_deliveries (
                 id TEXT PRIMARY KEY,
                 endpoint_id TEXT NOT NULL,
@@ -344,12 +344,15 @@ class WebhookManager:
                 error TEXT,
                 FOREIGN KEY (endpoint_id) REFERENCES webhook_endpoints(id)
             )
-        """)
+        """
+        )
 
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_deliveries_endpoint
             ON webhook_deliveries(endpoint_id, created_at)
-        """)
+        """
+        )
 
         self._conn.commit()
 
@@ -362,32 +365,35 @@ class WebhookManager:
         """
         # Validate URL
         parsed = urlparse(endpoint.url)
-        if parsed.scheme not in ('http', 'https'):
+        if parsed.scheme not in ("http", "https"):
             raise ValueError(f"Invalid URL scheme: {parsed.scheme}")
 
         self._endpoints[endpoint.id] = endpoint
 
         # Persist if database available
         if self._conn:
-            self._conn.execute("""
+            self._conn.execute(
+                """
                 INSERT OR REPLACE INTO webhook_endpoints
                 (id, url, secret, events_json, enabled, headers_json,
                  timeout_seconds, max_retries, retry_delay_seconds,
                  description, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                endpoint.id,
-                endpoint.url,
-                endpoint.secret,
-                json.dumps([e.value for e in endpoint.events]),
-                1 if endpoint.enabled else 0,
-                json.dumps(endpoint.headers),
-                endpoint.timeout_seconds,
-                endpoint.max_retries,
-                endpoint.retry_delay_seconds,
-                endpoint.description,
-                to_iso(utc_now())
-            ))
+            """,
+                (
+                    endpoint.id,
+                    endpoint.url,
+                    endpoint.secret,
+                    json.dumps([e.value for e in endpoint.events]),
+                    1 if endpoint.enabled else 0,
+                    json.dumps(endpoint.headers),
+                    endpoint.timeout_seconds,
+                    endpoint.max_retries,
+                    endpoint.retry_delay_seconds,
+                    endpoint.description,
+                    to_iso(utc_now()),
+                ),
+            )
             self._conn.commit()
 
         logger.info(f"Registered webhook endpoint: {endpoint.id} -> {endpoint.url}")
@@ -409,8 +415,7 @@ class WebhookManager:
 
         if self._conn:
             self._conn.execute(
-                "DELETE FROM webhook_endpoints WHERE id = ?",
-                (endpoint_id,)
+                "DELETE FROM webhook_endpoints WHERE id = ?", (endpoint_id,)
             )
             self._conn.commit()
 
@@ -426,16 +431,14 @@ class WebhookManager:
         if self._conn:
             self._conn.execute(
                 "UPDATE webhook_endpoints SET enabled = ? WHERE id = ?",
-                (1 if enabled else 0, endpoint_id)
+                (1 if enabled else 0, endpoint_id),
             )
             self._conn.commit()
 
         return True
 
     def add_filter(
-        self,
-        name: str,
-        filter_func: Callable[[WebhookPayload], bool]
+        self, name: str, filter_func: Callable[[WebhookPayload], bool]
     ) -> None:
         """
         Add a filter that can suppress webhook delivery.
@@ -447,9 +450,7 @@ class WebhookManager:
         self._filters[name] = filter_func
 
     def add_transformer(
-        self,
-        name: str,
-        transform_func: Callable[[WebhookPayload], WebhookPayload]
+        self, name: str, transform_func: Callable[[WebhookPayload], WebhookPayload]
     ) -> None:
         """
         Add a transformer to modify payloads before delivery.
@@ -464,7 +465,7 @@ class WebhookManager:
         self,
         event_type: WebhookEventType,
         data: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Publish an event to all subscribed endpoints.
@@ -485,7 +486,7 @@ class WebhookManager:
             event_type=event_type,
             timestamp=utc_now(),
             data=data,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # Apply filters
@@ -541,7 +542,7 @@ class WebhookManager:
             event_type=WebhookEventType.TEST,
             timestamp=utc_now(),
             data={"message": "Test webhook from NFC Tap Logger"},
-            metadata={"test": True}
+            metadata={"test": True},
         )
 
         self._delivery_queue.put((endpoint, payload))
@@ -555,7 +556,7 @@ class WebhookManager:
         attempt: int,
         response_code: Optional[int] = None,
         response_body: Optional[str] = None,
-        error: Optional[str] = None
+        error: Optional[str] = None,
     ) -> None:
         """Log a delivery attempt"""
         if not self._conn:
@@ -565,23 +566,26 @@ class WebhookManager:
         delivered_at = to_iso(utc_now()) if status == DeliveryStatus.DELIVERED else None
 
         try:
-            self._conn.execute("""
+            self._conn.execute(
+                """
                 INSERT INTO webhook_deliveries
                 (id, endpoint_id, payload_id, status, attempt, created_at,
                  delivered_at, response_code, response_body, error)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                delivery_id,
-                endpoint_id,
-                payload_id,
-                status.value,
-                attempt,
-                to_iso(utc_now()),
-                delivered_at,
-                response_code,
-                response_body,
-                error
-            ))
+            """,
+                (
+                    delivery_id,
+                    endpoint_id,
+                    payload_id,
+                    status.value,
+                    attempt,
+                    to_iso(utc_now()),
+                    delivered_at,
+                    response_code,
+                    response_body,
+                    error,
+                ),
+            )
             self._conn.commit()
         except Exception as e:
             logger.error(f"Failed to log delivery: {e}")
@@ -595,9 +599,7 @@ class WebhookManager:
         return self._endpoints.get(endpoint_id)
 
     def get_delivery_history(
-        self,
-        endpoint_id: Optional[str] = None,
-        limit: int = 100
+        self, endpoint_id: Optional[str] = None, limit: int = 100
     ) -> List[Dict[str, Any]]:
         """Get delivery history"""
         if not self._conn:
@@ -617,9 +619,7 @@ class WebhookManager:
         return [dict(row) for row in cursor.fetchall()]
 
     def get_delivery_stats(
-        self,
-        endpoint_id: Optional[str] = None,
-        hours: int = 24
+        self, endpoint_id: Optional[str] = None, hours: int = 24
     ) -> Dict[str, Any]:
         """Get delivery statistics"""
         if not self._conn:
@@ -654,12 +654,16 @@ class WebhookManager:
                 "failed": row["failed"] or 0,
                 "success_rate": (delivered / total * 100) if total > 0 else 100,
                 "avg_attempts": row["avg_attempts"] or 1,
-                "period_hours": hours
+                "period_hours": hours,
             }
 
         return {
-            "total": 0, "delivered": 0, "failed": 0,
-            "success_rate": 100, "avg_attempts": 1, "period_hours": hours
+            "total": 0,
+            "delivered": 0,
+            "failed": 0,
+            "success_rate": 100,
+            "avg_attempts": 1,
+            "period_hours": hours,
         }
 
     def shutdown(self) -> None:
@@ -686,9 +690,7 @@ class WebhookManager:
 _webhook_manager: Optional[WebhookManager] = None
 
 
-def get_webhook_manager(
-    conn: Optional[sqlite3.Connection] = None
-) -> WebhookManager:
+def get_webhook_manager(conn: Optional[sqlite3.Connection] = None) -> WebhookManager:
     """Get or create the webhook manager"""
     global _webhook_manager
     if _webhook_manager is None:
@@ -699,7 +701,7 @@ def get_webhook_manager(
 def publish_event(
     event_type: WebhookEventType,
     data: Dict[str, Any],
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Convenience function to publish a webhook event"""
     return get_webhook_manager().publish(event_type, data, metadata)

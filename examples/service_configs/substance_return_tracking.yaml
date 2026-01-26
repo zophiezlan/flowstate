@@ -49,7 +49,7 @@ workflow:
       label: "Substance Returned"
       description: "Staff confirms substance handed back to participant"
       order: 3
-      required: true  # CRITICAL: Make this required for accountability
+      required: true # CRITICAL: Make this required for accountability
       visible_to_public: true
       duration_estimate: 1
       icon: "🤝"
@@ -63,14 +63,14 @@ workflow:
       duration_estimate: 0
       icon: "✅"
 
-  allow_skip_stages: false  # Don't allow skipping substance return!
+  allow_skip_stages: false # Don't allow skipping substance return!
   allow_repeat_stages: false
   enforce_stage_order: true
 
 # Capacity settings
 capacity:
   people_per_hour: 12
-  avg_service_minutes: 10  # Includes return confirmation
+  avg_service_minutes: 10 # Includes return confirmation
   default_wait_estimate: 20
   queue_multiplier: 2
 
@@ -99,8 +99,8 @@ alerts:
 
   # CRITICAL: Alert if substances not returned
   unreturned_substances:
-    warning_minutes: 15  # Alert after 15 min without return confirmation
-    critical_minutes: 30  # Critical alert after 30 min
+    warning_minutes: 15 # Alert after 15 min without return confirmation
+    critical_minutes: 30 # Critical alert after 30 min
 
   service_time_variance:
     multiplier: 3
@@ -149,7 +149,7 @@ ui:
 
 # Staffing with accountability focus
 staffing:
-  require_staff_id: true  # Track which staff handled substance return
+  require_staff_id: true # Track which staff handled substance return
 
   roles:
     - id: "peer_worker"
@@ -227,7 +227,7 @@ data_collection:
         label: "Staff Member ID"
         type: "text"
         required_at_stages: ["SUBSTANCE_RETURNED"]
-        
+
       - id: "staff_notes"
         label: "Staff Notes"
         type: "textarea"
@@ -235,7 +235,7 @@ data_collection:
 
   # Keep data for audit trail
   anonymize_data: false
-  data_retention_days: 365  # Keep for full year for incident review
+  data_retention_days: 365 # Keep for full year for incident review
 
 # Metrics focused on accountability
 metrics:
@@ -252,7 +252,7 @@ metrics:
     max_queue_length: 15
     # Substance return targets
     max_unreturned_time_minutes: 20
-    substance_return_rate_percent: 100  # Aim for 100% return confirmation
+    substance_return_rate_percent: 100 # Aim for 100% return confirmation
 
   export:
     enabled: true
@@ -294,7 +294,7 @@ hardware:
     haptic_enabled: false
 
   readers:
-    max_concurrent: 4  # One for each stage
+    max_concurrent: 4 # One for each stage
     auto_detect: true
 
 # Security and audit
@@ -338,12 +338,13 @@ advanced:
     experimental_ui: false
     advanced_analytics: true
     predictive_wait_times: false
-    substance_return_tracking: true  # Enable substance return features
+    substance_return_tracking: true # Enable substance return features
+
 
 # ============================================================================
 # OPERATIONAL NOTES
 # ============================================================================
-# 
+#
 # Station Setup:
 # - Station 1: Entry point (QUEUE_JOIN)
 # - Station 2: Testing area (SERVICE_START) - staff receives substance

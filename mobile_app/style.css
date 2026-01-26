@@ -264,7 +264,7 @@ dialog {
 }
 
 .sync-message::before {
-  content: '';
+  content: "";
   display: inline-block;
   width: 12px;
   height: 12px;
@@ -277,20 +277,21 @@ dialog {
 }
 
 .sync-message.success::before {
-  content: '✓';
+  content: "✓";
   background: none;
   width: auto;
   font-weight: bold;
 }
 
 .sync-message.error::before {
-  content: '⚠';
+  content: "⚠";
   background: none;
   width: auto;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

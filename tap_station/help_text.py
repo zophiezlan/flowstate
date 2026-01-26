@@ -13,12 +13,12 @@ MOBILE_HELP = {
     "session_id": {
         "title": "Session ID",
         "tooltip": "The event name or date (e.g., 'festival-2026-summer'). This groups all taps from the same event together.",
-        "example": "festival-2026-summer"
+        "example": "festival-2026-summer",
     },
     "device_id": {
         "title": "Device ID",
         "tooltip": "Unique name for this phone/device (e.g., 'phone1', 'mobile-entry'). Helps identify which station recorded each tap.",
-        "example": "phone1"
+        "example": "phone1",
     },
     "stage": {
         "title": "Stage",
@@ -27,8 +27,8 @@ MOBILE_HELP = {
             "QUEUE_JOIN": "Entry - people joining the queue",
             "SERVICE_START": "Service began - starting consultation",
             "SUBSTANCE_RETURNED": "Substance returned after testing",
-            "EXIT": "Leaving - service complete"
-        }
+            "EXIT": "Leaving - service complete",
+        },
     },
     "sync_status": {
         "title": "Sync Status",
@@ -36,9 +36,9 @@ MOBILE_HELP = {
         "icons": {
             "synced": "✓ All synced",
             "pending": "⏱ Waiting to sync",
-            "syncing": "🔄 Syncing now..."
-        }
-    }
+            "syncing": "🔄 Syncing now...",
+        },
+    },
 }
 
 
@@ -47,27 +47,27 @@ DASHBOARD_HELP = {
     "queue_length": {
         "title": "People in Queue",
         "tooltip": "Number of people currently waiting or being served (tapped QUEUE_JOIN but not yet EXIT).",
-        "calculation": "Counted from: QUEUE_JOIN taps minus EXIT taps"
+        "calculation": "Counted from: QUEUE_JOIN taps minus EXIT taps",
     },
     "estimated_wait": {
         "title": "Estimated Wait Time",
         "tooltip": "Predicted wait time for someone joining the queue now, based on recent service times.",
-        "calculation": "Average of last 20 completed service times × current queue position"
+        "calculation": "Average of last 20 completed service times × current queue position",
     },
     "longest_wait": {
         "title": "Longest Current Wait",
         "tooltip": "How long the person who's been waiting the longest has been in the system.",
-        "action": "If this exceeds 90 minutes, consider prioritizing this person or investigating if they forgot to tap exit."
+        "action": "If this exceeds 90 minutes, consider prioritizing this person or investigating if they forgot to tap exit.",
     },
     "throughput": {
         "title": "Throughput (per hour)",
         "tooltip": "Number of people served per hour, averaged over the last hour.",
-        "calculation": "Completed services in last 60 minutes"
+        "calculation": "Completed services in last 60 minutes",
     },
     "capacity_utilization": {
         "title": "Capacity Utilization",
         "tooltip": "How busy the service is compared to maximum capacity.",
-        "calculation": "Current queue length / estimated max capacity × 100%"
+        "calculation": "Current queue length / estimated max capacity × 100%",
     },
     "health_status": {
         "title": "Queue Health",
@@ -76,9 +76,9 @@ DASHBOARD_HELP = {
             "good": "✅ Normal operations - queue under control",
             "moderate": "⚠️ Getting busy - monitor closely",
             "warning": "⚠️ High queue - consider adding resources",
-            "critical": "🚨 Overloaded - immediate action needed"
-        }
-    }
+            "critical": "🚨 Overloaded - immediate action needed",
+        },
+    },
 }
 
 
@@ -90,18 +90,18 @@ CONTROL_PANEL_HELP = {
         "actions": {
             "start": "Start the NFC reader and event logging",
             "stop": "Stop all tap logging (use during breaks)",
-            "restart": "Restart after config changes"
-        }
+            "restart": "Restart after config changes",
+        },
     },
     "stuck_cards": {
         "title": "Stuck Cards",
         "tooltip": "People who tapped in but haven't tapped out after 30+ minutes. May indicate lost cards or forgotten exit taps.",
-        "actions": "Use 'Force Exit' to mark them as complete if you know they've left."
+        "actions": "Use 'Force Exit' to mark them as complete if you know they've left.",
     },
     "backup_database": {
         "title": "Backup Database",
         "tooltip": "Create a copy of all event data for safe keeping.",
-        "recommendation": "Backup at least once per shift, and always before making manual corrections."
+        "recommendation": "Backup at least once per shift, and always before making manual corrections.",
     },
     "hardware_status": {
         "title": "Hardware Status",
@@ -109,8 +109,8 @@ CONTROL_PANEL_HELP = {
         "warnings": {
             "temp": "Temperature >70°C may cause throttling. Improve ventilation.",
             "disk": "Disk >80% full may cause logging failures. Clear old data.",
-            "throttle": "System is throttled due to under-voltage or overheating."
-        }
+            "throttle": "System is throttled due to under-voltage or overheating.",
+        },
     },
     "manual_events": {
         "title": "Manual Event Entry",
@@ -118,10 +118,10 @@ CONTROL_PANEL_HELP = {
         "use_cases": [
             "Someone forgot to tap at a station",
             "Accidental tap at wrong station",
-            "Card scanner was offline temporarily"
+            "Card scanner was offline temporarily",
         ],
-        "warning": "Manual changes bypass validation. Use carefully and document why."
-    }
+        "warning": "Manual changes bypass validation. Use carefully and document why.",
+    },
 }
 
 
@@ -131,44 +131,44 @@ CONFIG_HELP = {
         "field": "station.device_id",
         "tooltip": "Unique identifier for this station (e.g., 'station1', 'entry-pi', 'exit-mobile').",
         "required": True,
-        "example": "station1"
+        "example": "station1",
     },
     "stage": {
         "field": "station.stage",
         "tooltip": "Which checkpoint this station represents in the workflow.",
         "required": True,
-        "options": ["QUEUE_JOIN", "SERVICE_START", "SUBSTANCE_RETURNED", "EXIT"]
+        "options": ["QUEUE_JOIN", "SERVICE_START", "SUBSTANCE_RETURNED", "EXIT"],
     },
     "session_id": {
         "field": "station.session_id",
         "tooltip": "Event identifier to group taps from the same event (e.g., 'festival-2026-01-25').",
         "required": True,
-        "example": "festival-2026-summer"
+        "example": "festival-2026-summer",
     },
     "debounce_seconds": {
         "field": "nfc.debounce_seconds",
         "tooltip": "Minimum seconds between taps from the same card. Prevents accidental double-taps.",
         "range": "0.1-10 seconds",
-        "recommended": "1.0 seconds"
+        "recommended": "1.0 seconds",
     },
     "auto_init_cards": {
         "field": "nfc.auto_init_cards",
         "tooltip": "Automatically assign token IDs to uninitialized cards on first tap.",
         "benefit": "No need to pre-initialize cards - just hand them out!",
-        "default": False
+        "default": False,
     },
     "admin_password": {
         "field": "web_server.admin.password",
         "tooltip": "Password for control panel access. MUST be changed from default before deployment.",
         "security": "Use a strong password. All staff can share this password for admin access.",
-        "default_warning": "Default is 'CHANGE-ME-BEFORE-DEPLOYMENT' - NOT SECURE!"
+        "default_warning": "Default is 'CHANGE-ME-BEFORE-DEPLOYMENT' - NOT SECURE!",
     },
     "gpio_pins": {
         "field": "feedback.gpio.*",
         "tooltip": "GPIO pin numbers for buzzer and LEDs (BCM numbering, valid range: 0-27).",
         "wiring": "See wiring_schematic.md for pin layout.",
-        "validation": "Invalid pins will show error in logs."
-    }
+        "validation": "Invalid pins will show error in logs.",
+    },
 }
 
 
@@ -181,8 +181,8 @@ ALERT_HELP = {
             "Open additional service station if available",
             "Prioritize people waiting longest",
             "Consider turning away new arrivals temporarily",
-            "Check if anyone forgot to tap exit (stuck cards)"
-        ]
+            "Check if anyone forgot to tap exit (stuck cards)",
+        ],
     },
     "queue_warning": {
         "condition": "Queue >10 people OR wait >45 minutes",
@@ -191,8 +191,8 @@ ALERT_HELP = {
             "Monitor closely for further increases",
             "Call additional volunteers if available",
             "Inform new arrivals of current wait time",
-            "Check for any stuck cards or anomalies"
-        ]
+            "Check for any stuck cards or anomalies",
+        ],
     },
     "inactivity": {
         "condition": "No taps in >10 minutes",
@@ -201,8 +201,8 @@ ALERT_HELP = {
             "Check if NFC reader is working (tap a test card)",
             "Verify service is running (control panel)",
             "May be normal during quiet periods",
-            "Consider break or close if event ending"
-        ]
+            "Consider break or close if event ending",
+        ],
     },
     "service_variance": {
         "condition": "Service time >3× normal variance",
@@ -211,9 +211,9 @@ ALERT_HELP = {
             "Some people taking much longer than others",
             "May indicate complex cases or issues",
             "Check for stuck cards or forgotten taps",
-            "Verify process is consistent across staff"
-        ]
-    }
+            "Verify process is consistent across staff",
+        ],
+    },
 }
 
 

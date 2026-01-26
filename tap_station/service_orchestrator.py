@@ -75,6 +75,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SubsystemHealth:
     """Health status of a subsystem"""
+
     name: str
     status: str  # "healthy", "degraded", "unhealthy"
     message: str
@@ -98,7 +99,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         self,
         conn: sqlite3.Connection,
         config_path: Optional[str] = None,
-        auto_reload_config: bool = False
+        auto_reload_config: bool = False,
     ):
         """
         Initialize the service orchestrator.
@@ -141,8 +142,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
 
         # Initialize configuration manager first
         self._config_manager = DynamicConfigurationManager(
-            config_path=self._config_path,
-            auto_reload=self._auto_reload
+            config_path=self._config_path, auto_reload=self._auto_reload
         )
         self._config_manager.subscribe(self)
 
@@ -172,8 +172,10 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         self._improvement_engine = ServiceImprovementEngine(
             conn=self._conn,
             target_wait_minutes=improvement_config.get("target_wait_minutes", 30),
-            target_throughput_per_hour=improvement_config.get("target_throughput_per_hour", 12),
-            analysis_window_hours=improvement_config.get("analysis_window_hours", 24)
+            target_throughput_per_hour=improvement_config.get(
+                "target_throughput_per_hour", 12
+            ),
+            analysis_window_hours=improvement_config.get("analysis_window_hours", 24),
         )
         logger.debug("Service improvement engine initialized")
 
@@ -183,8 +185,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         base_thresholds = threshold_config.get("base_thresholds", {})
 
         self._threshold_manager = AdaptiveThresholdManager(
-            conn=self._conn,
-            base_thresholds=base_thresholds
+            conn=self._conn, base_thresholds=base_thresholds
         )
         self._threshold_checker = ThresholdChecker(self._threshold_manager)
 
@@ -196,12 +197,13 @@ class ServiceOrchestrator(ConfigurationSubscriber):
 
     def _init_slo_manager(self) -> None:
         """Initialize the SLO manager"""
-        slo_config = self._config.get("slos", self._config.get("service_level_objectives", {}))
+        slo_config = self._config.get(
+            "slos", self._config.get("service_level_objectives", {})
+        )
         target_wait = self._config.get("capacity", {}).get("target_wait_minutes", 30)
 
         self._slo_manager = CustomSLOManager(
-            conn=self._conn,
-            target_wait_minutes=target_wait
+            conn=self._conn, target_wait_minutes=target_wait
         )
 
         # Load custom SLOs from config
@@ -227,7 +229,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
 
         self._hooks_manager = IntegrationHooksManager(
             conn=self._conn,
-            async_delivery=integrations_config.get("async_delivery", True)
+            async_delivery=integrations_config.get("async_delivery", True),
         )
 
         # Load webhooks
@@ -243,7 +245,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         self._access_manager = AccessControlManager(
             conn=self._conn,
             session_timeout_minutes=session_timeout,
-            require_authentication=access_config.get("require_authentication", False)
+            require_authentication=access_config.get("require_authentication", False),
         )
 
         # Load custom roles
@@ -258,7 +260,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         self._validation_manager = WorkflowValidationManager(
             conn=self._conn,
             fail_on_error=validation_config.get("fail_on_error", True),
-            fail_on_warning=validation_config.get("fail_on_warning", False)
+            fail_on_warning=validation_config.get("fail_on_warning", False),
         )
 
         # Load validator configurations
@@ -276,7 +278,11 @@ class ServiceOrchestrator(ConfigurationSubscriber):
 
         # Validation warnings/errors trigger alerts
         def on_validation_complete(ctx, results):
-            errors = [r for r in results if r.severity in (ValidationSeverity.ERROR, ValidationSeverity.CRITICAL)]
+            errors = [
+                r
+                for r in results
+                if r.severity in (ValidationSeverity.ERROR, ValidationSeverity.CRITICAL)
+            ]
             if errors:
                 self._hooks_manager.emit_alert(
                     alert_type="validation_error",
@@ -285,8 +291,8 @@ class ServiceOrchestrator(ConfigurationSubscriber):
                     details={
                         "token_id": ctx.token_id,
                         "stage": ctx.stage,
-                        "errors": [e.to_dict() for e in errors]
-                    }
+                        "errors": [e.to_dict() for e in errors],
+                    },
                 )
 
         if self._validation_manager:
@@ -312,10 +318,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         if self._hooks_manager:
             self._hooks_manager.emit(
                 IntegrationEventType.HEALTH_CHECK,
-                {
-                    "type": "config_changed",
-                    "changes": [c.to_dict() for c in changes]
-                }
+                {"type": "config_changed", "changes": [c.to_dict() for c in changes]},
             )
 
         # Update internal config reference
@@ -385,7 +388,9 @@ class ServiceOrchestrator(ConfigurationSubscriber):
     def _ensure_initialized(self) -> None:
         """Ensure the orchestrator is initialized"""
         if not self._initialized:
-            raise RuntimeError("Service orchestrator not initialized. Call initialize() first.")
+            raise RuntimeError(
+                "Service orchestrator not initialized. Call initialize() first."
+            )
 
     # =========================================================================
     # Public API - Service Operations
@@ -397,7 +402,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         stage: str,
         token_id: str,
         session_id: str,
-        **kwargs
+        **kwargs,
     ) -> tuple:
         """
         Validate a workflow event.
@@ -418,15 +423,11 @@ class ServiceOrchestrator(ConfigurationSubscriber):
             stage=stage,
             token_id=token_id,
             session_id=session_id,
-            **kwargs
+            **kwargs,
         )
 
     def emit_tap_event(
-        self,
-        stage: str,
-        token_id: str,
-        session_id: str,
-        **extra_data
+        self, stage: str, token_id: str, session_id: str, **extra_data
     ) -> None:
         """
         Emit an integration event for a tap.
@@ -441,11 +442,7 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         if self._hooks_manager:
             self._hooks_manager.emit_tap_event(stage, token_id, session_id, extra_data)
 
-    def check_permission(
-        self,
-        user_id: Optional[str],
-        permission: Permission
-    ) -> bool:
+    def check_permission(self, user_id: Optional[str], permission: Permission) -> bool:
         """
         Check if a user has a permission.
 
@@ -489,30 +486,28 @@ class ServiceOrchestrator(ConfigurationSubscriber):
             "service_health": {
                 "score": health_report["health_score"],
                 "status": health_report["health_status"],
-                "summary": health_report["summary"]
+                "summary": health_report["summary"],
             },
             "slo_compliance": {
                 "status": slo_summary["overall_status"],
                 "compliance_rate": slo_summary["compliance_rate"],
                 "met": slo_summary["met"],
-                "breached": slo_summary["breached"]
+                "breached": slo_summary["breached"],
             },
             "recommendations": {
                 "critical": len(health_report["recommendations"]["critical"]),
                 "high": len(health_report["recommendations"]["high"]),
                 "top_recommendations": (
-                    health_report["recommendations"]["critical"][:2] +
-                    health_report["recommendations"]["high"][:2]
-                )
+                    health_report["recommendations"]["critical"][:2]
+                    + health_report["recommendations"]["high"][:2]
+                ),
             },
-            "thresholds": {
-                "active_rules": self._threshold_manager.get_active_rules()
-            },
+            "thresholds": {"active_rules": self._threshold_manager.get_active_rules()},
             "integrations": {
                 "status": integration_health["status"],
-                "webhooks": integration_health["enabled_webhooks"]
+                "webhooks": integration_health["enabled_webhooks"],
             },
-            "metrics": health_report["metrics"]
+            "metrics": health_report["metrics"],
         }
 
     def get_full_health_status(self) -> Dict[str, Any]:
@@ -527,52 +522,66 @@ class ServiceOrchestrator(ConfigurationSubscriber):
         subsystems = []
 
         # Check each subsystem
-        subsystems.append(SubsystemHealth(
-            name="improvement_engine",
-            status="healthy" if self._improvement_engine else "unhealthy",
-            message="Service improvement engine operational"
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="improvement_engine",
+                status="healthy" if self._improvement_engine else "unhealthy",
+                message="Service improvement engine operational",
+            )
+        )
 
-        subsystems.append(SubsystemHealth(
-            name="threshold_manager",
-            status="healthy" if self._threshold_manager else "unhealthy",
-            message="Adaptive threshold manager operational"
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="threshold_manager",
+                status="healthy" if self._threshold_manager else "unhealthy",
+                message="Adaptive threshold manager operational",
+            )
+        )
 
-        subsystems.append(SubsystemHealth(
-            name="slo_manager",
-            status="healthy" if self._slo_manager else "unhealthy",
-            message="SLO manager operational",
-            details={"slo_count": len(self._slo_manager.list_slos())}
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="slo_manager",
+                status="healthy" if self._slo_manager else "unhealthy",
+                message="SLO manager operational",
+                details={"slo_count": len(self._slo_manager.list_slos())},
+            )
+        )
 
         if self._hooks_manager:
             hooks_health = self._hooks_manager.get_health_status()
-            subsystems.append(SubsystemHealth(
-                name="hooks_manager",
-                status=hooks_health["status"],
-                message=f"{hooks_health['enabled_webhooks']} webhooks configured",
-                details=hooks_health
-            ))
+            subsystems.append(
+                SubsystemHealth(
+                    name="hooks_manager",
+                    status=hooks_health["status"],
+                    message=f"{hooks_health['enabled_webhooks']} webhooks configured",
+                    details=hooks_health,
+                )
+            )
 
-        subsystems.append(SubsystemHealth(
-            name="access_manager",
-            status="healthy" if self._access_manager else "unhealthy",
-            message="Access control operational"
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="access_manager",
+                status="healthy" if self._access_manager else "unhealthy",
+                message="Access control operational",
+            )
+        )
 
-        subsystems.append(SubsystemHealth(
-            name="validation_manager",
-            status="healthy" if self._validation_manager else "unhealthy",
-            message="Workflow validation operational",
-            details={"validators": len(self._validation_manager.list_validators())}
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="validation_manager",
+                status="healthy" if self._validation_manager else "unhealthy",
+                message="Workflow validation operational",
+                details={"validators": len(self._validation_manager.list_validators())},
+            )
+        )
 
-        subsystems.append(SubsystemHealth(
-            name="config_manager",
-            status="healthy" if self._config_manager else "unhealthy",
-            message=f"Configuration v{self._config_manager.get_current_version()}"
-        ))
+        subsystems.append(
+            SubsystemHealth(
+                name="config_manager",
+                status="healthy" if self._config_manager else "unhealthy",
+                message=f"Configuration v{self._config_manager.get_current_version()}",
+            )
+        )
 
         # Calculate overall status
         statuses = [s.status for s in subsystems]
@@ -591,10 +600,10 @@ class ServiceOrchestrator(ConfigurationSubscriber):
                     "name": s.name,
                     "status": s.status,
                     "message": s.message,
-                    "details": s.details
+                    "details": s.details,
                 }
                 for s in subsystems
-            ]
+            ],
         }
 
     def shutdown(self) -> None:
@@ -619,8 +628,7 @@ _orchestrator: Optional[ServiceOrchestrator] = None
 
 
 def get_orchestrator(
-    conn: Optional[sqlite3.Connection] = None,
-    config_path: Optional[str] = None
+    conn: Optional[sqlite3.Connection] = None, config_path: Optional[str] = None
 ) -> ServiceOrchestrator:
     """Get or create the global service orchestrator"""
     global _orchestrator
@@ -634,7 +642,7 @@ def get_orchestrator(
 def initialize_orchestrator(
     conn: sqlite3.Connection,
     config_path: Optional[str] = None,
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> ServiceOrchestrator:
     """Initialize the global orchestrator"""
     global _orchestrator

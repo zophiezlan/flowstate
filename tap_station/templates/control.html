@@ -548,7 +548,7 @@
           Session: {{ session }} | Station: {{ device_id }} ({{ stage }})
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 15px;">
+      <div style="display: flex; align-items: center; gap: 15px">
         <div class="admin-badge">
           <span>🔐</span>
           <span>Admin Mode</span>
@@ -597,34 +597,34 @@
         <div class="button-grid">
           <button
             class="control-button"
-            onclick="window.location.href='/dashboard'"
+            onclick="window.location.href = '/dashboard'"
           >
             <div class="icon">📊</div>
             <div class="title">Live Dashboard</div>
             <div class="description">Real-time queue analytics</div>
           </button>
-          
+
           <button
             class="control-button"
-            onclick="window.location.href='/event-summary'"
+            onclick="window.location.href = '/event-summary'"
           >
             <div class="icon">📈</div>
             <div class="title">Event Summary</div>
             <div class="description">Final statistics & goals</div>
           </button>
-          
+
           <button
             class="control-button"
-            onclick="window.location.href='/monitor'"
+            onclick="window.location.href = '/monitor'"
           >
             <div class="icon">📱</div>
             <div class="title">Simplified Monitor</div>
             <div class="description">Staff-friendly view</div>
           </button>
-          
+
           <button
             class="control-button"
-            onclick="window.location.href='/shift'"
+            onclick="window.location.href = '/shift'"
           >
             <div class="icon">🔄</div>
             <div class="title">Shift Handoff</div>
@@ -1375,17 +1375,17 @@
 
       // Load hardware status on page load
       loadHardwareStatus();
-      
+
       // ============================================================
       // SESSION TIMEOUT WARNING
       // ============================================================
-      
+
       // Session timeout management
       const SESSION_TIMEOUT_MS = {{ session_timeout_minutes | default(60) }} * 60 * 1000;
       const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes warning
       let sessionStartTime = Date.now();
       let warningShown = false;
-      
+
       // Create timeout warning modal
       const timeoutModal = document.createElement('div');
       timeoutModal.id = 'timeout-warning-modal';
@@ -1446,7 +1446,7 @@
         </div>
       `;
       document.body.appendChild(timeoutModal);
-      
+
       function showTimeoutWarning() {
         if (!warningShown) {
           timeoutModal.style.display = 'flex';
@@ -1454,12 +1454,12 @@
           startCountdown();
         }
       }
-      
+
       function hideTimeoutWarning() {
         timeoutModal.style.display = 'none';
         warningShown = false;
       }
-      
+
       function extendSession() {
         // Make a dummy request to extend session
         fetch('/api/control/status')
@@ -1473,43 +1473,43 @@
             console.error('Failed to extend session:', err);
           });
       }
-      
+
       function logoutNow() {
         window.location.href = '/logout';
       }
-      
+
       function startCountdown() {
         const countdownEl = document.getElementById('timeout-countdown');
         let secondsLeft = WARNING_BEFORE_MS / 1000;
-        
+
         const countdownInterval = setInterval(() => {
           if (!warningShown) {
             clearInterval(countdownInterval);
             return;
           }
-          
+
           secondsLeft--;
           const minutes = Math.floor(secondsLeft / 60);
           const seconds = secondsLeft % 60;
           countdownEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          
+
           if (secondsLeft <= 0) {
             clearInterval(countdownInterval);
             window.location.href = '/logout';
           }
         }, 1000);
       }
-      
+
       // Check session timeout every 30 seconds
       setInterval(() => {
         const elapsed = Date.now() - sessionStartTime;
         const timeUntilExpiry = SESSION_TIMEOUT_MS - elapsed;
-        
+
         if (timeUntilExpiry <= WARNING_BEFORE_MS && !warningShown) {
           showTimeoutWarning();
         }
       }, 30000);
-      
+
       // Reset session timer on user activity
       let activityTimeout;
       const resetActivityTimer = () => {
@@ -1521,12 +1521,11 @@
           }
         }, 1000);
       };
-      
+
       document.addEventListener('mousemove', resetActivityTimer);
       document.addEventListener('keypress', resetActivityTimer);
       document.addEventListener('click', resetActivityTimer);
       document.addEventListener('scroll', resetActivityTimer);
-      
     </script>
   </body>
 </html>

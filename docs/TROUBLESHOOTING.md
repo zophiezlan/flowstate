@@ -48,6 +48,7 @@ python3 scripts/init_cards_with_ndef.py --start 1 --end 10
 ```
 
 The scripts will:
+
 - Detect if tap-station service is running
 - Stop the service automatically (with your permission)
 - Clean up any stuck processes

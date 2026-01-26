@@ -16,6 +16,7 @@ from datetime import datetime
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tap_station.dynamic_config import (
@@ -53,7 +54,7 @@ alerts:
     warning_threshold: 10
     critical_threshold: 20
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
         f.flush()
         yield f.name
@@ -67,23 +68,14 @@ class TestConfigurationValidator:
     def test_validate_valid_config(self):
         """Test validation passes for valid config"""
         validator = ConfigurationValidator()
-        config = {
-            "capacity": {
-                "people_per_hour": 12,
-                "avg_service_minutes": 5
-            }
-        }
+        config = {"capacity": {"people_per_hour": 12, "avg_service_minutes": 5}}
         errors = validator.validate(config)
         assert len(errors) == 0
 
     def test_validate_invalid_value(self):
         """Test validation fails for invalid value"""
         validator = ConfigurationValidator()
-        config = {
-            "capacity": {
-                "people_per_hour": 500  # Too high
-            }
-        }
+        config = {"capacity": {"people_per_hour": 500}}  # Too high
         errors = validator.validate(config)
         assert len(errors) > 0
 
@@ -91,8 +83,7 @@ class TestConfigurationValidator:
         """Test adding custom validation rule"""
         validator = ConfigurationValidator()
         validator.add_rule(
-            "custom.setting",
-            lambda v: isinstance(v, str) and len(v) > 0
+            "custom.setting", lambda v: isinstance(v, str) and len(v) > 0
         )
 
         config = {"custom": {"setting": ""}}
@@ -127,7 +118,7 @@ class TestDynamicConfigurationManager:
         """Test loading config from dictionary"""
         config = {
             "service": {"name": "Dict Service"},
-            "capacity": {"people_per_hour": 15}
+            "capacity": {"people_per_hour": 15},
         }
         result = manager.load_from_dict(config)
         assert result is True
@@ -142,13 +133,7 @@ class TestDynamicConfigurationManager:
 
     def test_get_with_path(self, manager):
         """Test getting config value by path"""
-        manager.load_from_dict({
-            "level1": {
-                "level2": {
-                    "value": 42
-                }
-            }
-        })
+        manager.load_from_dict({"level1": {"level2": {"value": 42}}})
         assert manager.get("level1.level2.value") == 42
 
     def test_get_with_default(self, manager):
@@ -158,9 +143,7 @@ class TestDynamicConfigurationManager:
 
     def test_update_config(self, manager):
         """Test updating a config value"""
-        manager.load_from_dict({
-            "service": {"name": "Original"}
-        })
+        manager.load_from_dict({"service": {"name": "Original"}})
         result = manager.update("service.name", "Updated")
         assert result is True
         assert manager.get("service.name") == "Updated"
@@ -201,9 +184,7 @@ class TestDynamicConfigurationManager:
 
     def test_export_to_yaml(self, manager):
         """Test YAML export"""
-        manager.load_from_dict({
-            "service": {"name": "Export Test"}
-        })
+        manager.load_from_dict({"service": {"name": "Export Test"}})
         yaml_str = manager.export_to_yaml()
         assert "Export Test" in yaml_str
 
@@ -211,12 +192,12 @@ class TestDynamicConfigurationManager:
         """Test YAML export to file"""
         manager.load_from_dict({"test": "value"})
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             path = f.name
 
         try:
             manager.export_to_yaml(path)
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 content = f.read()
             assert "test" in content
         finally:
@@ -258,6 +239,7 @@ class TestConfigurationSubscriber:
 
     def test_unsubscribe(self, manager):
         """Test unsubscribing"""
+
         class TestSubscriber(ConfigurationSubscriber):
             pass
 
@@ -276,7 +258,7 @@ class TestConfigurationChange:
             path="service.name",
             old_value="Old",
             new_value="New",
-            changed_at=datetime.utcnow()
+            changed_at=datetime.utcnow(),
         )
         d = change.to_dict()
 
@@ -295,7 +277,7 @@ class TestConfigurationVersion:
             config={"test": "value"},
             checksum="abc123",
             created_at=datetime.utcnow(),
-            source="test"
+            source="test",
         )
         d = version.to_dict()
 
@@ -341,8 +323,7 @@ class TestAutoReload:
     def test_start_stop_auto_reload(self, config_file):
         """Test starting and stopping auto-reload"""
         manager = DynamicConfigurationManager(
-            config_path=config_file,
-            auto_reload=False
+            config_path=config_file, auto_reload=False
         )
 
         manager.start_auto_reload()
@@ -363,10 +344,7 @@ class TestValidationOnLoad:
 
     def test_invalid_config_rejected(self, manager):
         """Test invalid config is rejected"""
-        manager.add_validation_rule(
-            "must_exist",
-            lambda v: v == "required_value"
-        )
+        manager.add_validation_rule("must_exist", lambda v: v == "required_value")
 
         config = {"must_exist": "wrong_value"}
         result = manager.load_from_dict(config)

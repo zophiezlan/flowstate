@@ -31,10 +31,10 @@ def test_substance_return_workflow(test_db):
     token_id = "042"
     uid = "ABCD1234"
     session_id = "festival-2026"
-    
+
     # Simulate full workflow: QUEUE_JOIN -> SERVICE_START -> SUBSTANCE_RETURNED -> EXIT
     now = datetime.now(timezone.utc)
-    
+
     # Stage 1: Join queue
     result = test_db.log_event(
         token_id=token_id,
@@ -45,7 +45,7 @@ def test_substance_return_workflow(test_db):
         timestamp=now,
     )
     assert result["success"] is True
-    
+
     # Stage 2: Service starts (10 minutes later)
     result = test_db.log_event(
         token_id=token_id,
@@ -56,7 +56,7 @@ def test_substance_return_workflow(test_db):
         timestamp=now + timedelta(minutes=10),
     )
     assert result["success"] is True
-    
+
     # Stage 3: Substance returned (8 minutes after service start)
     result = test_db.log_event(
         token_id=token_id,
@@ -67,7 +67,7 @@ def test_substance_return_workflow(test_db):
         timestamp=now + timedelta(minutes=18),
     )
     assert result["success"] is True
-    
+
     # Stage 4: Exit (1 minute after substance returned)
     result = test_db.log_event(
         token_id=token_id,
@@ -78,13 +78,13 @@ def test_substance_return_workflow(test_db):
         timestamp=now + timedelta(minutes=19),
     )
     assert result["success"] is True
-    
+
     # Verify all events logged
     events = test_db.get_recent_events(limit=10)
     assert len(events) == 4
-    
+
     # Verify stages in correct order
-    stages = [event['stage'] for event in reversed(events)]
+    stages = [event["stage"] for event in reversed(events)]
     assert stages == ["QUEUE_JOIN", "SERVICE_START", "SUBSTANCE_RETURNED", "EXIT"]
 
 
@@ -123,14 +123,14 @@ def test_multiple_participants_substance_return(test_db):
     """Test tracking substance return for multiple participants"""
     session_id = "festival-2026"
     now = datetime.now(timezone.utc)
-    
+
     # Track 3 participants through substance return workflow
     participants = [
         {"token": "001", "uid": "UID001"},
         {"token": "002", "uid": "UID002"},
         {"token": "003", "uid": "UID003"},
     ]
-    
+
     for p in participants:
         # Each participant: QUEUE_JOIN -> SERVICE_START -> SUBSTANCE_RETURNED -> EXIT
         test_db.log_event(
@@ -141,7 +141,7 @@ def test_multiple_participants_substance_return(test_db):
             session_id=session_id,
             timestamp=now,
         )
-        
+
         test_db.log_event(
             token_id=p["token"],
             uid=p["uid"],
@@ -150,7 +150,7 @@ def test_multiple_participants_substance_return(test_db):
             session_id=session_id,
             timestamp=now + timedelta(minutes=5),
         )
-        
+
         test_db.log_event(
             token_id=p["token"],
             uid=p["uid"],
@@ -159,7 +159,7 @@ def test_multiple_participants_substance_return(test_db):
             session_id=session_id,
             timestamp=now + timedelta(minutes=12),
         )
-        
+
         test_db.log_event(
             token_id=p["token"],
             uid=p["uid"],
@@ -168,13 +168,13 @@ def test_multiple_participants_substance_return(test_db):
             session_id=session_id,
             timestamp=now + timedelta(minutes=13),
         )
-    
+
     # Verify all events logged (4 stages × 3 participants = 12 events)
     events = test_db.get_recent_events(limit=20)
     assert len(events) == 12
-    
+
     # Count SUBSTANCE_RETURNED events
-    returned_count = len([e for e in events if e['stage'] == 'SUBSTANCE_RETURNED'])
+    returned_count = len([e for e in events if e["stage"] == "SUBSTANCE_RETURNED"])
     assert returned_count == 3
 
 
@@ -182,7 +182,7 @@ def test_unreturned_substance_detection(test_db):
     """Test detection of participants awaiting substance return"""
     session_id = "festival-2026"
     now = datetime.now(timezone.utc)
-    
+
     # Participant 1: Complete workflow (substance returned)
     test_db.log_event(
         token_id="001",
@@ -216,7 +216,7 @@ def test_unreturned_substance_detection(test_db):
         session_id=session_id,
         timestamp=now - timedelta(minutes=9),
     )
-    
+
     # Participant 2: Service completed but substance NOT returned yet
     test_db.log_event(
         token_id="002",
@@ -235,7 +235,7 @@ def test_unreturned_substance_detection(test_db):
         timestamp=now - timedelta(minutes=8),
     )
     # No SUBSTANCE_RETURNED event for participant 2
-    
+
     # Query to find participants awaiting substance return
     # (has SERVICE_START but no SUBSTANCE_RETURNED)
     # Using LEFT JOIN for better performance
@@ -252,8 +252,8 @@ def test_unreturned_substance_detection(test_db):
         """,
         (session_id, session_id),
     )
-    
-    unreturned = [row['token_id'] for row in cursor.fetchall()]
+
+    unreturned = [row["token_id"] for row in cursor.fetchall()]
     assert len(unreturned) == 1
     assert "002" in unreturned
     assert "001" not in unreturned  # Participant 1 had substance returned
@@ -264,11 +264,11 @@ def test_substance_return_timing_metrics(test_db):
     session_id = "festival-2026"
     now = datetime.now(timezone.utc)
     token_id = "042"
-    
+
     # Log workflow with specific timing
     service_start_time = now + timedelta(minutes=10)
     return_time = now + timedelta(minutes=18)  # 8 minutes after service start
-    
+
     test_db.log_event(
         token_id=token_id,
         uid="TEST_UID",
@@ -277,7 +277,7 @@ def test_substance_return_timing_metrics(test_db):
         session_id=session_id,
         timestamp=now,
     )
-    
+
     test_db.log_event(
         token_id=token_id,
         uid="TEST_UID",
@@ -286,7 +286,7 @@ def test_substance_return_timing_metrics(test_db):
         session_id=session_id,
         timestamp=service_start_time,
     )
-    
+
     test_db.log_event(
         token_id=token_id,
         uid="TEST_UID",
@@ -295,7 +295,7 @@ def test_substance_return_timing_metrics(test_db):
         session_id=session_id,
         timestamp=return_time,
     )
-    
+
     test_db.log_event(
         token_id=token_id,
         uid="TEST_UID",
@@ -304,7 +304,7 @@ def test_substance_return_timing_metrics(test_db):
         session_id=session_id,
         timestamp=now + timedelta(minutes=19),
     )
-    
+
     # Query to calculate time from service start to substance return
     cursor = test_db.conn.execute(
         """
@@ -322,13 +322,13 @@ def test_substance_return_timing_metrics(test_db):
         """,
         (session_id, token_id),
     )
-    
+
     result = cursor.fetchone()
     assert result is not None
-    assert result['token_id'] == token_id
-    
+    assert result["token_id"] == token_id
+
     # Should be approximately 8 minutes
-    minutes = result['minutes_to_return']
+    minutes = result["minutes_to_return"]
     assert 7.9 <= minutes <= 8.1  # Allow small floating point variance
 
 
@@ -336,7 +336,7 @@ def test_session_isolation_substance_return(test_db):
     """Test that substance return tracking is isolated per session"""
     token_id = "001"
     uid = "TEST_UID"
-    
+
     # Session 1: Complete workflow with substance return
     test_db.log_event(
         token_id=token_id,
@@ -352,7 +352,7 @@ def test_session_isolation_substance_return(test_db):
         device_id="station3",
         session_id="session-1",
     )
-    
+
     # Session 2: Same token can have another substance return
     result = test_db.log_event(
         token_id=token_id,
@@ -362,12 +362,12 @@ def test_session_isolation_substance_return(test_db):
         session_id="session-2",
     )
     assert result["success"] is True  # Should succeed because different session
-    
+
     # Verify both events exist
     events = test_db.get_recent_events(limit=10)
-    returned_events = [e for e in events if e['stage'] == 'SUBSTANCE_RETURNED']
+    returned_events = [e for e in events if e["stage"] == "SUBSTANCE_RETURNED"]
     assert len(returned_events) == 2
-    
+
     # Verify they're in different sessions
-    sessions = {e['session_id'] for e in returned_events}
+    sessions = {e["session_id"] for e in returned_events}
     assert sessions == {"session-1", "session-2"}

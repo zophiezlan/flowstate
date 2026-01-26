@@ -1,408 +1,475 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Event Summary - NFC Tap Logger</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #0b1220 0%, #1a2235 100%);
+        color: #f6f8ff;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #4fd1c5, #2fc4b3);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .subtitle {
+        color: #9fb1d0;
+        font-size: 1.1rem;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .metric-card {
+        background: #11192b;
+        border: 1px solid rgba(79, 209, 197, 0.2);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+      }
+
+      .metric-label {
+        color: #9fb1d0;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #4fd1c5;
+        margin-bottom: 4px;
+      }
+
+      .metric-subtext {
+        color: #9fb1d0;
+        font-size: 0.85rem;
+      }
+
+      .help-icon {
+        cursor: help;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+      }
+
+      .help-icon:hover {
+        opacity: 1;
+      }
+
+      .section {
+        background: #11192b;
+        border: 1px solid rgba(79, 209, 197, 0.2);
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+      }
+
+      .section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        color: #4fd1c5;
+      }
+
+      .chart-placeholder {
+        background: rgba(79, 209, 197, 0.05);
+        border: 2px dashed rgba(79, 209, 197, 0.3);
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        color: #9fb1d0;
+        margin: 20px 0;
+      }
+
+      .goal-tracker {
+        display: grid;
+        gap: 16px;
+      }
+
+      .goal-item {
+        background: rgba(79, 209, 197, 0.05);
+        border: 1px solid rgba(79, 209, 197, 0.2);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .goal-name {
+        font-weight: 600;
+        color: #f6f8ff;
+      }
+
+      .goal-status {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .goal-achieved {
+        background: rgba(79, 209, 197, 0.2);
+        color: #4fd1c5;
+      }
+
+      .goal-partial {
+        background: rgba(252, 191, 73, 0.2);
+        color: #fcbf49;
+      }
+
+      .goal-missed {
+        background: rgba(255, 107, 107, 0.2);
+        color: #ff6b6b;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4fd1c5, #2fc4b3);
+        transition: width 0.3s ease;
+      }
+
+      .progress-fill.warning {
+        background: linear-gradient(90deg, #fcbf49, #f9a825);
+      }
+
+      .progress-fill.danger {
+        background: linear-gradient(90deg, #ff6b6b, #ee5a52);
+      }
+
+      .goal-details {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: #9fb1d0;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 30px;
+      }
+
+      button {
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: none;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #4fd1c5, #2fc4b3);
+        color: #0b1220;
+      }
+
+      .btn-secondary {
+        background: rgba(79, 209, 197, 0.1);
+        border: 1px solid rgba(79, 209, 197, 0.5);
+        color: #4fd1c5;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #9fb1d0;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(79, 209, 197, 0.3);
+      }
+
+      .highlight-box {
+        background: rgba(79, 209, 197, 0.1);
+        border-left: 4px solid #4fd1c5;
+        padding: 16px;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+
+      .highlight-box strong {
+        color: #4fd1c5;
+      }
+
+      @media print {
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0b1220 0%, #1a2235 100%);
-            color: #f6f8ff;
-            padding: 20px;
-            min-height: 100vh;
+          background: white;
+          color: black;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #4fd1c5, #2fc4b3);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .subtitle {
-            color: #9fb1d0;
-            font-size: 1.1rem;
-        }
-        
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        
-        .metric-card {
-            background: #11192b;
-            border: 1px solid rgba(79, 209, 197, 0.2);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-        }
-        
-        .metric-label {
-            color: #9fb1d0;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #4fd1c5;
-            margin-bottom: 4px;
-        }
-        
-        .metric-subtext {
-            color: #9fb1d0;
-            font-size: 0.85rem;
-        }
-        
-        .help-icon {
-            cursor: help;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-        
-        .help-icon:hover {
-            opacity: 1;
-        }
-        
-        .section {
-            background: #11192b;
-            border: 1px solid rgba(79, 209, 197, 0.2);
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-        }
-        
-        .section h2 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #4fd1c5;
-        }
-        
-        .chart-placeholder {
-            background: rgba(79, 209, 197, 0.05);
-            border: 2px dashed rgba(79, 209, 197, 0.3);
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            color: #9fb1d0;
-            margin: 20px 0;
-        }
-        
-        .goal-tracker {
-            display: grid;
-            gap: 16px;
-        }
-        
-        .goal-item {
-            background: rgba(79, 209, 197, 0.05);
-            border: 1px solid rgba(79, 209, 197, 0.2);
-            border-radius: 8px;
-            padding: 16px;
-        }
-        
-        .goal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        
-        .goal-name {
-            font-weight: 600;
-            color: #f6f8ff;
-        }
-        
-        .goal-status {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        
-        .goal-achieved {
-            background: rgba(79, 209, 197, 0.2);
-            color: #4fd1c5;
-        }
-        
-        .goal-partial {
-            background: rgba(252, 191, 73, 0.2);
-            color: #fcbf49;
-        }
-        
-        .goal-missed {
-            background: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4fd1c5, #2fc4b3);
-            transition: width 0.3s ease;
-        }
-        
-        .progress-fill.warning {
-            background: linear-gradient(90deg, #fcbf49, #f9a825);
-        }
-        
-        .progress-fill.danger {
-            background: linear-gradient(90deg, #ff6b6b, #ee5a52);
-        }
-        
-        .goal-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            color: #9fb1d0;
-        }
-        
+
         .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 30px;
+          display: none;
         }
-        
-        button {
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+
+        .metric-card,
+        .section {
+          border: 1px solid #ddd;
+          box-shadow: none;
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #4fd1c5, #2fc4b3);
-            color: #0b1220;
-        }
-        
-        .btn-secondary {
-            background: rgba(79, 209, 197, 0.1);
-            border: 1px solid rgba(79, 209, 197, 0.5);
-            color: #4fd1c5;
-        }
-        
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #9fb1d0;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 209, 197, 0.3);
-        }
-        
-        .highlight-box {
-            background: rgba(79, 209, 197, 0.1);
-            border-left: 4px solid #4fd1c5;
-            padding: 16px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        
-        .highlight-box strong {
-            color: #4fd1c5;
-        }
-        
-        @media print {
-            body {
-                background: white;
-                color: black;
-            }
-            
-            .actions {
-                display: none;
-            }
-            
-            .metric-card, .section {
-                border: 1px solid #ddd;
-                box-shadow: none;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <header>
-            <h1>📊 Event Summary</h1>
-            <p class="subtitle">{{ session_id }} • {{ event_date }}</p>
-        </header>
-        
-        <div class="summary-grid">
-            <div class="metric-card">
-                <div class="metric-label">
-                    Total Served
-                    <span class="help-icon" title="Total number of participants who completed the full journey (queue join to exit)">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ total_served }}</div>
-                <div class="metric-subtext">Completed journeys</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">
-                    Average Wait Time
-                    <span class="help-icon" title="Mean time from queue join to exit for all completed journeys">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ avg_wait_min }} min</div>
-                <div class="metric-subtext">Median: {{ median_wait_min }} min</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">
-                    Peak Queue Length
-                    <span class="help-icon" title="Maximum number of people in queue at any point during the event">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ peak_queue }}</div>
-                <div class="metric-subtext">At {{ peak_time }}</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">
-                    Throughput
-                    <span class="help-icon" title="Average number of people served per hour">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ throughput }}/hr</div>
-                <div class="metric-subtext">{{ service_hours }} hours active</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">
-                    Abandonment Rate
-                    <span class="help-icon" title="Percentage of people who joined queue but never completed service">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ abandonment_rate }}%</div>
-                <div class="metric-subtext">{{ abandoned_count }} abandoned</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">
-                    Service Time
-                    <span class="help-icon" title="Average time from service start to exit (if 3-stage tracking enabled)">ℹ️</span>
-                </div>
-                <div class="metric-value">{{ avg_service_min }} min</div>
-                <div class="metric-subtext">90th percentile: {{ p90_service_min }} min</div>
-            </div>
+      <header>
+        <h1>📊 Event Summary</h1>
+        <p class="subtitle">{{ session_id }} • {{ event_date }}</p>
+      </header>
+
+      <div class="summary-grid">
+        <div class="metric-card">
+          <div class="metric-label">
+            Total Served
+            <span
+              class="help-icon"
+              title="Total number of participants who completed the full journey (queue join to exit)"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ total_served }}</div>
+          <div class="metric-subtext">Completed journeys</div>
         </div>
-        
-        {% if goals %}
-        <div class="section">
-            <h2>🎯 Goal Achievement</h2>
-            <div class="goal-tracker">
-                {% for goal in goals %}
-                <div class="goal-item">
-                    <div class="goal-header">
-                        <span class="goal-name">{{ goal.name }}</span>
-                        <span class="goal-status {{ goal.status_class }}">{{ goal.status_text }}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill {{ goal.progress_class }}" style="width: {{ goal.progress_percent }}%"></div>
-                    </div>
-                    <div class="goal-details">
-                        <span>{{ goal.actual }} / {{ goal.target }} {{ goal.unit }}</span>
-                        <span>{{ goal.progress_percent }}%</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            Average Wait Time
+            <span
+              class="help-icon"
+              title="Mean time from queue join to exit for all completed journeys"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ avg_wait_min }} min</div>
+          <div class="metric-subtext">Median: {{ median_wait_min }} min</div>
         </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            Peak Queue Length
+            <span
+              class="help-icon"
+              title="Maximum number of people in queue at any point during the event"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ peak_queue }}</div>
+          <div class="metric-subtext">At {{ peak_time }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            Throughput
+            <span
+              class="help-icon"
+              title="Average number of people served per hour"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ throughput }}/hr</div>
+          <div class="metric-subtext">{{ service_hours }} hours active</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            Abandonment Rate
+            <span
+              class="help-icon"
+              title="Percentage of people who joined queue but never completed service"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ abandonment_rate }}%</div>
+          <div class="metric-subtext">{{ abandoned_count }} abandoned</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            Service Time
+            <span
+              class="help-icon"
+              title="Average time from service start to exit (if 3-stage tracking enabled)"
+              >ℹ️</span
+            >
+          </div>
+          <div class="metric-value">{{ avg_service_min }} min</div>
+          <div class="metric-subtext">
+            90th percentile: {{ p90_service_min }} min
+          </div>
+        </div>
+      </div>
+
+      {% if goals %}
+      <div class="section">
+        <h2>🎯 Goal Achievement</h2>
+        <div class="goal-tracker">
+          {% for goal in goals %}
+          <div class="goal-item">
+            <div class="goal-header">
+              <span class="goal-name">{{ goal.name }}</span>
+              <span class="goal-status {{ goal.status_class }}"
+                >{{ goal.status_text }}</span
+              >
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill {{ goal.progress_class }}"
+                style="width: {{ goal.progress_percent }}%"
+              ></div>
+            </div>
+            <div class="goal-details">
+              <span>{{ goal.actual }} / {{ goal.target }} {{ goal.unit }}</span>
+              <span>{{ goal.progress_percent }}%</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section">
+        <h2>📈 Activity Timeline</h2>
+        <div class="chart-placeholder">
+          <p style="font-size: 1.2rem; margin-bottom: 10px">
+            📊 Queue Activity Over Time
+          </p>
+          <p>Chart showing queue length and completions throughout the event</p>
+          <p style="margin-top: 10px; font-size: 0.9rem">
+            (Chart visualization would go here - requires JavaScript charting
+            library)
+          </p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>💡 Key Insights</h2>
+        <div class="highlight-box">
+          <strong>Busiest Period:</strong> {{ busiest_period }} with {{
+          busiest_count }} people served
+        </div>
+        <div class="highlight-box">
+          <strong>Service Quality:</strong> {{ quality_assessment }}
+        </div>
+        <div class="highlight-box">
+          <strong>Capacity:</strong> {{ capacity_assessment }}
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>⚠️ Issues Detected</h2>
+        {% if anomalies_summary.total_anomalies > 0 %}
+        <ul style="list-style: none; padding: 0">
+          {% if anomalies_summary.forgotten_exits > 0 %}
+          <li
+            style="
+              padding: 8px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            "
+          >
+            <strong>{{ anomalies_summary.forgotten_exits }}</strong> forgotten
+            exit taps (people who joined but never exited)
+          </li>
+          {% endif %} {% if anomalies_summary.stuck_in_service > 0 %}
+          <li
+            style="
+              padding: 8px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            "
+          >
+            <strong>{{ anomalies_summary.stuck_in_service }}</strong> stuck in
+            service (>45 minutes without completion)
+          </li>
+          {% endif %} {% if anomalies_summary.rapid_fire_taps > 0 %}
+          <li
+            style="
+              padding: 8px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            "
+          >
+            <strong>{{ anomalies_summary.rapid_fire_taps }}</strong> rapid-fire
+            duplicate taps detected
+          </li>
+          {% endif %}
+        </ul>
+        {% else %}
+        <p style="color: #4fd1c5">✅ No significant anomalies detected</p>
         {% endif %}
-        
-        <div class="section">
-            <h2>📈 Activity Timeline</h2>
-            <div class="chart-placeholder">
-                <p style="font-size: 1.2rem; margin-bottom: 10px;">📊 Queue Activity Over Time</p>
-                <p>Chart showing queue length and completions throughout the event</p>
-                <p style="margin-top: 10px; font-size: 0.9rem;">(Chart visualization would go here - requires JavaScript charting library)</p>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>💡 Key Insights</h2>
-            <div class="highlight-box">
-                <strong>Busiest Period:</strong> {{ busiest_period }} with {{ busiest_count }} people served
-            </div>
-            <div class="highlight-box">
-                <strong>Service Quality:</strong> {{ quality_assessment }}
-            </div>
-            <div class="highlight-box">
-                <strong>Capacity:</strong> {{ capacity_assessment }}
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>⚠️ Issues Detected</h2>
-            {% if anomalies_summary.total_anomalies > 0 %}
-            <ul style="list-style: none; padding: 0;">
-                {% if anomalies_summary.forgotten_exits > 0 %}
-                <li style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <strong>{{ anomalies_summary.forgotten_exits }}</strong> forgotten exit taps (people who joined but never exited)
-                </li>
-                {% endif %}
-                {% if anomalies_summary.stuck_in_service > 0 %}
-                <li style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <strong>{{ anomalies_summary.stuck_in_service }}</strong> stuck in service (>45 minutes without completion)
-                </li>
-                {% endif %}
-                {% if anomalies_summary.rapid_fire_taps > 0 %}
-                <li style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <strong>{{ anomalies_summary.rapid_fire_taps }}</strong> rapid-fire duplicate taps detected
-                </li>
-                {% endif %}
-            </ul>
-            {% else %}
-            <p style="color: #4fd1c5;">✅ No significant anomalies detected</p>
-            {% endif %}
-        </div>
-        
-        <div class="actions">
-            <button class="btn-primary" onclick="window.print()">🖨️ Print Summary</button>
-            <button class="btn-secondary" onclick="exportCSV()">📥 Download CSV</button>
-            <button class="btn-secondary" onclick="window.location.href='/dashboard'">📊 Return to Dashboard</button>
-            <button class="btn-ghost" onclick="window.location.href='/control'">⚙️ Control Panel</button>
-        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" onclick="window.print()">
+          🖨️ Print Summary
+        </button>
+        <button class="btn-secondary" onclick="exportCSV()">
+          📥 Download CSV
+        </button>
+        <button
+          class="btn-secondary"
+          onclick="window.location.href = '/dashboard'"
+        >
+          📊 Return to Dashboard
+        </button>
+        <button class="btn-ghost" onclick="window.location.href = '/control'">
+          ⚙️ Control Panel
+        </button>
+      </div>
     </div>
-    
+
     <script>
-        function exportCSV() {
-            window.location.href = '/api/export?format=csv&session={{ session_id }}';
-        }
+      function exportCSV() {
+        window.location.href =
+          "/api/export?format=csv&session={{ session_id }}";
+      }
     </script>
-</body>
+  </body>
 </html>

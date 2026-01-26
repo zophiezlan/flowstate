@@ -88,8 +88,8 @@ ui:
     show_queue_positions: true
     show_wait_estimates: true
     show_served_count: true
-    show_avg_time: false  # Hide detailed metrics
-    refresh_interval_seconds: 10  # Slower refresh
+    show_avg_time: false # Hide detailed metrics
+    refresh_interval_seconds: 10 # Slower refresh
 
 staffing:
   require_staff_id: false

@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tap_station.custom_slo import (
@@ -34,7 +35,8 @@ def db_connection():
     """Create an in-memory database with test schema"""
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE events (
             id INTEGER PRIMARY KEY,
             token_id TEXT,
@@ -42,7 +44,8 @@ def db_connection():
             stage TEXT,
             timestamp TEXT
         )
-    """)
+    """
+    )
     conn.commit()
     return conn
 
@@ -61,12 +64,14 @@ def populated_db(db_connection):
         return_time = service_time + timedelta(minutes=3)
         exit_time = return_time + timedelta(minutes=2)
 
-        events.extend([
-            (token_id, "session1", "QUEUE_JOIN", join_time.isoformat()),
-            (token_id, "session1", "SERVICE_START", service_time.isoformat()),
-            (token_id, "session1", "SUBSTANCE_RETURNED", return_time.isoformat()),
-            (token_id, "session1", "EXIT", exit_time.isoformat()),
-        ])
+        events.extend(
+            [
+                (token_id, "session1", "QUEUE_JOIN", join_time.isoformat()),
+                (token_id, "session1", "SERVICE_START", service_time.isoformat()),
+                (token_id, "session1", "SUBSTANCE_RETURNED", return_time.isoformat()),
+                (token_id, "session1", "EXIT", exit_time.isoformat()),
+            ]
+        )
 
     # Add incomplete journeys (no exit)
     for i in range(3):
@@ -76,7 +81,7 @@ def populated_db(db_connection):
 
     db_connection.executemany(
         "INSERT INTO events (token_id, session_id, stage, timestamp) VALUES (?, ?, ?, ?)",
-        events
+        events,
     )
     db_connection.commit()
     return db_connection
@@ -147,7 +152,7 @@ class TestCustomSLODefinition:
             metric_type=SLOMetricType.PERCENTAGE,
             target=SLOTarget(operator=">=", value=95.0),
             window_hours=24,
-            metric_id="completion_rate"
+            metric_id="completion_rate",
         )
         assert slo.id == "test_slo"
         assert slo.enabled is True
@@ -160,7 +165,7 @@ class TestCustomSLODefinition:
             description="Test",
             metric_type=SLOMetricType.PERCENTAGE,
             target=SLOTarget(operator=">=", value=95.0),
-            tags=["core", "participant"]
+            tags=["core", "participant"],
         )
         result = slo.to_dict()
 
@@ -185,7 +190,7 @@ class TestCustomSLOManager:
             description="Test SLO",
             metric_type=SLOMetricType.PERCENTAGE,
             target=SLOTarget(operator=">=", value=90.0),
-            metric_id="completion_rate"
+            metric_id="completion_rate",
         )
         manager.define_slo(slo)
 
@@ -205,7 +210,7 @@ class TestCustomSLOManager:
             "warning_threshold": 80.0,
             "metric_id": "completion_rate",
             "window_hours": 12,
-            "tags": ["test"]
+            "tags": ["test"],
         }
         slo = manager.define_slo_from_dict(config)
 
@@ -220,7 +225,7 @@ class TestCustomSLOManager:
             name="Removable",
             description="Test",
             metric_type=SLOMetricType.COUNT,
-            target=SLOTarget(operator=">=", value=10)
+            target=SLOTarget(operator=">=", value=10),
         )
         manager.define_slo(slo)
         result = manager.remove_slo("removable")
@@ -333,7 +338,7 @@ class TestSLOResult:
             status=SLOStatus.AT_RISK,
             compliance_percentage=96.8,
             window_hours=24,
-            evaluated_at=datetime.utcnow()
+            evaluated_at=datetime.utcnow(),
         )
 
         d = result.to_dict()
@@ -352,7 +357,7 @@ class TestSLOBudget:
             total_budget_minutes=420,  # 7 hours
             remaining_budget_minutes=300,
             burn_rate=0.5,
-            estimated_exhaustion=datetime.utcnow() + timedelta(hours=10)
+            estimated_exhaustion=datetime.utcnow() + timedelta(hours=10),
         )
 
         d = budget.to_dict()
@@ -376,7 +381,7 @@ class TestConfigurationLoading:
                     "metric_type": "percentage",
                     "target_operator": ">=",
                     "target_value": 90.0,
-                    "metric_id": "completion_rate"
+                    "metric_id": "completion_rate",
                 },
                 {
                     "id": "config_slo_2",
@@ -384,8 +389,8 @@ class TestConfigurationLoading:
                     "metric_type": "duration",
                     "target_operator": "<=",
                     "target_value": 30.0,
-                    "metric_id": "wait_time_avg"
-                }
+                    "metric_id": "wait_time_avg",
+                },
             ]
         }
 

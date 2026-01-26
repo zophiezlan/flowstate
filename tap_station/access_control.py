@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 class Permission(Enum):
     """Available permissions in the system"""
+
     # Tap operations
     TAP_READ = "tap:read"
     TAP_SCAN = "tap:scan"
@@ -86,6 +87,7 @@ class Permission(Enum):
 @dataclass
 class Role:
     """Defines a role with its permissions"""
+
     id: str
     name: str
     description: str
@@ -103,13 +105,14 @@ class Role:
             "permissions": [p.value for p in self.permissions],
             "inherits_from": self.inherits_from,
             "is_system_role": self.is_system_role,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
 @dataclass
 class User:
     """Represents a user in the system"""
+
     id: str
     username: str
     display_name: str
@@ -132,7 +135,7 @@ class User:
             "active": self.active,
             "created_at": self.created_at.isoformat(),
             "last_login": self.last_login.isoformat() if self.last_login else None,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
         if include_sensitive:
             data["has_password"] = bool(self.password_hash)
@@ -142,6 +145,7 @@ class User:
 @dataclass
 class Session:
     """Represents an active user session"""
+
     id: str
     user_id: str
     token: str
@@ -154,7 +158,7 @@ class Session:
     def is_valid(self) -> bool:
         """
         Check if session is still valid.
-        
+
         Compares current UTC time with expiration time. utc_now() returns a
         timezone-aware datetime (UTC), so comparison will work correctly
         whether expires_at is timezone-aware or naive.
@@ -169,13 +173,14 @@ class Session:
             "created_at": self.created_at.isoformat(),
             "expires_at": self.expires_at.isoformat(),
             "is_valid": self.is_valid(),
-            "active": self.active
+            "active": self.active,
         }
 
 
 @dataclass
 class AccessDecision:
     """Result of an access control decision"""
+
     allowed: bool
     permission: Permission
     user_id: Optional[str]
@@ -189,13 +194,14 @@ class AccessDecision:
             "permission": self.permission.value,
             "user_id": self.user_id,
             "reason": self.reason,
-            "context": self.context
+            "context": self.context,
         }
 
 
 @dataclass
 class AuditLogEntry:
     """An entry in the access audit log"""
+
     id: str
     timestamp: datetime
     user_id: Optional[str]
@@ -215,7 +221,7 @@ class AuditLogEntry:
             "resource": self.resource,
             "decision": self.decision,
             "ip_address": self.ip_address,
-            "details": self.details
+            "details": self.details,
         }
 
 
@@ -238,7 +244,7 @@ class AccessControlManager:
             name="Public",
             description="Unauthenticated public access",
             permissions={Permission.PUBLIC_VIEW},
-            is_system_role=True
+            is_system_role=True,
         ),
         "peer_worker": Role(
             id="peer_worker",
@@ -251,7 +257,7 @@ class AccessControlManager:
                 Permission.ALERTS_VIEW,
                 Permission.PUBLIC_VIEW,
             },
-            is_system_role=True
+            is_system_role=True,
         ),
         "coordinator": Role(
             id="coordinator",
@@ -273,22 +279,22 @@ class AccessControlManager:
                 Permission.PUBLIC_VIEW,
             },
             inherits_from="peer_worker",
-            is_system_role=True
+            is_system_role=True,
         ),
         "admin": Role(
             id="admin",
             name="Administrator",
             description="Full system access",
             permissions={Permission.ALL},
-            is_system_role=True
-        )
+            is_system_role=True,
+        ),
     }
 
     def __init__(
         self,
         conn: Optional[sqlite3.Connection] = None,
         session_timeout_minutes: int = 60,
-        require_authentication: bool = False
+        require_authentication: bool = False,
     ):
         """
         Initialize the access control manager.
@@ -318,9 +324,7 @@ class AccessControlManager:
 
     def _create_default_admin(self) -> None:
         """Create default admin user if none exists"""
-        admin_exists = any(
-            "admin" in u.roles for u in self._users.values()
-        )
+        admin_exists = any("admin" in u.roles for u in self._users.values())
         if not admin_exists:
             # Create with a random password that must be changed
             self._users["admin"] = User(
@@ -329,7 +333,7 @@ class AccessControlManager:
                 display_name="Administrator",
                 roles=["admin"],
                 password_hash=None,  # No password by default
-                active=True
+                active=True,
             )
 
     # =========================================================================
@@ -373,7 +377,7 @@ class AccessControlManager:
             permissions=permissions,
             inherits_from=config.get("inherits_from"),
             is_system_role=False,
-            metadata=config.get("metadata", {})
+            metadata=config.get("metadata", {}),
         )
 
         self.define_role(role)
@@ -423,7 +427,7 @@ class AccessControlManager:
         display_name: str,
         roles: List[str],
         password: Optional[str] = None,
-        email: Optional[str] = None
+        email: Optional[str] = None,
     ) -> User:
         """
         Create a new user.
@@ -451,7 +455,7 @@ class AccessControlManager:
             roles=roles,
             password_hash=password_hash,
             email=email,
-            active=True
+            active=True,
         )
 
         self._users[user_id] = user
@@ -475,7 +479,7 @@ class AccessControlManager:
         display_name: Optional[str] = None,
         roles: Optional[List[str]] = None,
         email: Optional[str] = None,
-        active: Optional[bool] = None
+        active: Optional[bool] = None,
     ) -> Optional[User]:
         """Update a user"""
         user = self._users.get(user_id)
@@ -539,7 +543,7 @@ class AccessControlManager:
         username: str,
         password: str,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> Optional[Session]:
         """
         Authenticate a user and create a session.
@@ -556,7 +560,9 @@ class AccessControlManager:
         user = self.get_user_by_username(username)
 
         if not user or not user.active:
-            self._audit_login_failure(username, ip_address, "User not found or inactive")
+            self._audit_login_failure(
+                username, ip_address, "User not found or inactive"
+            )
             return None
 
         if not user.password_hash:
@@ -576,10 +582,7 @@ class AccessControlManager:
         return session
 
     def _create_session(
-        self,
-        user_id: str,
-        ip_address: Optional[str],
-        user_agent: Optional[str]
+        self, user_id: str, ip_address: Optional[str], user_agent: Optional[str]
     ) -> Session:
         """Create a new session"""
         session_id = f"sess_{secrets.token_hex(8)}"
@@ -594,7 +597,7 @@ class AccessControlManager:
             expires_at=now + self._session_timeout,
             ip_address=ip_address,
             user_agent=user_agent,
-            active=True
+            active=True,
         )
 
         self._sessions[token] = session
@@ -655,7 +658,7 @@ class AccessControlManager:
         user_id: Optional[str],
         permission: Permission,
         resource: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> AccessDecision:
         """
         Check if a user has a permission.
@@ -679,7 +682,7 @@ class AccessControlManager:
                     permission=permission,
                     user_id=None,
                     reason="Public access allowed",
-                    context=context
+                    context=context,
                 )
             else:
                 if self._require_auth:
@@ -688,7 +691,7 @@ class AccessControlManager:
                         permission=permission,
                         user_id=None,
                         reason="Authentication required",
-                        context=context
+                        context=context,
                     )
                 else:
                     # Allow when auth not required
@@ -697,7 +700,7 @@ class AccessControlManager:
                         permission=permission,
                         user_id=None,
                         reason="Authentication not required",
-                        context=context
+                        context=context,
                     )
 
         # Get user permissions
@@ -710,7 +713,7 @@ class AccessControlManager:
                 permission=permission,
                 user_id=user_id,
                 reason="User has admin access",
-                context=context
+                context=context,
             )
             self._audit_access(user_id, permission.value, resource, True)
             return decision
@@ -722,7 +725,7 @@ class AccessControlManager:
                 permission=permission,
                 user_id=user_id,
                 reason="Permission granted",
-                context=context
+                context=context,
             )
             self._audit_access(user_id, permission.value, resource, True)
             return decision
@@ -732,7 +735,7 @@ class AccessControlManager:
             permission=permission,
             user_id=user_id,
             reason="Permission denied",
-            context=context
+            context=context,
         )
         self._audit_access(user_id, permission.value, resource, False)
         return decision
@@ -741,7 +744,7 @@ class AccessControlManager:
         self,
         permission: Permission,
         user_id: Optional[str] = None,
-        session_token: Optional[str] = None
+        session_token: Optional[str] = None,
     ) -> AccessDecision:
         """
         Check permission and raise if denied.
@@ -768,21 +771,18 @@ class AccessControlManager:
     def _hash_password(self, password: str) -> str:
         """
         Hash a password using PBKDF2-HMAC-SHA256.
-        
+
         The hash is stored in the format: "salt$hash" where:
         - salt: 32-character hex string (16 bytes)
         - hash: PBKDF2-HMAC-SHA256 output with 100,000 iterations
-        
+
         This is a standard approach for password storage. The salt prevents
         rainbow table attacks, and PBKDF2 with high iteration count slows
         down brute force attacks.
         """
         salt = secrets.token_hex(16)
         hash_obj = hashlib.pbkdf2_hmac(
-            "sha256",
-            password.encode(),
-            salt.encode(),
-            100000
+            "sha256", password.encode(), salt.encode(), 100000
         )
         return f"{salt}${hash_obj.hex()}"
 
@@ -791,10 +791,7 @@ class AccessControlManager:
         try:
             salt, hash_hex = password_hash.split("$")
             hash_obj = hashlib.pbkdf2_hmac(
-                "sha256",
-                password.encode(),
-                salt.encode(),
-                100000
+                "sha256", password.encode(), salt.encode(), 100000
             )
             return hash_obj.hex() == hash_hex
         except Exception:
@@ -811,7 +808,7 @@ class AccessControlManager:
         resource: str,
         allowed: bool,
         ip_address: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Add an entry to the audit log"""
         self._audit_counter += 1
@@ -823,19 +820,15 @@ class AccessControlManager:
             resource=resource,
             decision=allowed,
             ip_address=ip_address,
-            details=details or {}
+            details=details or {},
         )
 
         self._audit_log.append(entry)
         if len(self._audit_log) > self._max_audit_log:
-            self._audit_log = self._audit_log[-self._max_audit_log // 2:]
+            self._audit_log = self._audit_log[-self._max_audit_log // 2 :]
 
     def _audit_access(
-        self,
-        user_id: str,
-        permission: str,
-        resource: Optional[str],
-        allowed: bool
+        self, user_id: str, permission: str, resource: Optional[str], allowed: bool
     ) -> None:
         """Audit an access control decision"""
         self._audit(
@@ -843,7 +836,7 @@ class AccessControlManager:
             user_id,
             resource or "unknown",
             allowed,
-            details={"permission": permission}
+            details={"permission": permission},
         )
 
     def _audit_login_success(self, user_id: str, ip_address: Optional[str]) -> None:
@@ -851,10 +844,7 @@ class AccessControlManager:
         self._audit("login_success", user_id, "auth", True, ip_address)
 
     def _audit_login_failure(
-        self,
-        username: str,
-        ip_address: Optional[str],
-        reason: str
+        self, username: str, ip_address: Optional[str], reason: str
     ) -> None:
         """Audit failed login"""
         self._audit(
@@ -863,14 +853,14 @@ class AccessControlManager:
             "auth",
             False,
             ip_address,
-            {"username": username, "reason": reason}
+            {"username": username, "reason": reason},
         )
 
     def get_audit_log(
         self,
         user_id: Optional[str] = None,
         action: Optional[str] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[Dict[str, Any]]:
         """
         Get audit log entries.
@@ -897,6 +887,7 @@ class AccessControlManager:
 # Decorator for Permission Checking
 # =============================================================================
 
+
 def require_permission(permission: Permission):
     """
     Decorator to require a permission for a function.
@@ -906,6 +897,7 @@ def require_permission(permission: Permission):
         def view_dashboard(user_id, ...):
             ...
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -919,7 +911,9 @@ def require_permission(permission: Permission):
                 raise PermissionError(f"Permission denied: {permission.value}")
 
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -927,9 +921,9 @@ def require_permission(permission: Permission):
 # Configuration Loading
 # =============================================================================
 
+
 def load_roles_from_config(
-    config: Dict[str, Any],
-    manager: AccessControlManager
+    config: Dict[str, Any], manager: AccessControlManager
 ) -> int:
     """
     Load role definitions from configuration.
@@ -962,7 +956,7 @@ _access_manager: Optional[AccessControlManager] = None
 
 
 def get_access_control_manager(
-    conn: Optional[sqlite3.Connection] = None
+    conn: Optional[sqlite3.Connection] = None,
 ) -> AccessControlManager:
     """Get or create the global access control manager"""
     global _access_manager

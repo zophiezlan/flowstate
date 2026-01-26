@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class HealthStatus(Enum):
     """Health status levels"""
+
     OK = "ok"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -27,6 +28,7 @@ class HealthStatus(Enum):
 @dataclass
 class HealthResult:
     """Result of a health check"""
+
     status: HealthStatus
     message: str
     value: Optional[Any] = None
@@ -91,7 +93,7 @@ class HealthChecker:
             return HealthResult(
                 status=HealthStatus.UNKNOWN,
                 message="Temperature sensor not available",
-                details={"path": temp_path}
+                details={"path": temp_path},
             )
 
         try:
@@ -104,27 +106,26 @@ class HealthChecker:
                     status=HealthStatus.CRITICAL,
                     message=f"CPU temperature critical: {temp_c:.1f}°C",
                     value=temp_c,
-                    details={"threshold": self.temp_critical}
+                    details={"threshold": self.temp_critical},
                 )
             elif temp_c >= self.temp_warning:
                 return HealthResult(
                     status=HealthStatus.WARNING,
                     message=f"CPU temperature high: {temp_c:.1f}°C",
                     value=temp_c,
-                    details={"threshold": self.temp_warning}
+                    details={"threshold": self.temp_warning},
                 )
             else:
                 return HealthResult(
                     status=HealthStatus.OK,
                     message=f"CPU temperature normal: {temp_c:.1f}°C",
-                    value=temp_c
+                    value=temp_c,
                 )
 
         except (ValueError, IOError) as e:
             logger.warning(f"Failed to read temperature: {e}")
             return HealthResult(
-                status=HealthStatus.UNKNOWN,
-                message=f"Failed to read temperature: {e}"
+                status=HealthStatus.UNKNOWN, message=f"Failed to read temperature: {e}"
             )
 
     def get_temperature(self) -> Optional[float]:
@@ -174,28 +175,27 @@ class HealthChecker:
                     status=HealthStatus.CRITICAL,
                     message=f"Disk space critical: {used_percent:.1f}% used",
                     value=used_percent,
-                    details=details
+                    details=details,
                 )
             elif used_percent >= self.disk_warning:
                 return HealthResult(
                     status=HealthStatus.WARNING,
                     message=f"Disk space low: {used_percent:.1f}% used",
                     value=used_percent,
-                    details=details
+                    details=details,
                 )
             else:
                 return HealthResult(
                     status=HealthStatus.OK,
                     message=f"Disk space OK: {used_percent:.1f}% used, {free_gb:.1f}GB free",
                     value=used_percent,
-                    details=details
+                    details=details,
                 )
 
         except OSError as e:
             logger.warning(f"Failed to check disk space: {e}")
             return HealthResult(
-                status=HealthStatus.UNKNOWN,
-                message=f"Failed to check disk space: {e}"
+                status=HealthStatus.UNKNOWN, message=f"Failed to check disk space: {e}"
             )
 
     def get_disk_usage(self, path: str = "/") -> Tuple[float, float, float]:
@@ -281,28 +281,28 @@ class HealthChecker:
                     status=HealthStatus.CRITICAL,
                     message=f"Throttling active: {', '.join(issues)}",
                     value=throttle_value,
-                    details=details
+                    details=details,
                 )
             elif historical:
                 return HealthResult(
                     status=HealthStatus.WARNING,
                     message=f"Past throttling detected: {', '.join(historical)}",
                     value=throttle_value,
-                    details=details
+                    details=details,
                 )
             else:
                 return HealthResult(
                     status=HealthStatus.OK,
                     message="No throttling detected",
                     value=throttle_value,
-                    details=details
+                    details=details,
                 )
 
         except (ValueError, IOError) as e:
             logger.warning(f"Failed to read throttle status: {e}")
             return HealthResult(
                 status=HealthStatus.UNKNOWN,
-                message=f"Failed to read throttle status: {e}"
+                message=f"Failed to read throttle status: {e}",
             )
 
     def is_throttled(self) -> bool:
@@ -332,6 +332,7 @@ class HealthChecker:
         """
         try:
             import smbus2
+
             bus_obj = smbus2.SMBus(bus)
             try:
                 bus_obj.read_byte(address)
@@ -339,25 +340,25 @@ class HealthChecker:
                 return HealthResult(
                     status=HealthStatus.OK,
                     message=f"I2C device found at 0x{address:02X} on bus {bus}",
-                    details={"bus": bus, "address": hex(address)}
+                    details={"bus": bus, "address": hex(address)},
                 )
             except OSError:
                 bus_obj.close()
                 return HealthResult(
                     status=HealthStatus.CRITICAL,
                     message=f"I2C device not responding at 0x{address:02X} on bus {bus}",
-                    details={"bus": bus, "address": hex(address)}
+                    details={"bus": bus, "address": hex(address)},
                 )
         except ImportError:
             return HealthResult(
                 status=HealthStatus.UNKNOWN,
-                message="smbus2 not installed - cannot check I2C devices"
+                message="smbus2 not installed - cannot check I2C devices",
             )
         except Exception as e:
             return HealthResult(
                 status=HealthStatus.CRITICAL,
                 message=f"I2C error: {e}",
-                details={"bus": bus, "address": hex(address), "error": str(e)}
+                details={"bus": bus, "address": hex(address), "error": str(e)},
             )
 
     # =========================================================================
@@ -378,11 +379,12 @@ class HealthChecker:
             return HealthResult(
                 status=HealthStatus.WARNING,
                 message=f"Database file not found: {db_path}",
-                details={"path": db_path}
+                details={"path": db_path},
             )
 
         try:
             import sqlite3
+
             conn = sqlite3.connect(db_path, timeout=5)
             cursor = conn.execute("SELECT COUNT(*) FROM events")
             count = cursor.fetchone()[0]
@@ -399,20 +401,20 @@ class HealthChecker:
                     "path": db_path,
                     "event_count": count,
                     "size_mb": round(size_mb, 2),
-                }
+                },
             )
 
         except sqlite3.Error as e:
             return HealthResult(
                 status=HealthStatus.CRITICAL,
                 message=f"Database error: {e}",
-                details={"path": db_path, "error": str(e)}
+                details={"path": db_path, "error": str(e)},
             )
         except Exception as e:
             return HealthResult(
                 status=HealthStatus.CRITICAL,
                 message=f"Failed to check database: {e}",
-                details={"path": db_path, "error": str(e)}
+                details={"path": db_path, "error": str(e)},
             )
 
     # =========================================================================

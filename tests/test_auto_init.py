@@ -41,7 +41,7 @@ def config_with_auto_init():
     }
     with os.fdopen(fd, "w") as f:
         yaml.dump(config_data, f)
-    
+
     config = Config(path)
     yield config
     os.unlink(path)
@@ -67,7 +67,7 @@ def config_without_auto_init():
     }
     with os.fdopen(fd, "w") as f:
         yaml.dump(config_data, f)
-    
+
     config = Config(path)
     yield config
     os.unlink(path)
@@ -78,8 +78,10 @@ class TestAutoInitDatabase:
 
     def test_get_next_token_id_first_time(self, temp_db):
         """Test getting first token ID for a session"""
-        token_num, token_str = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
-        
+        token_num, token_str = temp_db.get_next_auto_init_token_id(
+            "test-session", start_id=1
+        )
+
         assert token_num == 1
         assert token_str == "001"
 
@@ -88,7 +90,7 @@ class TestAutoInitDatabase:
         _, token1 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         _, token2 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         _, token3 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
-        
+
         assert token1 == "001"
         assert token2 == "002"
         assert token3 == "003"
@@ -97,7 +99,7 @@ class TestAutoInitDatabase:
         """Test starting from a custom token ID"""
         _, token1 = temp_db.get_next_auto_init_token_id("test-session", start_id=100)
         _, token2 = temp_db.get_next_auto_init_token_id("test-session", start_id=100)
-        
+
         assert token1 == "100"
         assert token2 == "101"
 
@@ -107,7 +109,7 @@ class TestAutoInitDatabase:
         _, token1b = temp_db.get_next_auto_init_token_id("session-b", start_id=1)
         _, token2a = temp_db.get_next_auto_init_token_id("session-a", start_id=1)
         _, token2b = temp_db.get_next_auto_init_token_id("session-b", start_id=1)
-        
+
         assert token1a == "001"
         assert token1b == "001"
         assert token2a == "002"
@@ -116,19 +118,19 @@ class TestAutoInitDatabase:
     def test_get_next_token_id_formats_correctly(self, temp_db):
         """Test that token IDs are formatted as 3-digit strings"""
         _, token1 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
-        
+
         assert token1 == "001"
         assert len(token1) == 3
-        
+
         # Get a few more to verify formatting
         _, token2 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         assert token2 == "002"
         assert len(token2) == 3
-        
+
         # Skip ahead to near 100
         for _ in range(97):
             temp_db.get_next_auto_init_token_id("test-session", start_id=1)
-        
+
         _, token100 = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         assert token100 == "100"
         assert len(token100) == 3
@@ -160,7 +162,7 @@ class TestAutoInitConfig:
         }
         with os.fdopen(fd, "w") as f:
             yaml.dump(config_data, f)
-        
+
         config = Config(path)
         assert config.auto_init_cards is False
         assert config.auto_init_start_id == 1  # default
@@ -174,25 +176,25 @@ class TestAutoInitDetection:
         """Test that UIDs are correctly identified as uninitialized"""
         # Import the utility function from main
         from tap_station.main import TapStation
-        
+
         # Create a mock tap station just to access the method
         # (We can't instantiate fully without config file)
-        
+
         # Test the logic directly
         def looks_like_uid(token_id: str) -> bool:
             return len(token_id) >= 8 and all(c in "0123456789ABCDEF" for c in token_id)
-        
+
         # These look like UIDs (8+ hex chars)
         assert looks_like_uid("04A32FB2")
         assert looks_like_uid("04A32FB2C15080")
         assert looks_like_uid("AABBCCDD")
-        
+
         # These look like token IDs (3-4 digits)
         assert not looks_like_uid("001")
         assert not looks_like_uid("099")
         assert not looks_like_uid("100")
         assert not looks_like_uid("1000")
-        
+
         # Edge cases
         assert not looks_like_uid("ABC")  # Too short
         assert not looks_like_uid("12G45678")  # Contains non-hex
@@ -214,14 +216,16 @@ class TestAutoInitIntegration:
             ("05B43AC3D26091", "05B43AC3"),  # All hex
             ("06C54AD4E37102", "06C54AD4"),  # All hex
         ]
-        
+
         assigned_ids = []
         for uid, token_id in cards:
             # Detect uninitialized (token_id looks like UID)
             if self._looks_like_uid(token_id):
-                _, new_token_id = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
+                _, new_token_id = temp_db.get_next_auto_init_token_id(
+                    "test-session", start_id=1
+                )
                 assigned_ids.append(new_token_id)
-        
+
         assert assigned_ids == ["001", "002", "003"]
 
     def test_mixed_initialized_and_uninitialized(self, temp_db):
@@ -231,24 +235,26 @@ class TestAutoInitIntegration:
         # 2. Uninitialized card (UID - all hex, 8+ chars)
         # 3. Pre-initialized card "025"
         # 4. Uninitialized card (UID - all hex, 8+ chars)
-        
+
         cards = [
-            ("04A32FB2C15080", "050"),      # Pre-init
-            ("05B43AC3D26091", "05B43AC3"), # Uninitialized (all hex)
-            ("06C54AD4E37102", "025"),      # Pre-init
-            ("07D65AE5F48213", "07D65AE5"), # Uninitialized (all hex)
+            ("04A32FB2C15080", "050"),  # Pre-init
+            ("05B43AC3D26091", "05B43AC3"),  # Uninitialized (all hex)
+            ("06C54AD4E37102", "025"),  # Pre-init
+            ("07D65AE5F48213", "07D65AE5"),  # Uninitialized (all hex)
         ]
-        
+
         results = []
         for uid, token_id in cards:
             if self._looks_like_uid(token_id):
                 # Auto-init starting at 100 to avoid collision
-                _, new_token_id = temp_db.get_next_auto_init_token_id("test-session", start_id=100)
+                _, new_token_id = temp_db.get_next_auto_init_token_id(
+                    "test-session", start_id=100
+                )
                 results.append((uid, new_token_id))
             else:
                 # Keep existing token ID
                 results.append((uid, token_id))
-        
+
         # Check results
         assert results[0][1] == "050"  # Pre-init kept
         assert results[1][1] == "100"  # Auto-assigned
@@ -259,7 +265,7 @@ class TestAutoInitIntegration:
         """Test that auto-initialized cards log events correctly"""
         # Get auto-assigned token ID
         _, token_id = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
-        
+
         # Log event with auto-assigned token ID
         result = temp_db.log_event(
             token_id=token_id,
@@ -270,7 +276,7 @@ class TestAutoInitIntegration:
         )
 
         assert result["success"] is True
-        
+
         # Verify event was logged
         events = temp_db.get_recent_events(limit=1)
         assert len(events) == 1
@@ -284,7 +290,7 @@ class TestAutoInitCardWriting:
     def test_mock_reader_write_token_id(self):
         """Test that mock NFC reader can write token IDs"""
         reader = MockNFCReader()
-        
+
         success = reader.write_token_id("001")
         assert success is True
 
@@ -293,7 +299,7 @@ class TestAutoInitCardWriting:
         # Get auto-assigned token ID
         _, token_id = temp_db.get_next_auto_init_token_id("test-session", start_id=1)
         assert token_id == "001"
-        
+
         # Even if write fails, we can still log the event
         # (This is what happens in main.py - it tries to write but continues anyway)
         result = temp_db.log_event(

@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationSeverity(Enum):
     """Severity levels for validation issues"""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -36,6 +37,7 @@ class ValidationSeverity(Enum):
 @dataclass
 class ValidationIssue:
     """Represents a validation issue found during sequence checking"""
+
     severity: ValidationSeverity
     code: str
     message: str
@@ -49,13 +51,14 @@ class ValidationIssue:
             "code": self.code,
             "message": self.message,
             "suggestion": self.suggestion,
-            "context": self.context
+            "context": self.context,
         }
 
 
 @dataclass
 class SequenceValidationResult:
     """Result of sequence validation"""
+
     valid: bool
     issues: List[ValidationIssue] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
@@ -81,13 +84,14 @@ class SequenceValidationResult:
             "issues": [i.to_dict() for i in self.issues],
             "suggestions": self.suggestions,
             "has_errors": self.has_errors,
-            "has_warnings": self.has_warnings
+            "has_warnings": self.has_warnings,
         }
 
 
 @dataclass
 class StageDefinition:
     """Defines a workflow stage with its properties"""
+
     id: str
     label: str
     required: bool = True
@@ -126,7 +130,7 @@ class SequenceValidator:
         stages: Optional[List[StageDefinition]] = None,
         allow_skip_optional: bool = True,
         allow_late_entry: bool = True,
-        enforce_timing: bool = False
+        enforce_timing: bool = False,
     ):
         """
         Initialize sequence validator.
@@ -143,7 +147,10 @@ class SequenceValidator:
         self._allow_late_entry = allow_late_entry
         self._enforce_timing = enforce_timing
         self._terminal_stages: Set[str] = {WorkflowStages.EXIT}
-        self._entry_stages: Set[str] = {WorkflowStages.QUEUE_JOIN, WorkflowStages.SERVICE_START}
+        self._entry_stages: Set[str] = {
+            WorkflowStages.QUEUE_JOIN,
+            WorkflowStages.SERVICE_START,
+        }
 
     def _default_stages(self) -> List[StageDefinition]:
         """Get default stage definitions"""
@@ -153,7 +160,11 @@ class SequenceValidator:
                 label="In Queue",
                 required=True,
                 order=1,
-                allowed_successors={WorkflowStages.SERVICE_START, WorkflowStages.SUBSTANCE_RETURNED, WorkflowStages.EXIT}
+                allowed_successors={
+                    WorkflowStages.SERVICE_START,
+                    WorkflowStages.SUBSTANCE_RETURNED,
+                    WorkflowStages.EXIT,
+                },
             ),
             StageDefinition(
                 id=WorkflowStages.SERVICE_START,
@@ -161,26 +172,38 @@ class SequenceValidator:
                 required=False,
                 order=2,
                 allowed_predecessors={WorkflowStages.QUEUE_JOIN},
-                allowed_successors={WorkflowStages.SUBSTANCE_RETURNED, WorkflowStages.EXIT}
+                allowed_successors={
+                    WorkflowStages.SUBSTANCE_RETURNED,
+                    WorkflowStages.EXIT,
+                },
             ),
             StageDefinition(
                 id=WorkflowStages.SUBSTANCE_RETURNED,
                 label="Substance Returned",
                 required=False,
                 order=3,
-                allowed_predecessors={WorkflowStages.QUEUE_JOIN, WorkflowStages.SERVICE_START},
-                allowed_successors={WorkflowStages.EXIT}
+                allowed_predecessors={
+                    WorkflowStages.QUEUE_JOIN,
+                    WorkflowStages.SERVICE_START,
+                },
+                allowed_successors={WorkflowStages.EXIT},
             ),
             StageDefinition(
                 id=WorkflowStages.EXIT,
                 label="Completed",
                 required=True,
                 order=4,
-                allowed_predecessors={WorkflowStages.QUEUE_JOIN, WorkflowStages.SERVICE_START, WorkflowStages.SUBSTANCE_RETURNED}
+                allowed_predecessors={
+                    WorkflowStages.QUEUE_JOIN,
+                    WorkflowStages.SERVICE_START,
+                    WorkflowStages.SUBSTANCE_RETURNED,
+                },
             ),
         ]
 
-    def _build_stage_map(self, stages: List[StageDefinition]) -> Dict[str, StageDefinition]:
+    def _build_stage_map(
+        self, stages: List[StageDefinition]
+    ) -> Dict[str, StageDefinition]:
         """Build a map of stage ID to definition"""
         return {s.id: s for s in stages}
 
@@ -207,7 +230,7 @@ class SequenceValidator:
         self,
         from_stage: Optional[str],
         to_stage: str,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> SequenceValidationResult:
         """
         Validate a single stage transition.
@@ -226,51 +249,60 @@ class SequenceValidator:
 
         # Check if to_stage is known
         if to_stage not in self._stages:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                code=self.CODES["UNEXPECTED_STAGE"],
-                message=f"Unknown stage: {to_stage}",
-                suggestion=f"Valid stages: {', '.join(self._stages.keys())}",
-                context={"stage": to_stage}
-            ))
+            issues.append(
+                ValidationIssue(
+                    severity=ValidationSeverity.ERROR,
+                    code=self.CODES["UNEXPECTED_STAGE"],
+                    message=f"Unknown stage: {to_stage}",
+                    suggestion=f"Valid stages: {', '.join(self._stages.keys())}",
+                    context={"stage": to_stage},
+                )
+            )
             return SequenceValidationResult(valid=False, issues=issues)
 
         # First tap validation
         if from_stage is None:
             if to_stage not in self._entry_stages:
                 if self._allow_late_entry:
-                    issues.append(ValidationIssue(
-                        severity=ValidationSeverity.WARNING,
-                        code=self.CODES["INVALID_ENTRY"],
-                        message=f"First tap at {to_stage} instead of entry stage",
-                        suggestion="Consider adding missed entry tap",
-                        context={"stage": to_stage, "expected": list(self._entry_stages)}
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity=ValidationSeverity.WARNING,
+                            code=self.CODES["INVALID_ENTRY"],
+                            message=f"First tap at {to_stage} instead of entry stage",
+                            suggestion="Consider adding missed entry tap",
+                            context={
+                                "stage": to_stage,
+                                "expected": list(self._entry_stages),
+                            },
+                        )
+                    )
                 else:
-                    issues.append(ValidationIssue(
-                        severity=ValidationSeverity.ERROR,
-                        code=self.CODES["INVALID_ENTRY"],
-                        message=f"Invalid entry point: {to_stage}",
-                        suggestion=f"First tap must be at: {', '.join(self._entry_stages)}",
-                        context={"stage": to_stage}
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity=ValidationSeverity.ERROR,
+                            code=self.CODES["INVALID_ENTRY"],
+                            message=f"Invalid entry point: {to_stage}",
+                            suggestion=f"First tap must be at: {', '.join(self._entry_stages)}",
+                            context={"stage": to_stage},
+                        )
+                    )
                     return SequenceValidationResult(valid=False, issues=issues)
 
             return SequenceValidationResult(
-                valid=True,
-                issues=issues,
-                suggestions=suggestions
+                valid=True, issues=issues, suggestions=suggestions
             )
 
         # Check for post-terminal transition
         if from_stage in self._terminal_stages:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                code=self.CODES["POST_TERMINAL"],
-                message=f"Cannot transition from terminal stage {from_stage}",
-                suggestion="This may indicate a reused card or second visit",
-                context={"from": from_stage, "to": to_stage}
-            ))
+            issues.append(
+                ValidationIssue(
+                    severity=ValidationSeverity.ERROR,
+                    code=self.CODES["POST_TERMINAL"],
+                    message=f"Cannot transition from terminal stage {from_stage}",
+                    suggestion="This may indicate a reused card or second visit",
+                    context={"from": from_stage, "to": to_stage},
+                )
+            )
             return SequenceValidationResult(valid=False, issues=issues)
 
         # Check if transition is allowed
@@ -291,49 +323,56 @@ class SequenceValidator:
             if self._allow_skip_optional:
                 skipped = self._get_skipped_stages(from_stage, to_stage)
                 if all(not self._stages[s].required for s in skipped):
-                    issues.append(ValidationIssue(
-                        severity=ValidationSeverity.INFO,
-                        code=self.CODES["SKIPPED_REQUIRED"],
-                        message=f"Skipped optional stages: {', '.join(skipped)}",
-                        context={"skipped": skipped}
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity=ValidationSeverity.INFO,
+                            code=self.CODES["SKIPPED_REQUIRED"],
+                            message=f"Skipped optional stages: {', '.join(skipped)}",
+                            context={"skipped": skipped},
+                        )
+                    )
                 else:
                     required_skipped = [s for s in skipped if self._stages[s].required]
-                    issues.append(ValidationIssue(
-                        severity=ValidationSeverity.WARNING,
-                        code=self.CODES["SKIPPED_REQUIRED"],
-                        message=f"Skipped required stages: {', '.join(required_skipped)}",
-                        suggestion="Add missing stage taps if participant went through them",
-                        context={"skipped": required_skipped}
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity=ValidationSeverity.WARNING,
+                            code=self.CODES["SKIPPED_REQUIRED"],
+                            message=f"Skipped required stages: {', '.join(required_skipped)}",
+                            suggestion="Add missing stage taps if participant went through them",
+                            context={"skipped": required_skipped},
+                        )
+                    )
             else:
-                issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    code=self.CODES["INVALID_TRANSITION"],
-                    message=f"Invalid transition: {from_stage} -> {to_stage}",
-                    suggestion=f"Expected next stages: {', '.join(from_def.allowed_successors if from_def else [])}",
-                    context={"from": from_stage, "to": to_stage}
-                ))
+                issues.append(
+                    ValidationIssue(
+                        severity=ValidationSeverity.ERROR,
+                        code=self.CODES["INVALID_TRANSITION"],
+                        message=f"Invalid transition: {from_stage} -> {to_stage}",
+                        suggestion=f"Expected next stages: {', '.join(from_def.allowed_successors if from_def else [])}",
+                        context={"from": from_stage, "to": to_stage},
+                    )
+                )
                 return SequenceValidationResult(valid=False, issues=issues)
 
         # Timing validation
-        if self._enforce_timing and context.get("from_timestamp") and context.get("to_timestamp"):
+        if (
+            self._enforce_timing
+            and context.get("from_timestamp")
+            and context.get("to_timestamp")
+        ):
             timing_issues = self._validate_timing(
-                from_stage, to_stage,
-                context["from_timestamp"], context["to_timestamp"]
+                from_stage, to_stage, context["from_timestamp"], context["to_timestamp"]
             )
             issues.extend(timing_issues)
 
         return SequenceValidationResult(
             valid=not any(i.severity == ValidationSeverity.ERROR for i in issues),
             issues=issues,
-            suggestions=suggestions
+            suggestions=suggestions,
         )
 
     def validate_sequence(
-        self,
-        stages: List[str],
-        timestamps: Optional[List[datetime]] = None
+        self, stages: List[str], timestamps: Optional[List[datetime]] = None
     ) -> SequenceValidationResult:
         """
         Validate a complete sequence of stages.
@@ -373,36 +412,38 @@ class SequenceValidator:
             if stage in seen:
                 stage_def = self._stages.get(stage)
                 if stage_def and not stage_def.repeatable:
-                    all_issues.append(ValidationIssue(
-                        severity=ValidationSeverity.WARNING,
-                        code=self.CODES["REPEATED_STAGE"],
-                        message=f"Stage {stage} appears multiple times",
-                        suggestion="This may indicate accidental duplicate taps",
-                        context={"stage": stage}
-                    ))
+                    all_issues.append(
+                        ValidationIssue(
+                            severity=ValidationSeverity.WARNING,
+                            code=self.CODES["REPEATED_STAGE"],
+                            message=f"Stage {stage} appears multiple times",
+                            suggestion="This may indicate accidental duplicate taps",
+                            context={"stage": stage},
+                        )
+                    )
             seen.add(stage)
 
         # Check if sequence ends properly
         if stages[-1] not in self._terminal_stages:
-            all_issues.append(ValidationIssue(
-                severity=ValidationSeverity.INFO,
-                code=self.CODES["MISSING_EXIT"],
-                message="Sequence does not end at a terminal stage",
-                suggestion="Journey may be incomplete",
-                context={"last_stage": stages[-1], "terminal_stages": list(self._terminal_stages)}
-            ))
+            all_issues.append(
+                ValidationIssue(
+                    severity=ValidationSeverity.INFO,
+                    code=self.CODES["MISSING_EXIT"],
+                    message="Sequence does not end at a terminal stage",
+                    suggestion="Journey may be incomplete",
+                    context={
+                        "last_stage": stages[-1],
+                        "terminal_stages": list(self._terminal_stages),
+                    },
+                )
+            )
 
         valid = not any(i.severity == ValidationSeverity.ERROR for i in all_issues)
         return SequenceValidationResult(
-            valid=valid,
-            issues=all_issues,
-            suggestions=all_suggestions
+            valid=valid, issues=all_issues, suggestions=all_suggestions
         )
 
-    def suggest_next_stages(
-        self,
-        current_sequence: List[str]
-    ) -> List[str]:
+    def suggest_next_stages(self, current_sequence: List[str]) -> List[str]:
         """
         Suggest valid next stages based on current sequence.
 
@@ -431,8 +472,7 @@ class SequenceValidator:
         # Fall back to all stages with higher order
         current_order = self._stage_order.get(last_stage, 0)
         return [
-            s_id for s_id, order in self._stage_order.items()
-            if order > current_order
+            s_id for s_id, order in self._stage_order.items() if order > current_order
         ]
 
     def _get_skipped_stages(self, from_stage: str, to_stage: str) -> List[str]:
@@ -441,16 +481,13 @@ class SequenceValidator:
         to_order = self._stage_order.get(to_stage, 0)
 
         return [
-            s_id for s_id, order in self._stage_order.items()
+            s_id
+            for s_id, order in self._stage_order.items()
             if from_order < order < to_order
         ]
 
     def _validate_timing(
-        self,
-        from_stage: str,
-        to_stage: str,
-        from_time: datetime,
-        to_time: datetime
+        self, from_stage: str, to_stage: str, from_time: datetime, to_time: datetime
     ) -> List[ValidationIssue]:
         """Validate timing between stages"""
         issues = []
@@ -462,30 +499,34 @@ class SequenceValidator:
         duration = (to_time - from_time).total_seconds() / 60  # minutes
 
         if from_def.min_duration_minutes and duration < from_def.min_duration_minutes:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                code=self.CODES["TIMING_VIOLATION"],
-                message=f"Stage {from_stage} completed too quickly ({duration:.1f}min < {from_def.min_duration_minutes}min)",
-                suggestion="This may indicate a data entry error or skipped process",
-                context={
-                    "stage": from_stage,
-                    "duration": duration,
-                    "minimum": from_def.min_duration_minutes
-                }
-            ))
+            issues.append(
+                ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    code=self.CODES["TIMING_VIOLATION"],
+                    message=f"Stage {from_stage} completed too quickly ({duration:.1f}min < {from_def.min_duration_minutes}min)",
+                    suggestion="This may indicate a data entry error or skipped process",
+                    context={
+                        "stage": from_stage,
+                        "duration": duration,
+                        "minimum": from_def.min_duration_minutes,
+                    },
+                )
+            )
 
         if from_def.max_duration_minutes and duration > from_def.max_duration_minutes:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                code=self.CODES["TIMING_VIOLATION"],
-                message=f"Stage {from_stage} took unusually long ({duration:.1f}min > {from_def.max_duration_minutes}min)",
-                suggestion="This may indicate a forgotten tap or extended service",
-                context={
-                    "stage": from_stage,
-                    "duration": duration,
-                    "maximum": from_def.max_duration_minutes
-                }
-            ))
+            issues.append(
+                ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    code=self.CODES["TIMING_VIOLATION"],
+                    message=f"Stage {from_stage} took unusually long ({duration:.1f}min > {from_def.max_duration_minutes}min)",
+                    suggestion="This may indicate a forgotten tap or extended service",
+                    context={
+                        "stage": from_stage,
+                        "duration": duration,
+                        "maximum": from_def.max_duration_minutes,
+                    },
+                )
+            )
 
         return issues
 
@@ -506,8 +547,7 @@ def get_sequence_validator() -> SequenceValidator:
 
 
 def configure_sequence_validator(
-    stages: Optional[List[StageDefinition]] = None,
-    **kwargs
+    stages: Optional[List[StageDefinition]] = None, **kwargs
 ) -> SequenceValidator:
     """Configure and return the global sequence validator"""
     global _sequence_validator

@@ -23,42 +23,49 @@ This document describes the **completed implementation** of enhanced human error
 All anomaly types from documentation are now fully functional:
 
 #### a. Forgotten Exit Taps
+
 - **Detection:** Cards that entered queue >30 minutes ago without EXIT tap
 - **Severity:** High if >120 min, Medium if >30 min
 - **Implementation:** SQL query checks for QUEUE_JOIN without matching EXIT
 - **Endpoint:** `/api/control/anomalies`
 
 #### b. Stuck in Service
+
 - **Detection:** Cards at SERVICE_START >45 minutes without completion
 - **Severity:** High if >90 min, Medium if >45 min
 - **Implementation:** SQL query checks for SERVICE_START without EXIT or SUBSTANCE_RETURNED
 - **Use Case:** Service taking too long or participant forgot to tap exit
 
 #### c. Long Service Times
+
 - **Detection:** Service time >2× median service time
 - **Severity:** Low (informational)
 - **Implementation:** Calculates median service time and flags outliers
 - **Use Case:** Identifies unusually complex cases
 
 #### d. Rapid-Fire Duplicate Taps
+
 - **Detection:** Same card tapped twice at same stage <2 minutes apart
 - **Severity:** Low
 - **Implementation:** SQL query finds duplicate taps within 2-minute window
 - **Use Case:** Participant accidentally tapped multiple times
 
 #### e. Incomplete Journeys
+
 - **Detection:** Any journey without EXIT tap
 - **Severity:** Medium
 - **Implementation:** SQL query finds cards with taps but no EXIT
 - **Use Case:** Participant left without exiting or lost card
 
 #### f. Out-of-Order Events
+
 - **Detection:** Invalid stage transitions (e.g., EXIT before QUEUE_JOIN)
 - **Severity:** Medium
 - **Implementation:** Real-time sequence validation using state machine
 - **Use Case:** Card tapped at wrong station or reused card
 
 **API Response:**
+
 ```json
 {
   "anomalies": {
@@ -86,13 +93,15 @@ All anomaly types from documentation are now fully functional:
 
 **Status:** ✅ Fully implemented with `deleted_events` table
 
-#### Features:
+#### Features
+
 - **Permanent Archive:** All deleted events stored in `deleted_events` table
 - **Full Context:** Preserves original event ID, all event data, deletion metadata
 - **Accountability:** Tracks who deleted (operator_id), when (deleted_at), why (deletion_reason)
 - **Recovery:** Events can be reviewed and manually re-added if needed
 
-#### Database Schema:
+#### Database Schema
+
 ```sql
 CREATE TABLE deleted_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,7 +119,8 @@ CREATE TABLE deleted_events (
 )
 ```
 
-#### Usage:
+#### Usage
+
 ```bash
 # Delete an event
 curl -X POST http://localhost:5000/api/control/remove-event \
@@ -131,19 +141,22 @@ sqlite3 data/events.db "SELECT * FROM deleted_events WHERE session_id='festival-
 
 **Status:** ✅ All critical fields validated
 
-#### Stage Validation:
+#### Stage Validation
+
 - **Validates against:** `WorkflowStages.ALL_STAGES` enum
 - **Rejects:** Unknown or invalid stage names
 - **Error Message:** "Unknown stage: INVALID. Valid stages: QUEUE_JOIN, SERVICE_START, SUBSTANCE_RETURNED, EXIT"
 - **Location:** `tap_station/database.py::log_event()`, `tap_station/validation.py::StageValidator`
 
-#### Token ID Validation:
+#### Token ID Validation
+
 - **Format:** Alphanumeric, 1-10 characters
 - **Pattern:** `^[A-Za-z0-9]{1,10}$`
 - **Backwards Compatible:** Still accepts legacy numeric-only IDs
 - **Location:** `tap_station/validation.py::TokenValidator`
 
-#### Timestamp Validation:
+#### Timestamp Validation
+
 - **Formats Supported:**
   - ISO 8601: `2026-01-25T12:30:00Z`
   - Unix timestamp (seconds): `1737812400`
@@ -160,28 +173,33 @@ sqlite3 data/events.db "SELECT * FROM deleted_events WHERE session_id='festival-
 
 **Status:** ✅ Implemented without external dependencies
 
-#### Implementation:
+#### Implementation
+
 - **Type:** Simple in-memory rate limiter
 - **Scope:** Per-IP address tracking
 - **Storage:** Thread-safe defaultdict with automatic cleanup
 
-#### Limits:
+#### Limits
+
 - **Control Endpoints (Write):** 10 requests/minute
   - `/api/control/manual-event`
   - `/api/control/remove-event`
 - **Anomaly Endpoint (Read):** 30 requests/minute
   - `/api/control/anomalies`
 
-#### Response:
+#### Response
+
 ```json
 {
   "success": false,
   "error": "Rate limit exceeded. Please try again later."
 }
 ```
+
 **HTTP Status:** 429 (Too Many Requests)
 
-#### Configuration:
+#### Configuration
+
 ```python
 # In tap_station/web_server.py
 self.control_limiter = RateLimiter(max_requests=10, window_seconds=60)
@@ -194,18 +212,21 @@ self.anomaly_limiter = RateLimiter(max_requests=30, window_seconds=60)
 
 **Status:** ✅ Manual events can now bypass duplicate checking
 
-#### Problem:
+#### Problem
+
 - Manual events were still subject to duplicate checking
 - Staff couldn't add missed events at same stage
 - Contradicted the purpose of manual corrections
 
-#### Solution:
+#### Solution
+
 - Added `skip_duplicate_check` parameter to `log_event()`
 - Manual events set `skip_duplicate_check=True`
 - Allows staff to intentionally add duplicate corrections
 - Still validates sequence and logs with appropriate flags
 
-#### Usage:
+#### Usage
+
 ```python
 # Normal event (duplicate check applies)
 db.log_event(token_id="001", stage="EXIT", ...)
@@ -224,12 +245,14 @@ db.add_manual_event(
 
 ## 📊 Testing & Validation
 
-### Test Suite:
+### Test Suite
+
 - **9 new tests** for anomaly detection features
 - **8 existing tests** for database operations
 - **100% pass rate** (17/17 tests)
 
-### Test Coverage:
+### Test Coverage
+
 1. ✅ Forgotten exit tap detection
 2. ✅ Stuck in service detection (via incomplete journeys)
 3. ✅ Incomplete journey detection
@@ -240,7 +263,8 @@ db.add_manual_event(
 8. ✅ Stage validation rejection
 9. ✅ Anomaly summary statistics
 
-### Security Scanning:
+### Security Scanning
+
 - **CodeQL:** ✅ No vulnerabilities found
 - **Input Validation:** ✅ All critical fields validated
 - **Rate Limiting:** ✅ DoS protection in place
@@ -290,14 +314,16 @@ class WorkflowStages:
 
 ## 📈 Impact & Improvements
 
-### Before v2.6:
+### Before v2.6
+
 - ❌ Only 1/6 anomaly types implemented (17% complete)
 - ❌ No audit trail for deleted events (permanent data loss)
 - ❌ No input validation (security risk)
 - ❌ No rate limiting (DoS vulnerability)
 - ❌ Manual events subject to duplicate check (couldn't correct errors)
 
-### After v2.6:
+### After v2.6
+
 - ✅ All 6 anomaly types implemented (100% complete)
 - ✅ Full audit trail with deleted_events table
 - ✅ Comprehensive input validation (stages, tokens, timestamps)
@@ -306,7 +332,8 @@ class WorkflowStages:
 - ✅ 17/17 tests passing
 - ✅ Zero security vulnerabilities
 
-### Operational Impact:
+### Operational Impact
+
 - **Data Integrity:** No more permanent data loss from accidental deletions
 - **Security:** Protected against malicious input and DoS attacks
 - **Reliability:** Real-time anomaly detection identifies issues immediately
@@ -324,6 +351,7 @@ curl http://localhost:5000/api/control/anomalies | jq .
 ```
 
 **Response:**
+
 ```json
 {
   "anomalies": {
@@ -397,12 +425,14 @@ curl -X POST http://localhost:5000/api/control/remove-event \
 
 ## 🔄 Migration Notes
 
-### Existing Databases:
+### Existing Databases
+
 - **New table created automatically:** `deleted_events` table created on first run
 - **No data migration needed:** Existing events remain unchanged
 - **Backwards compatible:** All existing features work exactly as before
 
-### API Changes:
+### API Changes
+
 - **No breaking changes:** All existing endpoints work unchanged
 - **New parameter:** `skip_duplicate_check` optional in manual events
 - **New validation:** Invalid stages now rejected (previously accepted silently)

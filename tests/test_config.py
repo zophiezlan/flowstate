@@ -87,10 +87,10 @@ station:
 def test_config_file_not_found():
     """Test error when config file doesn't exist"""
     from tap_station.exceptions import ConfigurationError
-    
+
     with pytest.raises(ConfigurationError) as exc_info:
         Config("nonexistent.yaml")
-    
+
     # Check that the error message is helpful
     assert "Configuration file not found" in str(exc_info.value)
     assert "config.yaml.example" in str(exc_info.value)

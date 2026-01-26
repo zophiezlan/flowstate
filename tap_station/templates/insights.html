@@ -434,7 +434,9 @@
     <div class="header">
       <div>
         <h1>Service Insights</h1>
-        <div class="session-info">Session: {{ session }} | Quality Metrics & SLO Tracking</div>
+        <div class="session-info">
+          Session: {{ session }} | Quality Metrics & SLO Tracking
+        </div>
       </div>
       <div class="nav-links">
         <a href="/dashboard" class="nav-link">Live Dashboard</a>
@@ -528,7 +530,8 @@
       </div>
 
       <div class="auto-refresh">
-        Auto-refreshing every 30 seconds | Last update: <span id="last-update">-</span>
+        Auto-refreshing every 30 seconds | Last update:
+        <span id="last-update">-</span>
       </div>
     </div>
 
@@ -538,7 +541,8 @@
           const response = await fetch("/api/service-insights");
           const data = await response.json();
           updateInsights(data);
-          document.getElementById("last-update").textContent = new Date().toLocaleTimeString();
+          document.getElementById("last-update").textContent =
+            new Date().toLocaleTimeString();
         } catch (error) {
           console.error("Failed to fetch insights:", error);
         }
@@ -557,23 +561,32 @@
           // Update status
           circle.className = "quality-score-circle " + score.status;
           statusEl.className = "quality-status " + score.status;
-          statusEl.textContent = score.status.charAt(0).toUpperCase() + score.status.slice(1) + " Service";
+          statusEl.textContent =
+            score.status.charAt(0).toUpperCase() +
+            score.status.slice(1) +
+            " Service";
 
           // Update component scores
-          document.getElementById("score-timeliness").textContent =
-            Math.round(score.components.timeliness || 0);
-          document.getElementById("score-throughput").textContent =
-            Math.round(score.components.throughput || 0);
-          document.getElementById("score-completion").textContent =
-            Math.round(score.components.completion || 0);
-          document.getElementById("score-reliability").textContent =
-            Math.round(score.components.reliability || 0);
+          document.getElementById("score-timeliness").textContent = Math.round(
+            score.components.timeliness || 0,
+          );
+          document.getElementById("score-throughput").textContent = Math.round(
+            score.components.throughput || 0,
+          );
+          document.getElementById("score-completion").textContent = Math.round(
+            score.components.completion || 0,
+          );
+          document.getElementById("score-reliability").textContent = Math.round(
+            score.components.reliability || 0,
+          );
         }
 
         // Update SLOs
         const sloGrid = document.getElementById("slo-grid");
         if (data.slos && Object.keys(data.slos).length > 0) {
-          sloGrid.innerHTML = Object.entries(data.slos).map(([key, slo]) => `
+          sloGrid.innerHTML = Object.entries(data.slos)
+            .map(
+              ([key, slo]) => `
             <div class="slo-card ${slo.status}">
               <div class="slo-header">
                 <div class="slo-name">${formatSloName(slo.name)}</div>
@@ -589,27 +602,34 @@
                 <span class="slo-target">Target: ${formatValue(slo.target, slo.unit)}</span>
               </div>
             </div>
-          `).join("");
+          `,
+            )
+            .join("");
         } else {
-          sloGrid.innerHTML = '<div class="loading">No SLO data available</div>';
+          sloGrid.innerHTML =
+            '<div class="loading">No SLO data available</div>';
         }
 
         // Update SLIs
         if (data.slis) {
-          document.getElementById("sli-avg-wait").innerHTML =
-            formatMinutes(data.slis.avg_wait_time);
-          document.getElementById("sli-median-wait").innerHTML =
-            formatMinutes(data.slis.median_wait_time);
-          document.getElementById("sli-p95-wait").innerHTML =
-            formatMinutes(data.slis.p95_wait_time);
+          document.getElementById("sli-avg-wait").innerHTML = formatMinutes(
+            data.slis.avg_wait_time,
+          );
+          document.getElementById("sli-median-wait").innerHTML = formatMinutes(
+            data.slis.median_wait_time,
+          );
+          document.getElementById("sli-p95-wait").innerHTML = formatMinutes(
+            data.slis.p95_wait_time,
+          );
           document.getElementById("sli-throughput").innerHTML =
             `${Math.round(data.slis.current_throughput || 0)}`;
           document.getElementById("sli-completion").innerHTML =
             `${Math.round(data.slis.completion_rate || 0)}<span class="sli-unit">%</span>`;
           document.getElementById("sli-active").textContent =
             data.slis.active_journeys || 0;
-          document.getElementById("sli-service-time").innerHTML =
-            formatMinutes(data.slis.avg_service_time);
+          document.getElementById("sli-service-time").innerHTML = formatMinutes(
+            data.slis.avg_service_time,
+          );
           document.getElementById("sli-efficiency").innerHTML =
             `${Math.round(data.slis.service_efficiency || 0)}<span class="sli-unit">%</span>`;
         }
@@ -619,8 +639,13 @@
       }
 
       function formatSloName(name) {
-        return name.replace(/_/g, " ").replace(/slo$/i, "").trim()
-          .split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+        return name
+          .replace(/_/g, " ")
+          .replace(/slo$/i, "")
+          .trim()
+          .split(" ")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
       }
 
       function formatValue(value, unit) {
@@ -647,7 +672,7 @@
             recommendations.push({
               type: "urgent",
               title: "Improve Wait Times",
-              text: "Wait times are above target. Consider adding staff or streamlining processes."
+              text: "Wait times are above target. Consider adding staff or streamlining processes.",
             });
           }
 
@@ -655,7 +680,7 @@
             recommendations.push({
               type: "improve",
               title: "Increase Throughput",
-              text: "Service throughput is below capacity. Review bottlenecks in the workflow."
+              text: "Service throughput is below capacity. Review bottlenecks in the workflow.",
             });
           }
 
@@ -663,7 +688,7 @@
             recommendations.push({
               type: "improve",
               title: "Track Completions",
-              text: "Some participants may be leaving without tapping exit. Remind staff to encourage exit taps."
+              text: "Some participants may be leaving without tapping exit. Remind staff to encourage exit taps.",
             });
           }
 
@@ -671,7 +696,7 @@
             recommendations.push({
               type: "maintain",
               title: "Excellent Service Quality",
-              text: "Keep up the great work! All metrics are within healthy ranges."
+              text: "Keep up the great work! All metrics are within healthy ranges.",
             });
           }
         }
@@ -680,7 +705,7 @@
           recommendations.push({
             type: "urgent",
             title: "High Active Count",
-            text: `${data.slis.active_journeys} active journeys. Monitor for stuck cards or forgotten exits.`
+            text: `${data.slis.active_journeys} active journeys. Monitor for stuck cards or forgotten exits.`,
           });
         }
 
@@ -688,11 +713,13 @@
           recommendations.push({
             type: "maintain",
             title: "Service Running Normally",
-            text: "No immediate actions required. Continue monitoring."
+            text: "No immediate actions required. Continue monitoring.",
           });
         }
 
-        container.innerHTML = recommendations.map(rec => `
+        container.innerHTML = recommendations
+          .map(
+            (rec) => `
           <div class="recommendation-item">
             <div class="recommendation-icon ${rec.type}">
               ${rec.type === "urgent" ? "⚠️" : rec.type === "improve" ? "📈" : "✅"}
@@ -702,7 +729,9 @@
               <div class="recommendation-text">${rec.text}</div>
             </div>
           </div>
-        `).join("");
+        `,
+          )
+          .join("");
       }
 
       // Initial load

@@ -19,8 +19,12 @@
         <form id="settings-form">
           <div class="field">
             <label for="session-id">
-              Session ID 
-              <span class="help-icon" title="The event name or date (e.g., 'festival-2026-summer'). This groups all taps from the same event together.">ℹ️</span>
+              Session ID
+              <span
+                class="help-icon"
+                title="The event name or date (e.g., 'festival-2026-summer'). This groups all taps from the same event together."
+                >ℹ️</span
+              >
             </label>
             <input
               id="session-id"
@@ -33,20 +37,34 @@
           </div>
           <div class="field">
             <label for="stage">
-              Stage 
-              <span class="help-icon" title="Which checkpoint this station represents: QUEUE_JOIN = entry, SERVICE_START = beginning service, EXIT = leaving">ℹ️</span>
+              Stage
+              <span
+                class="help-icon"
+                title="Which checkpoint this station represents: QUEUE_JOIN = entry, SERVICE_START = beginning service, EXIT = leaving"
+                >ℹ️</span
+              >
             </label>
             <select id="stage" name="stage">
-              <option value="QUEUE_JOIN">QUEUE_JOIN (Entry - people joining queue)</option>
-              <option value="SERVICE_START">SERVICE_START (Service began)</option>
-              <option value="SUBSTANCE_RETURNED">SUBSTANCE_RETURNED (Substance returned)</option>
+              <option value="QUEUE_JOIN">
+                QUEUE_JOIN (Entry - people joining queue)
+              </option>
+              <option value="SERVICE_START">
+                SERVICE_START (Service began)
+              </option>
+              <option value="SUBSTANCE_RETURNED">
+                SUBSTANCE_RETURNED (Substance returned)
+              </option>
               <option value="EXIT">EXIT (Leaving - service complete)</option>
             </select>
           </div>
           <div class="field">
             <label for="device-id">
-              Device ID 
-              <span class="help-icon" title="Unique name for this phone/device (e.g., 'phone1', 'mobile-entry'). Helps identify which station recorded each tap.">ℹ️</span>
+              Device ID
+              <span
+                class="help-icon"
+                title="Unique name for this phone/device (e.g., 'phone1', 'mobile-entry'). Helps identify which station recorded each tap."
+                >ℹ️</span
+              >
             </label>
             <input
               id="device-id"
@@ -60,7 +78,11 @@
           <div class="field">
             <label for="pi-url">
               Pi Station URL (Optional)
-              <span class="help-icon" title="IP address of the Raspberry Pi server for automatic syncing. Leave blank to sync manually.">ℹ️</span>
+              <span
+                class="help-icon"
+                title="IP address of the Raspberry Pi server for automatic syncing. Leave blank to sync manually."
+                >ℹ️</span
+              >
             </label>
             <input
               id="pi-url"
@@ -85,7 +107,11 @@
             <h2>Scanner</h2>
             <p id="nfc-status" class="muted">NFC idle</p>
           </div>
-          <div class="pill" id="unsynced-count" title="Number of taps waiting to sync to server. Taps are saved locally and will sync automatically when online.">
+          <div
+            class="pill"
+            id="unsynced-count"
+            title="Number of taps waiting to sync to server. Taps are saved locally and will sync automatically when online."
+          >
             0 unsynced
           </div>
         </div>
@@ -96,7 +122,11 @@
           </button>
           <button id="manual-add" class="ghost">Add manual token</button>
         </div>
-        <div id="sync-status-message" class="sync-message" style="display: none;"></div>
+        <div
+          id="sync-status-message"
+          class="sync-message"
+          style="display: none"
+        ></div>
         <div id="status-grid">
           <div>
             <p class="muted">Last token</p>

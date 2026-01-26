@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConfigurationChange:
     """Represents a configuration change"""
+
     path: str
     old_value: Any
     new_value: Any
@@ -53,13 +54,14 @@ class ConfigurationChange:
             "path": self.path,
             "old_value": str(self.old_value)[:100],  # Truncate for display
             "new_value": str(self.new_value)[:100],
-            "changed_at": self.changed_at.isoformat()
+            "changed_at": self.changed_at.isoformat(),
         }
 
 
 @dataclass
 class ConfigurationVersion:
     """A versioned configuration snapshot"""
+
     version: int
     config: Dict[str, Any]
     checksum: str
@@ -74,7 +76,7 @@ class ConfigurationVersion:
             "checksum": self.checksum,
             "created_at": self.created_at.isoformat(),
             "source": self.source,
-            "change_count": len(self.changes)
+            "change_count": len(self.changes),
         }
 
 
@@ -89,15 +91,27 @@ class ConfigurationValidator:
     def _load_default_rules(self) -> None:
         """Load default validation rules"""
         # Capacity rules
-        self.add_rule("capacity.people_per_hour", lambda v: isinstance(v, int) and 1 <= v <= 100)
-        self.add_rule("capacity.avg_service_minutes", lambda v: isinstance(v, int) and 1 <= v <= 120)
+        self.add_rule(
+            "capacity.people_per_hour", lambda v: isinstance(v, int) and 1 <= v <= 100
+        )
+        self.add_rule(
+            "capacity.avg_service_minutes",
+            lambda v: isinstance(v, int) and 1 <= v <= 120,
+        )
 
         # Alert rules
-        self.add_rule("alerts.queue.warning_threshold", lambda v: isinstance(v, int) and v >= 1)
-        self.add_rule("alerts.queue.critical_threshold", lambda v: isinstance(v, int) and v >= 1)
+        self.add_rule(
+            "alerts.queue.warning_threshold", lambda v: isinstance(v, int) and v >= 1
+        )
+        self.add_rule(
+            "alerts.queue.critical_threshold", lambda v: isinstance(v, int) and v >= 1
+        )
 
         # UI rules
-        self.add_rule("ui.public_display.refresh_interval_seconds", lambda v: isinstance(v, int) and 1 <= v <= 60)
+        self.add_rule(
+            "ui.public_display.refresh_interval_seconds",
+            lambda v: isinstance(v, int) and 1 <= v <= 60,
+        )
 
     def add_rule(self, path: str, validator: Callable[[Any], bool]) -> None:
         """Add a validation rule for a config path"""
@@ -155,7 +169,7 @@ class ConfigurationSubscriber:
         self,
         old_config: Dict[str, Any],
         new_config: Dict[str, Any],
-        changes: List[ConfigurationChange]
+        changes: List[ConfigurationChange],
     ) -> None:
         """
         Called when configuration changes.
@@ -194,7 +208,7 @@ class DynamicConfigurationManager:
         config_path: Optional[str] = None,
         auto_reload: bool = False,
         reload_interval_seconds: int = 30,
-        max_history: int = 10
+        max_history: int = 10,
     ):
         """
         Initialize the configuration manager.
@@ -280,7 +294,9 @@ class DynamicConfigurationManager:
                 if changes:
                     self._notify_changes(old_config, new_config, changes)
 
-            logger.info(f"Configuration loaded from {path} (version {self._version_counter})")
+            logger.info(
+                f"Configuration loaded from {path} (version {self._version_counter})"
+            )
             return True
 
         except yaml.YAMLError as e:
@@ -290,11 +306,7 @@ class DynamicConfigurationManager:
             logger.error(f"Error loading configuration from {path}: {e}")
             return False
 
-    def load_from_dict(
-        self,
-        config: Dict[str, Any],
-        source: str = "api"
-    ) -> bool:
+    def load_from_dict(self, config: Dict[str, Any], source: str = "api") -> bool:
         """
         Load configuration from a dictionary.
 
@@ -316,9 +328,7 @@ class DynamicConfigurationManager:
             changes = self._detect_changes(old_config, config)
 
             # Calculate checksum
-            checksum = hashlib.md5(
-                yaml.dump(config).encode()
-            ).hexdigest()
+            checksum = hashlib.md5(yaml.dump(config).encode()).hexdigest()
 
             self._config = deepcopy(config)
 
@@ -329,15 +339,12 @@ class DynamicConfigurationManager:
             if changes:
                 self._notify_changes(old_config, config, changes)
 
-        logger.info(f"Configuration loaded from {source} (version {self._version_counter})")
+        logger.info(
+            f"Configuration loaded from {source} (version {self._version_counter})"
+        )
         return True
 
-    def update(
-        self,
-        path: str,
-        value: Any,
-        source: str = "api"
-    ) -> bool:
+    def update(self, path: str, value: Any, source: str = "api") -> bool:
         """
         Update a specific configuration value.
 
@@ -367,16 +374,11 @@ class DynamicConfigurationManager:
 
             # Create change record
             change = ConfigurationChange(
-                path=path,
-                old_value=old_value,
-                new_value=value,
-                changed_at=utc_now()
+                path=path, old_value=old_value, new_value=value, changed_at=utc_now()
             )
 
             # Calculate checksum
-            checksum = hashlib.md5(
-                yaml.dump(new_config).encode()
-            ).hexdigest()
+            checksum = hashlib.md5(yaml.dump(new_config).encode()).hexdigest()
 
             # Save to history
             self._save_version(new_config, checksum, source, [change])
@@ -438,10 +440,7 @@ class DynamicConfigurationManager:
                 target = self._history[-2]
             else:
                 # Find specific version
-                target = next(
-                    (v for v in self._history if v.version == version),
-                    None
-                )
+                target = next((v for v in self._history if v.version == version), None)
                 if not target:
                     logger.warning(f"Version {version} not found")
                     return False
@@ -456,7 +455,7 @@ class DynamicConfigurationManager:
                 target.config,
                 target.checksum,
                 f"rollback_from_v{self._version_counter}",
-                changes
+                changes,
             )
 
             # Notify
@@ -495,10 +494,7 @@ class DynamicConfigurationManager:
             YAML string
         """
         yaml_str = yaml.dump(
-            self._config,
-            default_flow_style=False,
-            allow_unicode=True,
-            sort_keys=False
+            self._config, default_flow_style=False, allow_unicode=True, sort_keys=False
         )
 
         if path:
@@ -515,9 +511,7 @@ class DynamicConfigurationManager:
 
         self._running = True
         self._watch_thread = threading.Thread(
-            target=self._watch_file,
-            daemon=True,
-            name="config-watcher"
+            target=self._watch_file, daemon=True, name="config-watcher"
         )
         self._watch_thread.start()
         logger.info("Configuration auto-reload started")
@@ -529,11 +523,7 @@ class DynamicConfigurationManager:
             self._watch_thread.join(timeout=5.0)
         logger.info("Configuration auto-reload stopped")
 
-    def add_validation_rule(
-        self,
-        path: str,
-        validator: Callable[[Any], bool]
-    ) -> None:
+    def add_validation_rule(self, path: str, validator: Callable[[Any], bool]) -> None:
         """Add a custom validation rule"""
         self._validator.add_rule(path, validator)
 
@@ -544,13 +534,13 @@ class DynamicConfigurationManager:
     def _watch_file(self) -> None:
         """File watching thread"""
         last_mtime = None
-        
+
         while self._running:
             try:
                 if self._config_path and os.path.exists(self._config_path):
                     # First check modification time - much faster than reading file
                     current_mtime = os.path.getmtime(self._config_path)
-                    
+
                     if last_mtime is None:
                         last_mtime = current_mtime
                     elif current_mtime != last_mtime:
@@ -562,7 +552,7 @@ class DynamicConfigurationManager:
                         if checksum != self._last_checksum:
                             logger.info("Configuration file changed, reloading...")
                             self.load_from_file(self._config_path)
-                        
+
                         last_mtime = current_mtime
 
             except Exception as e:
@@ -575,7 +565,7 @@ class DynamicConfigurationManager:
         config: Dict[str, Any],
         checksum: str,
         source: str,
-        changes: List[ConfigurationChange]
+        changes: List[ConfigurationChange],
     ) -> None:
         """Save a configuration version to history"""
         self._version_counter += 1
@@ -585,20 +575,17 @@ class DynamicConfigurationManager:
             checksum=checksum,
             created_at=utc_now(),
             source=source,
-            changes=changes
+            changes=changes,
         )
 
         self._history.append(version)
 
         # Trim history if needed
         if len(self._history) > self._max_history:
-            self._history = self._history[-self._max_history:]
+            self._history = self._history[-self._max_history :]
 
     def _detect_changes(
-        self,
-        old: Dict[str, Any],
-        new: Dict[str, Any],
-        prefix: str = ""
+        self, old: Dict[str, Any], new: Dict[str, Any], prefix: str = ""
     ) -> List[ConfigurationChange]:
         """Detect changes between two configurations"""
         changes = []
@@ -616,12 +603,14 @@ class DynamicConfigurationManager:
                     # Recurse into nested dicts
                     changes.extend(self._detect_changes(old_val, new_val, path))
                 else:
-                    changes.append(ConfigurationChange(
-                        path=path,
-                        old_value=old_val,
-                        new_value=new_val,
-                        changed_at=now
-                    ))
+                    changes.append(
+                        ConfigurationChange(
+                            path=path,
+                            old_value=old_val,
+                            new_value=new_val,
+                            changed_at=now,
+                        )
+                    )
 
         return changes
 
@@ -650,7 +639,7 @@ class DynamicConfigurationManager:
         self,
         old_config: Dict[str, Any],
         new_config: Dict[str, Any],
-        changes: List[ConfigurationChange]
+        changes: List[ConfigurationChange],
     ) -> None:
         """Notify subscribers of changes"""
         for subscriber in self._subscribers:
@@ -676,7 +665,7 @@ _config_manager: Optional[DynamicConfigurationManager] = None
 
 
 def get_config_manager(
-    config_path: Optional[str] = None
+    config_path: Optional[str] = None,
 ) -> DynamicConfigurationManager:
     """Get or create the global configuration manager"""
     global _config_manager

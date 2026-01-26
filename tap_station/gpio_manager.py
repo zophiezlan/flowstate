@@ -86,14 +86,18 @@ class GPIOManager:
             initial = GPIOManager._GPIO.HIGH if initial_state else GPIOManager._GPIO.LOW
             GPIOManager._GPIO.setup(pin, GPIOManager._GPIO.OUT, initial=initial)
             GPIOManager._configured_pins[pin] = "OUT"
-            logger.debug(f"Configured GPIO {pin} as OUTPUT (initial: {'HIGH' if initial_state else 'LOW'})")
+            logger.debug(
+                f"Configured GPIO {pin} as OUTPUT (initial: {'HIGH' if initial_state else 'LOW'})"
+            )
             return True
 
         except Exception as e:
             logger.error(f"Failed to setup GPIO {pin} as output: {e}")
             return False
 
-    def setup_input(self, pin: int, pull_up: bool = False, pull_down: bool = False) -> bool:
+    def setup_input(
+        self, pin: int, pull_up: bool = False, pull_down: bool = False
+    ) -> bool:
         """
         Configure a pin as input.
 
@@ -118,7 +122,9 @@ class GPIOManager:
 
             GPIOManager._GPIO.setup(pin, GPIOManager._GPIO.IN, pull_up_down=pud)
             GPIOManager._configured_pins[pin] = "IN"
-            logger.debug(f"Configured GPIO {pin} as INPUT (pull_up={pull_up}, pull_down={pull_down})")
+            logger.debug(
+                f"Configured GPIO {pin} as INPUT (pull_up={pull_up}, pull_down={pull_down})"
+            )
             return True
 
         except Exception as e:

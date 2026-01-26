@@ -51,7 +51,7 @@ workflow:
       description: "Sample analysis in progress"
       order: 3
       required: true
-      visible_to_public: false  # Don't show internal processing
+      visible_to_public: false # Don't show internal processing
       duration_estimate: 12
       icon: "🔬"
 
@@ -89,7 +89,7 @@ workflow:
 # Higher capacity with efficient multi-stage process
 capacity:
   people_per_hour: 15
-  avg_service_minutes: 20  # Total time through all stages
+  avg_service_minutes: 20 # Total time through all stages
   default_wait_estimate: 30
   queue_multiplier: 2.5
 
@@ -114,14 +114,14 @@ alerts:
     critical_minutes: 10
 
   stuck_cards:
-    threshold_hours: 3  # Allow more time for complex workflow
+    threshold_hours: 3 # Allow more time for complex workflow
 
   unreturned_substances:
-    warning_minutes: 20  # Alert if substance not returned after results discussion
+    warning_minutes: 20 # Alert if substance not returned after results discussion
     critical_minutes: 40
 
   service_time_variance:
-    multiplier: 4  # More variance expected with detailed process
+    multiplier: 4 # More variance expected with detailed process
 
   messages:
     queue_warning: "{count} people in queue - monitor staffing levels"
@@ -158,7 +158,7 @@ ui:
     analytics_history_hours: 12
 
 staffing:
-  require_staff_id: true  # Track which staff member handled each stage
+  require_staff_id: true # Track which staff member handled each stage
 
   roles:
     - id: "intake_worker"

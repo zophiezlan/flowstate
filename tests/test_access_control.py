@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tap_station.access_control import (
@@ -47,7 +48,7 @@ class TestRole:
             id="test_role",
             name="Test Role",
             description="A test role",
-            permissions={Permission.DASHBOARD_VIEW, Permission.QUEUE_VIEW}
+            permissions={Permission.DASHBOARD_VIEW, Permission.QUEUE_VIEW},
         )
         assert role.id == "test_role"
         assert Permission.DASHBOARD_VIEW in role.permissions
@@ -58,7 +59,7 @@ class TestRole:
             id="test",
             name="Test",
             description="Test role",
-            permissions={Permission.TAP_READ}
+            permissions={Permission.TAP_READ},
         )
         result = role.to_dict()
 
@@ -81,7 +82,7 @@ class TestAccessControlManager:
             id="custom_role",
             name="Custom Role",
             description="Test",
-            permissions={Permission.DASHBOARD_VIEW}
+            permissions={Permission.DASHBOARD_VIEW},
         )
         manager.define_role(role)
 
@@ -95,7 +96,7 @@ class TestAccessControlManager:
             "id": "dict_role",
             "name": "Dict Role",
             "description": "From dict",
-            "permissions": ["dashboard:view", "queue:view"]
+            "permissions": ["dashboard:view", "queue:view"],
         }
         role = manager.define_role_from_dict(config)
 
@@ -119,7 +120,7 @@ class TestAccessControlManager:
             display_name="Test User",
             roles=["peer_worker"],
             password="testpass123",
-            email="test@example.com"
+            email="test@example.com",
         )
 
         assert user.username == "testuser"
@@ -129,9 +130,7 @@ class TestAccessControlManager:
     def test_get_user(self, manager):
         """Test getting user by ID"""
         user = manager.create_user(
-            username="gettest",
-            display_name="Get Test",
-            roles=["public"]
+            username="gettest", display_name="Get Test", roles=["public"]
         )
 
         retrieved = manager.get_user(user.id)
@@ -140,11 +139,7 @@ class TestAccessControlManager:
 
     def test_get_user_by_username(self, manager):
         """Test getting user by username"""
-        manager.create_user(
-            username="findme",
-            display_name="Find Me",
-            roles=["public"]
-        )
+        manager.create_user(username="findme", display_name="Find Me", roles=["public"])
 
         user = manager.get_user_by_username("findme")
         assert user is not None
@@ -153,16 +148,10 @@ class TestAccessControlManager:
     def test_update_user(self, manager):
         """Test updating user"""
         user = manager.create_user(
-            username="updateme",
-            display_name="Update Me",
-            roles=["public"]
+            username="updateme", display_name="Update Me", roles=["public"]
         )
 
-        manager.update_user(
-            user.id,
-            display_name="Updated Name",
-            roles=["peer_worker"]
-        )
+        manager.update_user(user.id, display_name="Updated Name", roles=["peer_worker"])
 
         updated = manager.get_user(user.id)
         assert updated.display_name == "Updated Name"
@@ -171,9 +160,7 @@ class TestAccessControlManager:
     def test_set_password(self, manager):
         """Test password setting"""
         user = manager.create_user(
-            username="passtest",
-            display_name="Pass Test",
-            roles=["public"]
+            username="passtest", display_name="Pass Test", roles=["public"]
         )
 
         result = manager.set_password(user.id, "newpassword123")
@@ -193,9 +180,7 @@ class TestAccessControlManager:
     def test_get_user_permissions(self, manager):
         """Test getting all user permissions"""
         user = manager.create_user(
-            username="permtest",
-            display_name="Perm Test",
-            roles=["coordinator"]
+            username="permtest", display_name="Perm Test", roles=["coordinator"]
         )
 
         perms = manager.get_user_permissions(user.id)
@@ -214,13 +199,10 @@ class TestAuthentication:
             username="authtest",
             display_name="Auth Test",
             roles=["peer_worker"],
-            password="correctpassword"
+            password="correctpassword",
         )
 
-        session = manager.authenticate(
-            username="authtest",
-            password="correctpassword"
-        )
+        session = manager.authenticate(username="authtest", password="correctpassword")
 
         assert session is not None
         assert session.token is not None
@@ -232,22 +214,16 @@ class TestAuthentication:
             username="wrongpass",
             display_name="Wrong Pass",
             roles=["peer_worker"],
-            password="correctpassword"
+            password="correctpassword",
         )
 
-        session = manager.authenticate(
-            username="wrongpass",
-            password="wrongpassword"
-        )
+        session = manager.authenticate(username="wrongpass", password="wrongpassword")
 
         assert session is None
 
     def test_authenticate_nonexistent_user(self, manager):
         """Test authentication with non-existent user"""
-        session = manager.authenticate(
-            username="doesnotexist",
-            password="anypassword"
-        )
+        session = manager.authenticate(username="doesnotexist", password="anypassword")
         assert session is None
 
     def test_validate_session(self, manager):
@@ -256,7 +232,7 @@ class TestAuthentication:
             username="sessiontest",
             display_name="Session Test",
             roles=["peer_worker"],
-            password="password123"
+            password="password123",
         )
 
         session = manager.authenticate("sessiontest", "password123")
@@ -276,7 +252,7 @@ class TestAuthentication:
             username="logouttest",
             display_name="Logout Test",
             roles=["peer_worker"],
-            password="password123"
+            password="password123",
         )
 
         session = manager.authenticate("logouttest", "password123")
@@ -293,7 +269,7 @@ class TestAuthentication:
             username="fromsession",
             display_name="From Session",
             roles=["peer_worker"],
-            password="password123"
+            password="password123",
         )
 
         session = manager.authenticate("fromsession", "password123")
@@ -309,83 +285,54 @@ class TestPermissionChecking:
     def test_check_permission_allowed(self, manager):
         """Test permission check when allowed"""
         user = manager.create_user(
-            username="permcheck",
-            display_name="Perm Check",
-            roles=["coordinator"]
+            username="permcheck", display_name="Perm Check", roles=["coordinator"]
         )
 
-        decision = manager.check_permission(
-            user.id,
-            Permission.SESSION_START
-        )
+        decision = manager.check_permission(user.id, Permission.SESSION_START)
 
         assert decision.allowed is True
 
     def test_check_permission_denied(self, manager):
         """Test permission check when denied"""
         user = manager.create_user(
-            username="denied",
-            display_name="Denied",
-            roles=["public"]
+            username="denied", display_name="Denied", roles=["public"]
         )
 
-        decision = manager.check_permission(
-            user.id,
-            Permission.ADMIN_SYSTEM
-        )
+        decision = manager.check_permission(user.id, Permission.ADMIN_SYSTEM)
 
         assert decision.allowed is False
 
     def test_check_permission_admin_wildcard(self, manager):
         """Test admin has all permissions via wildcard"""
         user = manager.create_user(
-            username="adminuser",
-            display_name="Admin User",
-            roles=["admin"]
+            username="adminuser", display_name="Admin User", roles=["admin"]
         )
 
         # Admin should have any permission
-        decision = manager.check_permission(
-            user.id,
-            Permission.ADMIN_SYSTEM
-        )
+        decision = manager.check_permission(user.id, Permission.ADMIN_SYSTEM)
         assert decision.allowed is True
 
-        decision2 = manager.check_permission(
-            user.id,
-            Permission.CONFIG_EDIT
-        )
+        decision2 = manager.check_permission(user.id, Permission.CONFIG_EDIT)
         assert decision2.allowed is True
 
     def test_check_permission_anonymous_strict(self, strict_manager):
         """Test anonymous access with strict auth"""
-        decision = strict_manager.check_permission(
-            None,
-            Permission.DASHBOARD_VIEW
-        )
+        decision = strict_manager.check_permission(None, Permission.DASHBOARD_VIEW)
         assert decision.allowed is False
         assert "Authentication required" in decision.reason
 
     def test_check_permission_anonymous_public(self, manager):
         """Test anonymous can access public"""
-        decision = manager.check_permission(
-            None,
-            Permission.PUBLIC_VIEW
-        )
+        decision = manager.check_permission(None, Permission.PUBLIC_VIEW)
         assert decision.allowed is True
 
     def test_require_permission(self, manager):
         """Test require_permission method"""
         user = manager.create_user(
-            username="require",
-            display_name="Require",
-            roles=["coordinator"]
+            username="require", display_name="Require", roles=["coordinator"]
         )
 
-        decision = manager.require_permission(
-            Permission.SESSION_START,
-            user_id=user.id
-        )
+        decision = manager.require_permission(Permission.SESSION_START, user_id=user.id)
         assert decision.allowed is True
 
 
@@ -395,9 +342,7 @@ class TestAuditLogging:
     def test_audit_log_access(self, manager):
         """Test access decisions are logged"""
         user = manager.create_user(
-            username="audituser",
-            display_name="Audit User",
-            roles=["peer_worker"]
+            username="audituser", display_name="Audit User", roles=["peer_worker"]
         )
 
         manager.check_permission(user.id, Permission.DASHBOARD_VIEW)
@@ -411,7 +356,7 @@ class TestAuditLogging:
             username="loginaudit",
             display_name="Login Audit",
             roles=["peer_worker"],
-            password="password123"
+            password="password123",
         )
 
         manager.authenticate("loginaudit", "password123")
@@ -441,7 +386,7 @@ class TestSession:
             token="token123",
             created_at=now,
             expires_at=now + timedelta(hours=1),
-            active=True
+            active=True,
         )
         assert session.is_valid() is True
 
@@ -454,7 +399,7 @@ class TestSession:
             token="token123",
             created_at=now - timedelta(hours=2),
             expires_at=now - timedelta(hours=1),
-            active=True
+            active=True,
         )
         assert session.is_valid() is False
 
@@ -467,7 +412,7 @@ class TestSession:
             token="token123",
             created_at=now,
             expires_at=now + timedelta(hours=1),
-            active=False
+            active=False,
         )
         assert session.is_valid() is False
 
@@ -483,7 +428,7 @@ class TestConfigurationLoading:
                     {
                         "id": "config_role",
                         "name": "Config Role",
-                        "permissions": ["dashboard:view", "queue:view"]
+                        "permissions": ["dashboard:view", "queue:view"],
                     }
                 ]
             }

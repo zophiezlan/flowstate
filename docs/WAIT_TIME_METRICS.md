@@ -16,18 +16,21 @@ This distinction is important because these metrics serve different purposes and
 **What it measures:** Time a participant spends waiting in the queue before a staff member begins serving them.
 
 **Characteristics:**
+
 - **Highly variable**: Can range from 0 minutes to 3+ hours
 - **Event-dependent**: Changes based on demand, staffing, and time of day
 - **Dynamic**: Fluctuates throughout the event (peak hours vs. quiet periods)
 - **Unpredictable**: Hard to estimate in advance
 
 **Used for:**
+
 - Telling new arrivals how long they'll wait
 - Identifying queue bottlenecks
 - Making staffing decisions
 - Real-time operational adjustments
 
 **Example values:**
+
 - Quiet period: 5-10 minutes
 - Moderate demand: 20-45 minutes
 - Peak demand: 60-180 minutes
@@ -37,18 +40,21 @@ This distinction is important because these metrics serve different purposes and
 **What it measures:** Time from when a staff member starts serving a participant until they complete and exit.
 
 **Characteristics:**
+
 - **Relatively consistent**: Usually stays within a narrow range
 - **Service-dependent**: Varies by service type but stable within a service
 - **Predictable**: Can be estimated based on past events
 - **Staff-controlled**: Depends on process efficiency, not demand
 
 **Used for:**
+
 - Capacity planning (how many people can you serve per hour?)
 - Process optimization
 - Staffing calculations
 - Comparing service efficiency across events
 
 **Example values:**
+
 - Quick drug check: 3-8 minutes
 - Standard consultation: 10-15 minutes
 - Comprehensive testing: 15-25 minutes
@@ -60,6 +66,7 @@ This distinction is important because these metrics serve different purposes and
 **Formula:** Queue Wait Time + Service Time
 
 **Used for:**
+
 - Overall participant experience assessment
 - Event retrospectives
 - Funder reports showing complete service time
@@ -88,6 +95,7 @@ workflow:
 ```
 
 **Stage purposes:**
+
 - **QUEUE_JOIN**: Participant taps when entering the queue
 - **SERVICE_START**: Staff taps participant's card when beginning service
 - **EXIT**: Participant taps when leaving
@@ -95,6 +103,7 @@ workflow:
 ### 2-Stage Tracking (Simple Mode)
 
 If you only use QUEUE_JOIN and EXIT (no SERVICE_START):
+
 - The system tracks total time only
 - Queue wait and service time cannot be separated
 - Less data granularity but simpler operations
@@ -160,6 +169,7 @@ estimated_wait = avg_recent_queue_wait + (people_in_queue * queue_multiplier)
 ```
 
 **Example:**
+
 - Recent average queue wait: 30 minutes
 - People currently in queue: 5
 - Queue multiplier: 2
@@ -215,6 +225,7 @@ Current Status:
 ```
 
 **Action:** Service time is unusually high. Check if:
+
 - Complex cases requiring extra time
 - New staff member learning process
 - Technical issues (equipment malfunction)
@@ -224,12 +235,14 @@ Current Status:
 ### For Operations
 
 **Queue Wait Time helps you:**
+
 - Set accurate expectations for participants
 - Make real-time staffing decisions
 - Identify when demand exceeds capacity
 - Adjust strategy during the event
 
 **Service Time helps you:**
+
 - Plan staffing levels before the event
 - Calculate theoretical capacity
 - Optimize your service process
@@ -238,6 +251,7 @@ Current Status:
 ### For Reporting
 
 **To funders/stakeholders:**
+
 - Queue wait shows demand and accessibility
 - Service time shows operational efficiency
 - Total time shows complete participant experience
@@ -264,6 +278,7 @@ Current Status:
 ### 1. Use 3-Stage Tracking for Better Data
 
 Enable SERVICE_START stage:
+
 ```yaml
 workflow:
   stages:
@@ -275,11 +290,13 @@ workflow:
 ### 2. Train Staff on SERVICE_START
 
 **When to tap SERVICE_START:**
+
 - ✅ When you begin talking to the participant
 - ✅ When you accept their substance for testing
 - ✅ When they sit down for consultation
 
 **When NOT to tap:**
+
 - ❌ When you're still helping someone else
 - ❌ When setting up equipment between participants
 - ❌ During your break
@@ -287,6 +304,7 @@ workflow:
 ### 3. Communicate Queue Wait, Not Total Time
 
 **To participants:**
+
 - ✅ "Current wait time is about 30 minutes"
 - ❌ "You'll be here for 40 minutes total"
 
@@ -305,6 +323,7 @@ alerts:
 ### 5. Review Both Metrics After Events
 
 **Questions to ask:**
+
 - How did queue wait vary throughout the event?
 - Was service time consistent or variable?
 - What was our peak capacity utilization?
@@ -315,6 +334,7 @@ alerts:
 ### Problem: Service time seems too long
 
 **Check:**
+
 - Are staff members tapping SERVICE_START at the right time?
 - Are there technical issues slowing the process?
 - Is training needed for new staff?
@@ -322,6 +342,7 @@ alerts:
 ### Problem: Queue wait estimates are inaccurate
 
 **Check:**
+
 - Is the queue multiplier appropriate? (adjust in config)
 - Are there enough recent completions to calculate averages?
 - Is the service capacity setting correct?
@@ -331,6 +352,7 @@ alerts:
 **Cause:** No SERVICE_START events in recent completions.
 
 **Solution:** Either:
+
 1. Start using SERVICE_START stage (recommended)
 2. Accept that only total time is available (2-stage mode)
 
@@ -339,6 +361,7 @@ alerts:
 ### Event: Summer Festival Drug Checking
 
 **Configuration:**
+
 ```yaml
 capacity:
   people_per_hour: 15
@@ -358,8 +381,9 @@ capacity:
 | 10pm-11pm   | 35 min    | 9 min        | 44 min     | 18            |
 
 **Insights:**
+
 - Service time remained consistent (7-9 min) ✅
-- Queue wait varied dramatically (8-78 min) 
+- Queue wait varied dramatically (8-78 min)
 - Peak demand 6-10pm exceeded capacity
 - Service efficiency maintained despite high demand
 - Consider 2 additional staff during 6-10pm peak

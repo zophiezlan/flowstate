@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tap_station.service_improvement import (
@@ -33,7 +34,8 @@ def db_connection():
     """Create an in-memory database with test schema"""
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE events (
             id INTEGER PRIMARY KEY,
             token_id TEXT,
@@ -41,7 +43,8 @@ def db_connection():
             stage TEXT,
             timestamp TEXT
         )
-    """)
+    """
+    )
     conn.commit()
     return conn
 
@@ -53,7 +56,7 @@ def engine(db_connection):
         conn=db_connection,
         target_wait_minutes=30,
         target_throughput_per_hour=12,
-        analysis_window_hours=24
+        analysis_window_hours=24,
     )
 
 
@@ -70,11 +73,13 @@ def populated_db(db_connection):
         service_time = join_time + timedelta(minutes=15 + i * 2)
         exit_time = service_time + timedelta(minutes=5)
 
-        events.extend([
-            (token_id, "session1", "QUEUE_JOIN", join_time.isoformat()),
-            (token_id, "session1", "SERVICE_START", service_time.isoformat()),
-            (token_id, "session1", "EXIT", exit_time.isoformat()),
-        ])
+        events.extend(
+            [
+                (token_id, "session1", "QUEUE_JOIN", join_time.isoformat()),
+                (token_id, "session1", "SERVICE_START", service_time.isoformat()),
+                (token_id, "session1", "EXIT", exit_time.isoformat()),
+            ]
+        )
 
     # Add some abandoned journeys
     for i in range(3):
@@ -84,7 +89,7 @@ def populated_db(db_connection):
 
     db_connection.executemany(
         "INSERT INTO events (token_id, session_id, stage, timestamp) VALUES (?, ?, ?, ?)",
-        events
+        events,
     )
     db_connection.commit()
     return db_connection
@@ -105,7 +110,7 @@ class TestServiceImprovementEngine:
         engine.configure(
             target_wait_minutes=45,
             target_throughput_per_hour=20,
-            analysis_window_hours=12
+            analysis_window_hours=12,
         )
         assert engine._target_wait == 45
         assert engine._target_throughput == 20
@@ -155,7 +160,7 @@ class TestServiceImprovementEngine:
             suggested_actions=["Action 1"],
             expected_impact="Test impact",
             metrics_affected=["metric1"],
-            evidence={}
+            evidence={},
         )
 
         # Store it
@@ -177,7 +182,7 @@ class TestServiceImprovementEngine:
             suggested_actions=[],
             expected_impact="",
             metrics_affected=[],
-            evidence={}
+            evidence={},
         )
         engine._recommendations[rec.id] = rec
 
@@ -206,7 +211,7 @@ class TestServiceImprovementEngine:
             rationale="",
             suggested_actions=[],
             expected_impact="",
-            metrics_affected=[]
+            metrics_affected=[],
         )
 
         score = engine._calculate_health_score(metrics, [critical_rec])
@@ -235,7 +240,7 @@ class TestImprovementRecommendation:
             rationale="Test rationale",
             suggested_actions=["Action 1", "Action 2"],
             expected_impact="Expected impact",
-            metrics_affected=["wait_time", "queue_size"]
+            metrics_affected=["wait_time", "queue_size"],
         )
 
         result = rec.to_dict()
@@ -261,7 +266,7 @@ class TestServicePattern:
             trend="stable",
             data_points=10,
             first_seen=now - timedelta(hours=24),
-            last_seen=now
+            last_seen=now,
         )
 
         result = pattern.to_dict()

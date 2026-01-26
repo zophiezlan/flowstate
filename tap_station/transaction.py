@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class IsolationLevel(Enum):
     """SQLite transaction isolation levels"""
+
     DEFERRED = "DEFERRED"
     IMMEDIATE = "IMMEDIATE"
     EXCLUSIVE = "EXCLUSIVE"
@@ -52,7 +53,7 @@ class TransactionManager:
     def __init__(
         self,
         connection: sqlite3.Connection,
-        default_isolation: IsolationLevel = IsolationLevel.IMMEDIATE
+        default_isolation: IsolationLevel = IsolationLevel.IMMEDIATE,
     ):
         """
         Initialize transaction manager.
@@ -93,8 +94,7 @@ class TransactionManager:
 
     @contextmanager
     def transaction(
-        self,
-        isolation: Optional[IsolationLevel] = None
+        self, isolation: Optional[IsolationLevel] = None
     ) -> Generator[sqlite3.Connection, None, None]:
         """
         Context manager for database transactions.
@@ -124,7 +124,9 @@ class TransactionManager:
                 self._savepoint_counter += 1
                 savepoint_name = f"sp_{self._savepoint_counter}"
                 self._conn.execute(f"SAVEPOINT {savepoint_name}")
-                logger.debug(f"Created savepoint {savepoint_name} at depth {self._transaction_depth}")
+                logger.debug(
+                    f"Created savepoint {savepoint_name} at depth {self._transaction_depth}"
+                )
 
             self._transaction_depth += 1
 
@@ -174,10 +176,7 @@ class TransactionManager:
             except sqlite3.Error as rollback_e:
                 logger.error(f"Rollback failed: {rollback_e}")
 
-            raise TransactionError(
-                f"Transaction failed: {str(e)}",
-                cause=e
-            ) from e
+            raise TransactionError(f"Transaction failed: {str(e)}", cause=e) from e
 
     @contextmanager
     def atomic(self) -> Generator[sqlite3.Connection, None, None]:
@@ -192,14 +191,14 @@ class TransactionManager:
             yield conn
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def with_transaction(
     get_connection: Callable[[], sqlite3.Connection],
     isolation: IsolationLevel = IsolationLevel.IMMEDIATE,
     max_retries: int = 3,
-    retry_delay_ms: int = 100
+    retry_delay_ms: int = 100,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Decorator for wrapping functions in a transaction.
@@ -218,6 +217,7 @@ def with_transaction(
         def save_data(data):
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -244,6 +244,7 @@ def with_transaction(
             raise last_error
 
         return wrapper
+
     return decorator
 
 
@@ -255,11 +256,7 @@ class BatchOperationManager:
     to commit periodically to avoid losing all progress on failure.
     """
 
-    def __init__(
-        self,
-        tx_manager: TransactionManager,
-        batch_size: int = 100
-    ):
+    def __init__(self, tx_manager: TransactionManager, batch_size: int = 100):
         """
         Initialize batch operation manager.
 
@@ -280,13 +277,11 @@ class BatchOperationManager:
             "total": self._total_operations,
             "completed": self._operation_count,
             "failed": len(self._failed_operations),
-            "pending_batch": self._operation_count % self._batch_size
+            "pending_batch": self._operation_count % self._batch_size,
         }
 
     def execute(
-        self,
-        operation: Callable[[], None],
-        continue_on_error: bool = True
+        self, operation: Callable[[], None], continue_on_error: bool = True
     ) -> bool:
         """
         Execute a single operation within the batch.
@@ -306,7 +301,9 @@ class BatchOperationManager:
 
             # Auto-commit batch if threshold reached
             if self._operation_count % self._batch_size == 0:
-                logger.info(f"Batch checkpoint: {self._operation_count} operations completed")
+                logger.info(
+                    f"Batch checkpoint: {self._operation_count} operations completed"
+                )
 
             return True
 

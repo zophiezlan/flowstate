@@ -13,9 +13,11 @@ The following event-specific features have been implemented to improve event man
 ## 1. Event Summary Dashboard
 
 ### Purpose
+
 Provide a comprehensive, printable summary of event performance with goal tracking and key insights.
 
 ### Access
+
 - **URL**: `/event-summary`
 - **Authentication**: Admin password required
 - **When to Use**: During or after event to review performance
@@ -23,6 +25,7 @@ Provide a comprehensive, printable summary of event performance with goal tracki
 ### Features
 
 #### Key Metrics Display
+
 - **Total Served**: Number of participants who completed full journey
 - **Average Wait Time**: Mean and median wait times
 - **Peak Queue Length**: Maximum queue size with timestamp
@@ -31,12 +34,15 @@ Provide a comprehensive, printable summary of event performance with goal tracki
 - **Service Time**: Average service duration (if 3-stage tracking enabled)
 
 #### Goal Achievement Tracking
+
 Visualizes progress toward event goals with:
+
 - Progress bars showing achievement percentage
 - Color-coded status (achieved/partial/missed)
 - Visual feedback on goal attainment
 
 **Example Goals:**
+
 - Serve 150+ Participants
 - Average Wait <15 Minutes
 - Abandonment Rate <10%
@@ -44,17 +50,21 @@ Visualizes progress toward event goals with:
 Goals are customizable and can be configured per event.
 
 #### Key Insights
+
 - **Busiest Period**: Hour with most completions
 - **Service Quality**: Assessment based on wait times
 - **Capacity**: Evaluation of queue management
 
 #### Issues Detected
+
 Summary of anomalies found:
+
 - Forgotten exit taps
 - Stuck in service incidents
 - Rapid-fire duplicate taps
 
 #### Actions Available
+
 - **Print Summary**: Generate printable report
 - **Download CSV**: Export raw data
 - **Return to Dashboard**: Go back to live view
@@ -63,6 +73,7 @@ Summary of anomalies found:
 ### Screenshots
 
 The event summary shows:
+
 1. Grid of key metrics with help icons
 2. Goal achievement progress bars
 3. Activity timeline placeholder (for future chart integration)
@@ -72,26 +83,31 @@ The event summary shows:
 ### Calculations
 
 **Total Served**:
+
 ```sql
 COUNT(DISTINCT journeys with both QUEUE_JOIN and EXIT)
 ```
 
 **Average Wait Time**:
+
 ```sql
 AVG(time between QUEUE_JOIN and EXIT)
 ```
 
 **Peak Queue Length**:
+
 ```sql
 MAX(count of people with QUEUE_JOIN but no EXIT at any point in time)
 ```
 
 **Throughput**:
+
 ```sql
 Total Served / Service Hours
 ```
 
 **Abandonment Rate**:
+
 ```sql
 (People with QUEUE_JOIN but no EXIT / Total QUEUE_JOIN) × 100
 ```
@@ -114,16 +130,19 @@ Total Served / Service Hours
 ### Benefits
 
 **For Coordinators:**
+
 - Quick overview of event success
 - Goal achievement visibility
 - Printable report for stakeholders
 
 **For Funders:**
+
 - Data-driven performance metrics
 - Goal vs. actual comparison
 - Professional summary format
 
 **For Administrators:**
+
 - Anomaly detection and issue identification
 - Capacity planning insights
 - Service quality assessment
@@ -131,16 +150,19 @@ Total Served / Service Hours
 ## 2. Session Timeout Warning
 
 ### Purpose
+
 Prevent unexpected admin session expiration during critical tasks with advance warning.
 
 ### Features
 
 #### 5-Minute Warning Modal
+
 - Appears 5 minutes before session expires
 - Shows countdown timer
 - Allows extending session without losing work
 
 #### Modal Content
+
 - Large clock icon (⏰)
 - "Session Expiring Soon" heading
 - Countdown display showing minutes and seconds
@@ -150,10 +172,13 @@ Prevent unexpected admin session expiration during critical tasks with advance w
   - **Logout Now** - Immediate logout
 
 #### Countdown Timer
+
 Real-time countdown from 5:00 to 0:00 showing time remaining before automatic logout.
 
 #### Auto-Extension
+
 If user doesn't interact with modal:
+
 - Session expires after countdown reaches 0:00
 - User is redirected to login page
 - Any unsaved work may be lost (warning provided)
@@ -161,6 +186,7 @@ If user doesn't interact with modal:
 ### Implementation Details
 
 **Session Configuration**:
+
 ```yaml
 web_server:
   admin:
@@ -168,11 +194,13 @@ web_server:
 ```
 
 **Warning Timing**:
+
 - Check every 30 seconds for approaching timeout
 - Show warning when 5 minutes or less remain
 - Don't show warning multiple times for same session
 
 **User Activity Tracking**:
+
 - Mouse movement resets timer
 - Keyboard input resets timer
 - Clicks reset timer
@@ -206,12 +234,14 @@ web_server:
 ### Benefits
 
 **For Administrators:**
+
 - No surprise logouts during critical work
 - Time to save progress before session ends
 - Clear indication of time remaining
 - Option to extend or logout gracefully
 
 **Security Benefits:**
+
 - Still enforces timeout for inactive sessions
 - Prevents unauthorized access to abandoned sessions
 - Configurable timeout duration
@@ -220,12 +250,14 @@ web_server:
 ### Configuration
 
 **Default Settings**:
+
 - Session timeout: 60 minutes
 - Warning advance: 5 minutes
 - Check interval: 30 seconds
 
 **Customization**:
 Edit `config.yaml`:
+
 ```yaml
 web_server:
   admin:
@@ -237,18 +269,22 @@ The 5-minute warning is hardcoded but can be adjusted in `control.html` JavaScri
 ## 3. Quick Links Navigation
 
 ### Purpose
+
 Provide easy access to all monitoring and reporting tools from the control panel.
 
 ### Features
 
 #### Links Section
+
 New "Quick Links" section in control panel with buttons for:
+
 1. **Live Dashboard** (📊) - Real-time queue analytics
 2. **Event Summary** (📈) - Final statistics & goals
 3. **Simplified Monitor** (📱) - Staff-friendly view
 4. **Shift Handoff** (🔄) - Quick shift summary
 
 #### Button Design
+
 - Consistent styling with other control panel buttons
 - Icon for visual identification
 - Title and description for clarity
@@ -289,12 +325,14 @@ Added to control panel template after "System Status" section:
 ### Benefits
 
 **For Administrators:**
+
 - One-click access to all tools
 - No need to remember URLs
 - Consistent navigation
 - Reduced training time
 
 **For Coordinators:**
+
 - Quick switching between live and summary views
 - Easy access to different stakeholder views
 - Professional presentation options
@@ -302,6 +340,7 @@ Added to control panel template after "System Status" section:
 ## Integration with Existing Features
 
 ### Works With
+
 - **Service Configuration**: Goals can be customized per service
 - **Anomaly Detection**: Issues surface in event summary
 - **3-Stage Tracking**: Service time metrics included when available
@@ -319,18 +358,22 @@ Added to control panel template after "System Status" section:
 ## Technical Details
 
 ### Files Modified
+
 - `tap_station/templates/event_summary.html` (NEW) - Event summary page
 - `tap_station/templates/control.html` - Added timeout warning & quick links
 - `tap_station/web_server.py` - Added `/event-summary` route and calculation method
 
 ### Database Queries
+
 Event summary uses complex SQL queries to calculate:
+
 - Completed journeys (JOIN between QUEUE_JOIN and EXIT)
 - Peak queue length (subquery counting active journeys at each timestamp)
 - Service hours (MIN/MAX timestamp difference)
 - Abandonment rate (LEFT JOIN to find unmatched QUEUE_JOIN)
 
 ### Performance Considerations
+
 - Summary calculation may take 1-2 seconds for large events (1000+ participants)
 - Results could be cached for recently viewed sessions
 - Database indexes on `token_id`, `stage`, and `session_id` improve query speed
@@ -338,6 +381,7 @@ Event summary uses complex SQL queries to calculate:
 ## Testing
 
 All 80 tests pass including:
+
 - Web server route tests
 - Authentication tests
 - Database query tests
@@ -346,6 +390,7 @@ All 80 tests pass including:
 ## Documentation
 
 Complete documentation in:
+
 - `UX_IMPROVEMENTS.md` - Overall UX enhancements
 - `EVENT_SPECIFIC_UX.md` - This document
 - `REFACTORING_SUMMARY.md` - Technical refactoring details
@@ -353,6 +398,7 @@ Complete documentation in:
 ## Conclusion
 
 These event-specific improvements provide coordinators, funders, and administrators with the tools they need to:
+
 - Track progress toward event goals in real-time
 - Generate professional summaries for stakeholders
 - Avoid session timeout interruptions

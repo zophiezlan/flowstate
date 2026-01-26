@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class ServiceType(Enum):
     """Types of service deployments"""
+
     FESTIVAL = "festival"
     POPUP = "popup"
     FIXED_SITE = "fixed_site"
@@ -41,6 +42,7 @@ class ServiceType(Enum):
 @dataclass
 class WorkflowStagePreset:
     """Preset configuration for a workflow stage"""
+
     id: str
     label: str
     description: str
@@ -54,6 +56,7 @@ class WorkflowStagePreset:
 @dataclass
 class CapacityPreset:
     """Preset configuration for service capacity"""
+
     people_per_hour: int
     avg_service_minutes: int
     default_wait_estimate: int
@@ -65,6 +68,7 @@ class CapacityPreset:
 @dataclass
 class AlertThresholdsPreset:
     """Preset configuration for alert thresholds"""
+
     queue_warning: int
     queue_critical: int
     wait_warning_minutes: int
@@ -77,6 +81,7 @@ class AlertThresholdsPreset:
 @dataclass
 class UILabelsPreset:
     """Preset configuration for UI labels"""
+
     service_name: str
     organization: str
     queue_count_label: str = "people in queue"
@@ -90,6 +95,7 @@ class UILabelsPreset:
 @dataclass
 class ServicePreset:
     """Complete service configuration preset"""
+
     id: str
     name: str
     description: str
@@ -168,6 +174,7 @@ class ServicePreset:
 # Built-in Presets
 # =============================================================================
 
+
 class Presets:
     """Collection of built-in service presets"""
 
@@ -192,7 +199,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=True,
-                    icon="⏰"
+                    icon="⏰",
                 ),
                 WorkflowStagePreset(
                     id="SERVICE_START",
@@ -202,7 +209,7 @@ class Presets:
                     required=False,
                     visible_to_public=True,
                     duration_estimate=5,
-                    icon="🔬"
+                    icon="🔬",
                 ),
                 WorkflowStagePreset(
                     id="SUBSTANCE_RETURNED",
@@ -212,7 +219,7 @@ class Presets:
                     required=False,
                     visible_to_public=True,
                     duration_estimate=1,
-                    icon="🤝"
+                    icon="🤝",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -221,14 +228,14 @@ class Presets:
                     order=4,
                     required=True,
                     visible_to_public=True,
-                    icon="✅"
+                    icon="✅",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=12,
                 avg_service_minutes=5,
                 default_wait_estimate=20,
-                queue_multiplier=2
+                queue_multiplier=2,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=10,
@@ -237,13 +244,13 @@ class Presets:
                 wait_critical_minutes=90,
                 inactivity_warning_minutes=5,
                 inactivity_critical_minutes=10,
-                stuck_cards_hours=2
+                stuck_cards_hours=2,
             ),
             ui_labels=UILabelsPreset(
                 service_name="Drug Checking Service",
                 organization="Harm Reduction Services",
                 queue_count_label="people waiting",
-                wait_time_label="estimated wait time"
+                wait_time_label="estimated wait time",
             ),
             features={
                 "show_queue_positions": True,
@@ -251,7 +258,7 @@ class Presets:
                 "show_served_count": True,
                 "substance_return_tracking": True,
                 "auto_init_cards": True,
-            }
+            },
         )
 
     @staticmethod
@@ -275,7 +282,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=True,
-                    icon="📝"
+                    icon="📝",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -284,14 +291,14 @@ class Presets:
                     order=2,
                     required=True,
                     visible_to_public=True,
-                    icon="✅"
+                    icon="✅",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=20,
                 avg_service_minutes=3,
                 default_wait_estimate=10,
-                queue_multiplier=2
+                queue_multiplier=2,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=15,
@@ -300,7 +307,7 @@ class Presets:
                 wait_critical_minutes=60,
                 inactivity_warning_minutes=10,
                 inactivity_critical_minutes=20,
-                stuck_cards_hours=1
+                stuck_cards_hours=1,
             ),
             ui_labels=UILabelsPreset(
                 service_name="Queue Service",
@@ -312,7 +319,7 @@ class Presets:
                 "show_served_count": True,
                 "substance_return_tracking": False,
                 "auto_init_cards": True,
-            }
+            },
         )
 
     @staticmethod
@@ -336,7 +343,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=True,
-                    icon="⏳"
+                    icon="⏳",
                 ),
                 WorkflowStagePreset(
                     id="SERVICE_START",
@@ -346,7 +353,7 @@ class Presets:
                     required=False,
                     visible_to_public=True,
                     duration_estimate=10,
-                    icon="🔧"
+                    icon="🔧",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -355,14 +362,14 @@ class Presets:
                     order=3,
                     required=True,
                     visible_to_public=True,
-                    icon="✅"
+                    icon="✅",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=10,
                 avg_service_minutes=6,
                 default_wait_estimate=15,
-                queue_multiplier=2
+                queue_multiplier=2,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=8,
@@ -371,7 +378,7 @@ class Presets:
                 wait_critical_minutes=60,
                 inactivity_warning_minutes=10,
                 inactivity_critical_minutes=15,
-                stuck_cards_hours=2
+                stuck_cards_hours=2,
             ),
             ui_labels=UILabelsPreset(
                 service_name="Service Point",
@@ -383,7 +390,7 @@ class Presets:
                 "show_served_count": True,
                 "substance_return_tracking": False,
                 "auto_init_cards": True,
-            }
+            },
         )
 
     @staticmethod
@@ -407,7 +414,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=False,
-                    icon="👋"
+                    icon="👋",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -416,14 +423,14 @@ class Presets:
                     order=2,
                     required=True,
                     visible_to_public=False,
-                    icon="✅"
+                    icon="✅",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=6,
                 avg_service_minutes=10,
                 default_wait_estimate=5,
-                queue_multiplier=3
+                queue_multiplier=3,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=5,
@@ -432,13 +439,13 @@ class Presets:
                 wait_critical_minutes=45,
                 inactivity_warning_minutes=15,
                 inactivity_critical_minutes=30,
-                stuck_cards_hours=1
+                stuck_cards_hours=1,
             ),
             ui_labels=UILabelsPreset(
                 service_name="Outreach Service",
                 organization="",
                 queue_count_label="active engagements",
-                served_today_label="completed today"
+                served_today_label="completed today",
             ),
             features={
                 "show_queue_positions": False,
@@ -446,7 +453,7 @@ class Presets:
                 "show_served_count": True,
                 "substance_return_tracking": False,
                 "auto_init_cards": True,
-            }
+            },
         )
 
     @staticmethod
@@ -469,7 +476,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=True,
-                    icon="1️⃣"
+                    icon="1️⃣",
                 ),
                 WorkflowStagePreset(
                     id="SERVICE_START",
@@ -479,7 +486,7 @@ class Presets:
                     required=False,
                     visible_to_public=True,
                     duration_estimate=2,
-                    icon="2️⃣"
+                    icon="2️⃣",
                 ),
                 WorkflowStagePreset(
                     id="SUBSTANCE_RETURNED",
@@ -488,7 +495,7 @@ class Presets:
                     order=3,
                     required=False,
                     visible_to_public=True,
-                    icon="3️⃣"
+                    icon="3️⃣",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -497,14 +504,14 @@ class Presets:
                     order=4,
                     required=True,
                     visible_to_public=True,
-                    icon="4️⃣"
+                    icon="4️⃣",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=60,
                 avg_service_minutes=1,
                 default_wait_estimate=1,
-                queue_multiplier=1
+                queue_multiplier=1,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=100,
@@ -513,7 +520,7 @@ class Presets:
                 wait_critical_minutes=120,
                 inactivity_warning_minutes=60,
                 inactivity_critical_minutes=120,
-                stuck_cards_hours=24
+                stuck_cards_hours=24,
             ),
             ui_labels=UILabelsPreset(
                 service_name="Training Mode",
@@ -530,7 +537,7 @@ class Presets:
             custom_config={
                 "demo_mode": True,
                 "allow_duplicate_taps": True,
-            }
+            },
         )
 
     @staticmethod
@@ -553,7 +560,7 @@ class Presets:
                     order=1,
                     required=True,
                     visible_to_public=True,
-                    icon="📋"
+                    icon="📋",
                 ),
                 WorkflowStagePreset(
                     id="SERVICE_START",
@@ -563,7 +570,7 @@ class Presets:
                     required=False,
                     visible_to_public=True,
                     duration_estimate=3,
-                    icon="⚡"
+                    icon="⚡",
                 ),
                 WorkflowStagePreset(
                     id="EXIT",
@@ -572,14 +579,14 @@ class Presets:
                     order=3,
                     required=True,
                     visible_to_public=True,
-                    icon="✅"
+                    icon="✅",
                 ),
             ],
             capacity=CapacityPreset(
                 people_per_hour=30,
                 avg_service_minutes=2,
                 default_wait_estimate=10,
-                queue_multiplier=1
+                queue_multiplier=1,
             ),
             alerts=AlertThresholdsPreset(
                 queue_warning=25,
@@ -588,7 +595,7 @@ class Presets:
                 wait_critical_minutes=60,
                 inactivity_warning_minutes=3,
                 inactivity_critical_minutes=5,
-                stuck_cards_hours=1
+                stuck_cards_hours=1,
             ),
             ui_labels=UILabelsPreset(
                 service_name="High Volume Service",
@@ -600,7 +607,7 @@ class Presets:
                 "show_served_count": True,
                 "substance_return_tracking": False,
                 "auto_init_cards": True,
-            }
+            },
         )
 
 
@@ -658,11 +665,7 @@ class PresetManager:
         logger.info(f"Registered preset: {preset.id}")
 
     def create_from_base(
-        self,
-        base_preset_id: str,
-        new_id: str,
-        name: str,
-        modifications: Dict[str, Any]
+        self, base_preset_id: str, new_id: str, name: str, modifications: Dict[str, Any]
     ) -> Optional[ServicePreset]:
         """
         Create a new preset by modifying an existing one.
@@ -715,10 +718,7 @@ class PresetManager:
         return None
 
     def recommend_preset(
-        self,
-        expected_daily_visitors: int,
-        has_substance_return: bool,
-        is_mobile: bool
+        self, expected_daily_visitors: int, has_substance_return: bool, is_mobile: bool
     ) -> str:
         """
         Recommend a preset based on service characteristics.

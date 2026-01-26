@@ -164,11 +164,18 @@ async function loadStagesFromAPI() {
       });
 
       // Restore previous selection if it still exists
-      if (currentValue && Array.from(stageSelect.options).some(opt => opt.value === currentValue)) {
+      if (
+        currentValue &&
+        Array.from(stageSelect.options).some(
+          (opt) => opt.value === currentValue,
+        )
+      ) {
         stageSelect.value = currentValue;
       }
 
-      console.log(`Loaded ${config.workflow_stages.length} stages from ${serviceName}`);
+      console.log(
+        `Loaded ${config.workflow_stages.length} stages from ${serviceName}`,
+      );
     }
   } catch (error) {
     console.warn("Could not load service config from API:", error);
@@ -338,7 +345,10 @@ async function syncToPi() {
   const settings = saveSettings();
   if (!settings.piUrl) {
     showToast("Please set Pi Station URL in settings");
-    showSyncStatus("error", "⚠ No Pi URL configured - set in settings to enable sync");
+    showSyncStatus(
+      "error",
+      "⚠ No Pi URL configured - set in settings to enable sync",
+    );
     setTimeout(() => hideSyncStatus(), 3000);
     return;
   }
@@ -382,7 +392,10 @@ async function syncToPi() {
       updateStats();
       const timestamp = new Date().toLocaleTimeString();
       showToast(`Synced ${count} events!`);
-      showSyncStatus("success", `✓ Synced ${count} events to server at ${timestamp}`);
+      showSyncStatus(
+        "success",
+        `✓ Synced ${count} events to server at ${timestamp}`,
+      );
       setTimeout(() => hideSyncStatus(), 5000);
     } else {
       throw new Error(result.error || "Unknown error");
@@ -390,7 +403,10 @@ async function syncToPi() {
   } catch (err) {
     console.error("Sync failed", err);
     showToast(`Sync failed: ${err.message}`);
-    showSyncStatus("error", `⚠ Sync failed: ${err.message}. Taps saved locally.`);
+    showSyncStatus(
+      "error",
+      `⚠ Sync failed: ${err.message}. Taps saved locally.`,
+    );
     setTimeout(() => hideSyncStatus(), 5000);
   } finally {
     syncPiBtn.disabled = false;

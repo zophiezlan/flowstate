@@ -28,6 +28,7 @@ sudo bash scripts/install_onsite_features.sh
 ```
 
 This installs:
+
 - WiFi management tools (wpasupplicant, hostapd)
 - mDNS service (avahi-daemon)
 - Python dependencies (requests)
@@ -39,6 +40,7 @@ This installs:
 1. **Add WiFi Networks**
 
    Edit `config/wifi_networks.conf`:
+
    ```
    # Format: SSID|password|priority
    Festival-Staff|secretpass123|1
@@ -48,6 +50,7 @@ This installs:
 2. **Enable On-Site Features**
 
    Edit `config.yaml`:
+
    ```yaml
    onsite:
      enabled: true
@@ -105,15 +108,18 @@ This installs:
 ### LED Status Indicators
 
 **Green LED (GPIO 27)**
+
 - Solid: System ready, WiFi connected
 - Slow blink: Ready, no WiFi (offline mode)
 - Fast blink: Connecting to WiFi
 
 **Red LED (GPIO 22)**
+
 - Fast blink: Error state
 - Off: Normal operation
 
 **Both LEDs (Yellow)**
+
 - Slow blink: Failover mode active
 - Alternating: Boot sequence
 
@@ -124,6 +130,7 @@ This installs:
 ### Auto-Connect Flow
 
 On boot, the system:
+
 1. Checks WiFi configuration file
 2. Scans for available networks
 3. Connects to highest priority network found
@@ -146,16 +153,18 @@ Backup-Hotspot       | backup789     | 3        ← Finally this
 
 **Method 1: Physical Button** (Requires Manual Setup)
 
-> **Note**: The WiFi setup button (GPIO 23) currently provides WiFi rescan functionality. 
-> Full captive portal AP mode requires additional system-level configuration of hostapd 
-> and dnsmasq. See the [Raspberry Pi documentation on wireless access points](https://www.raspberrypi.com/documentation/computers/configuration.html#setting-up-a-routed-wireless-access-point) 
+> **Note**: The WiFi setup button (GPIO 23) currently provides WiFi rescan functionality.
+> Full captive portal AP mode requires additional system-level configuration of hostapd
+> and dnsmasq. See the [Raspberry Pi documentation on wireless access points](https://www.raspberrypi.com/documentation/computers/configuration.html#setting-up-a-routed-wireless-access-point)
 > for setup instructions.
 
 Current functionality:
+
 1. **Short press**: Enter WiFi setup mode (prepares for config file method)
 2. **Hold 3 seconds**: Force WiFi rescan to reconnect to known networks
 
 For full captive portal functionality in a future release:
+
 1. Press WiFi Setup button (GPIO 23)
 2. Pi creates hotspot: `TapStation-<device_id>`
 3. Connect to hotspot with phone (password: `tapstation123`)
@@ -179,6 +188,7 @@ New-Festival-Net|password|1
 ### WiFi Rescan (Force Reconnect)
 
 **Hold WiFi Setup button for 3 seconds**
+
 - Disables AP mode if active
 - Rescans networks
 - Attempts to reconnect
@@ -216,16 +226,19 @@ The system automatically generates hostnames from `device_id`:
 **If hostname.local doesn't work:**
 
 1. Check Avahi is running:
+
    ```bash
    systemctl status avahi-daemon
    ```
 
 2. Find IP manually:
+
    ```bash
    hostname -I
    ```
 
 3. Check from another device:
+
    ```bash
    # Linux/Mac
    avahi-browse -a
@@ -241,6 +254,7 @@ The system automatically generates hostnames from `device_id`:
 ### How Failover Works
 
 **Normal Operation**
+
 ```
 Station 1 (QUEUE_JOIN)  ←→  Station 2 (EXIT)
         ↓                           ↓
@@ -248,6 +262,7 @@ Station 1 (QUEUE_JOIN)  ←→  Station 2 (EXIT)
 ```
 
 **Failover Mode** (Station 2 fails)
+
 ```
 Station 1 (DUAL MODE)
         ↓
@@ -265,14 +280,17 @@ Station 1 (DUAL MODE)
 ### Failover Indicators
 
 **LED Status**
+
 - Yellow (both LEDs) blinking = Failover mode active
 
 **Dashboard**
+
 - Big banner: "⚠️ FAILOVER MODE ACTIVE"
 - Shows which stages are active
 - Displays peer status
 
 **Buzzer Patterns**
+
 - Normal mode: Short beep (success)
 - Failover mode: Double beep (indicates dual operation)
 
@@ -290,6 +308,7 @@ onsite:
 ### Manual Failover Control
 
 Via control panel:
+
 - View failover status
 - See peer health
 - View tap counts per stage
@@ -336,11 +355,13 @@ Connected → Green solid (ready)
 ### Separated Restart Controls
 
 **Safe Operations** (Won't interrupt tap logging)
+
 - `[Restart Dashboard]` - Restarts web server only
 - `[Export Data]` - Generates CSV
 - `[View Logs]` - Shows recent logs
 
 **System Operations** (Use with caution)
+
 - `[Restart Tap Logger]` ⚠️ - Brief interruption (10s)
 - `[Reboot System]` ⚠️⚠️ - Full system reboot (60s)
 
@@ -349,6 +370,7 @@ Connected → Green solid (ready)
 Access at: `http://tapstation-queue.local:8080/control`
 
 Shows:
+
 - **WiFi Status**: Connected network, IP address
 - **Peer Status**: Health, last seen, failover state
 - **System Health**: Uptime, disk usage, temperature
@@ -404,6 +426,7 @@ grep "Restart" logs/watchdog.log
 *(Future Enhancement)*
 
 Display QR code on OLED screen:
+
 - Scan to open dashboard
 - No typing URLs
 
@@ -414,12 +437,15 @@ Display QR code on OLED screen:
 ### Pre-Event Setup (Office)
 
 1. **Configure WiFi networks**
+
    ```bash
    nano config/wifi_networks.conf
    ```
+
    Add all expected site networks
 
 2. **Set peer hostnames**
+
    ```yaml
    # Station 1 (queue)
    peer_hostname: "tapstation-exit.local"
@@ -436,6 +462,7 @@ Display QR code on OLED screen:
    - Verify recovery
 
 4. **Create SD card images**
+
    ```bash
    # After setup, create image
    sudo dd if=/dev/mmcblk0 of=tapstation-queue.img bs=4M status=progress
@@ -444,12 +471,14 @@ Display QR code on OLED screen:
 ### Day-of-Event Setup (On-Site)
 
 **If WiFi pre-configured:**
+
 1. Power on both Pis
 2. Wait for green LED (30s)
 3. Check dashboard via mDNS URL
 4. Done!
 
 **If new WiFi network:**
+
 1. Power on Pi
 2. Blue/alternating LED = needs WiFi
 3. Press WiFi Setup button
@@ -461,17 +490,20 @@ Display QR code on OLED screen:
 ### During Event
 
 **Normal Operation**
+
 - Green LED = all good
 - Monitor dashboard as needed
 - Export data periodically
 
 **If Station Fails**
+
 - Other station automatically enters failover
 - Yellow LED indicates dual mode
 - Staff tap cards twice (enter then exit)
 - Continue operation with single station
 
 **If WiFi Lost**
+
 - Station continues offline
 - Tap logging unaffected
 - Dashboard unavailable until reconnect
@@ -491,12 +523,14 @@ Display QR code on OLED screen:
 ### WiFi Issues
 
 **Can't connect to any network**
+
 - Check WiFi config file syntax
 - Verify network passwords
 - Try manual WiFi setup button
 - Check if networks are 2.4GHz (Pi Zero 2 doesn't support 5GHz)
 
 **AP mode won't start**
+
 - Check hostapd installed: `dpkg -l | grep hostapd`
 - Check logs: `journalctl -u hostapd`
 - Verify GPIO 23 button wiring
@@ -504,6 +538,7 @@ Display QR code on OLED screen:
 ### mDNS Issues
 
 **hostname.local doesn't resolve**
+
 - Check Avahi running: `systemctl status avahi-daemon`
 - Restart Avahi: `sudo systemctl restart avahi-daemon`
 - Try direct IP: `hostname -I`
@@ -512,12 +547,14 @@ Display QR code on OLED screen:
 ### Failover Issues
 
 **Failover not triggering**
+
 - Check peer hostname correct
 - Verify peer station accessible: `ping tapstation-exit.local`
 - Check health endpoint: `curl http://tapstation-exit.local:8080/health`
 - Review logs: `grep -i failover logs/tap-station.log`
 
 **Stuck in failover mode**
+
 - Check peer station actually running
 - Manually restart peer station
 - Check peer health via dashboard
@@ -526,6 +563,7 @@ Display QR code on OLED screen:
 ### LED Issues
 
 **LEDs not working**
+
 - Check GPIO connections (27=green, 22=red)
 - Verify LED polarity (long leg = positive)
 - Check config: `led_enabled: true`
@@ -662,6 +700,7 @@ vcgencmd measure_temp
    - Unplug
 
 **Advanced operations:**
+
 - Dashboard access via mDNS URL
 - Data export via control panel
 - Log viewing for troubleshooting
@@ -673,6 +712,7 @@ vcgencmd measure_temp
 ### Custom WiFi Priorities
 
 Adjust priorities based on reliability:
+
 ```
 Most-Reliable-Network|pass|1
 Backup-Network|pass|10
@@ -682,6 +722,7 @@ Emergency-Hotspot|pass|99
 ### Multiple Failover Stages
 
 For 4-stage workflows:
+
 ```yaml
 # Station 1: QUEUE_JOIN
 fallback_stages: [EXIT]
@@ -693,6 +734,7 @@ fallback_stages: [SUBSTANCE_RETURNED]
 ### Custom LED Patterns
 
 Modify `status_leds.py` for custom patterns:
+
 ```python
 # Custom pattern for your site
 def custom_pattern(self):
@@ -715,6 +757,7 @@ def custom_pattern(self):
 ### Reporting Issues
 
 Include:
+
 - System logs (last 100 lines)
 - Config.yaml (redact passwords)
 - Hardware setup description
@@ -735,6 +778,7 @@ Include:
 ## 🔮 Future Enhancements
 
 Planned features:
+
 - [ ] OLED display with QR code
 - [ ] Voice feedback ("WiFi connected")
 - [ ] NFC admin cards (tap to restart)

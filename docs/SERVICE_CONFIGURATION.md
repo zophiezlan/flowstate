@@ -84,6 +84,7 @@ service:
 ```
 
 **Customization tips:**
+
 - Use a clear, welcoming service name
 - Include location info in contact if you have multiple sites
 - Update service hours daily if they change
@@ -112,6 +113,7 @@ workflow:
 #### Common Workflow Patterns
 
 **Pattern 1: Simple Queue (2 stages)**
+
 ```yaml
 stages:
   - {id: "QUEUE_JOIN", label: "Waiting", order: 1, required: true}
@@ -119,11 +121,13 @@ stages:
 ```
 
 Best for:
+
 - Small services
 - Quick check-in/check-out
 - Limited staff
 
 **Pattern 2: Standard Service (3 stages)**
+
 ```yaml
 stages:
   - {id: "QUEUE_JOIN", label: "In Queue", order: 1, required: true, duration_estimate: 0}
@@ -132,11 +136,13 @@ stages:
 ```
 
 Best for:
+
 - Medium-sized services
 - Track when service actually starts
 - Distinguish waiting vs. being served
 
 **Pattern 3: Comprehensive Workflow (5+ stages)**
+
 ```yaml
 stages:
   - {id: "QUEUE_JOIN", label: "Queue", order: 1}
@@ -147,6 +153,7 @@ stages:
 ```
 
 Best for:
+
 - Large services
 - Specialized staff roles
 - Detailed tracking needed
@@ -176,18 +183,23 @@ capacity:
 #### How to Calculate Your Capacity
 
 **Method 1: From Service Time**
+
 ```
 Capacity = 60 / avg_service_minutes
 ```
+
 Example: 5 min per person = 60/5 = 12 people/hour
 
 **Method 2: From Staff**
+
 ```
 Capacity = (60 / avg_service_minutes) × num_parallel_stations
 ```
+
 Example: 5 min per person, 2 stations = 12 × 2 = 24 people/hour
 
 **Method 3: Measure It**
+
 - Track actual throughput during a shift
 - Count completions per hour
 - Use the real number
@@ -237,6 +249,7 @@ alerts:
 **Queue Length Thresholds**
 
 Ask yourself:
+
 - At what queue length should I consider calling in more staff? → **Warning**
 - At what length is the queue unmanageable? → **Critical**
 
@@ -249,6 +262,7 @@ Ask yourself:
 **Wait Time Thresholds**
 
 Consider:
+
 - What's an acceptable wait for your participants?
 - What's your service level goal?
 - When does waiting become harmful (people leave, unsafe substance use)?
@@ -259,6 +273,7 @@ Consider:
 - **Critical**: Definitely a problem (staff break, system issue, emergency)
 
 For most services:
+
 - Warning: 5-10 minutes
 - Critical: 10-15 minutes
 
@@ -473,6 +488,7 @@ python -c "from service_config_loader import load_service_config; c=load_service
 If you're using an older version with hardcoded stages:
 
 #### Before (Hardcoded)
+
 ```python
 # Hardcoded stages in code
 QUEUE_JOIN = "QUEUE_JOIN"
@@ -481,6 +497,7 @@ EXIT = "EXIT"
 ```
 
 #### After (Configured)
+
 ```python
 # Stages from configuration
 from tap_station.service_integration import get_first_stage, get_last_stage
@@ -498,6 +515,7 @@ The system maintains **backward compatibility** - if no configuration file exist
 **Problem**: System uses default values instead of your configuration
 
 **Solutions**:
+
 1. Check file location: `service_config.yaml` should be in project root
 2. Check file permissions: `ls -la service_config.yaml`
 3. Check YAML syntax: `python -c "import yaml; yaml.safe_load(open('service_config.yaml'))"`
@@ -508,6 +526,7 @@ The system maintains **backward compatibility** - if no configuration file exist
 **Problem**: Custom stages don't show up
 
 **Solutions**:
+
 1. Verify stage order numbers are sequential
 2. Check `visible_to_public: true` if they should show on displays
 3. Restart the service after config changes
@@ -518,6 +537,7 @@ The system maintains **backward compatibility** - if no configuration file exist
 **Problem**: Alerts don't appear when expected
 
 **Solutions**:
+
 1. Verify threshold values are reasonable
 2. Check that queue is actually exceeding thresholds
 3. Test with deliberately high queue counts
@@ -528,6 +548,7 @@ The system maintains **backward compatibility** - if no configuration file exist
 **Problem**: Estimated wait times are inaccurate
 
 **Solutions**:
+
 1. Measure real service time: time actual participants
 2. Update `avg_service_minutes` to match reality
 3. Adjust `queue_multiplier` based on observations
@@ -583,12 +604,14 @@ The system maintains **backward compatibility** - if no configuration file exist
 ### Scenario 1: Small Festival Popup
 
 **Context**:
+
 - 200-person festival
 - 1-2 peer workers
 - Quick reagent testing only
 - 4-hour service window
 
 **Configuration**:
+
 ```yaml
 service:
   name: "Safer Partying Pop-up"
@@ -615,6 +638,7 @@ alerts:
 ### Scenario 2: Large Multi-Day Festival
 
 **Context**:
+
 - 5,000-person festival
 - 6-8 staff members
 - Comprehensive testing (FTIR, GC/MS available)
@@ -622,6 +646,7 @@ alerts:
 - 72-hour operation
 
 **Configuration**:
+
 ```yaml
 service:
   name: "Festival Harm Reduction"

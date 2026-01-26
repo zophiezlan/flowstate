@@ -34,7 +34,7 @@ class PeerMonitor:
         timeout: int = 5,
         failure_threshold: int = 2,
         on_peer_down: Optional[Callable] = None,
-        on_peer_up: Optional[Callable] = None
+        on_peer_up: Optional[Callable] = None,
     ):
         """
         Initialize peer monitor
@@ -81,10 +81,7 @@ class PeerMonitor:
         logger.info(f"Starting peer monitor for {self.peer_hostname}:{self.peer_port}")
 
         self._running = True
-        self._monitor_thread = threading.Thread(
-            target=self._monitor_loop,
-            daemon=True
-        )
+        self._monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
         self._monitor_thread.start()
 
     def stop(self):
@@ -122,10 +119,7 @@ class PeerMonitor:
 
         try:
             # Try to reach peer health endpoint
-            response = requests.get(
-                self.peer_url,
-                timeout=self.timeout
-            )
+            response = requests.get(self.peer_url, timeout=self.timeout)
 
             # Check if response is successful
             if response.status_code == 200:
@@ -168,7 +162,7 @@ class PeerMonitor:
                         self.on_peer_up()
                     except Exception as e:
                         logger.error(f"Error in peer_up callback: {e}")
-                
+
                 peer_up_thread = threading.Thread(target=_run_callback, daemon=True)
                 peer_up_thread.start()
 
@@ -197,8 +191,10 @@ class PeerMonitor:
                             self.on_peer_down()
                         except Exception as e:
                             logger.error(f"Error in peer_down callback: {e}")
-                    
-                    peer_down_thread = threading.Thread(target=_run_callback, daemon=True)
+
+                    peer_down_thread = threading.Thread(
+                        target=_run_callback, daemon=True
+                    )
                     peer_down_thread.start()
 
     def get_status(self) -> Dict:
@@ -209,13 +205,17 @@ class PeerMonitor:
             Status dictionary
         """
         return {
-            'peer_hostname': self.peer_hostname,
-            'peer_port': self.peer_port,
-            'peer_healthy': self.peer_healthy,
-            'consecutive_failures': self.consecutive_failures,
-            'last_check_time': self.last_check_time.isoformat() if self.last_check_time else None,
-            'last_success_time': self.last_success_time.isoformat() if self.last_success_time else None,
-            'monitoring_enabled': self._running
+            "peer_hostname": self.peer_hostname,
+            "peer_port": self.peer_port,
+            "peer_healthy": self.peer_healthy,
+            "consecutive_failures": self.consecutive_failures,
+            "last_check_time": (
+                self.last_check_time.isoformat() if self.last_check_time else None
+            ),
+            "last_success_time": (
+                self.last_success_time.isoformat() if self.last_success_time else None
+            ),
+            "monitoring_enabled": self._running,
         }
 
     def force_check(self) -> bool:

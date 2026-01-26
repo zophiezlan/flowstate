@@ -22,11 +22,9 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
     # Station settings
     "device_id": ("station.device_id", "unknown", str),
     "session_id": ("station.session_id", "default-session", str),
-
     # Database settings
     "database_path": ("database.path", "data/events.db", str),
     "wal_mode": ("database.wal_mode", True, bool),
-
     # NFC settings
     "i2c_bus": ("nfc.i2c_bus", 1, int),
     "i2c_address": ("nfc.address", 0x24, int),
@@ -35,7 +33,6 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
     "debounce_seconds": ("nfc.debounce_seconds", 1.0, float),
     "auto_init_cards": ("nfc.auto_init_cards", False, bool),
     "auto_init_start_id": ("nfc.auto_init_start_id", 1, int),
-
     # Feedback settings
     "buzzer_enabled": ("feedback.buzzer_enabled", False, bool),
     "led_enabled": ("feedback.led_enabled", False, bool),
@@ -45,64 +42,81 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
     "beep_success": ("feedback.beep_success", [0.1], None),
     "beep_duplicate": ("feedback.beep_duplicate", [0.1, 0.05, 0.1], None),
     "beep_error": ("feedback.beep_error", [0.3], None),
-
     # Shutdown button settings
     "shutdown_button_enabled": ("shutdown_button.enabled", False, bool),
     "shutdown_button_gpio": ("shutdown_button.gpio_pin", 26, int),
     "shutdown_button_hold_time": ("shutdown_button.hold_time", 3.0, float),
     "shutdown_button_delay_minutes": ("shutdown_button.delay_minutes", 1, int),
-
     # Logging settings
     "log_path": ("logging.path", "logs/tap-station.log", str),
     "log_level": ("logging.level", "INFO", str),
     "log_max_size_mb": ("logging.max_size_mb", 10, int),
     "log_backup_count": ("logging.backup_count", 3, int),
-
     # Web server settings
     "web_server_enabled": ("web_server.enabled", False, bool),
     "web_server_host": ("web_server.host", "0.0.0.0", str),
     "web_server_port": ("web_server.port", 8080, int),
     "admin_password": ("web_server.admin.password", "CHANGE-ME-BEFORE-DEPLOYMENT", str),
-    "admin_session_timeout_minutes": ("web_server.admin.session_timeout_minutes", 60, int),
-
+    "admin_session_timeout_minutes": (
+        "web_server.admin.session_timeout_minutes",
+        60,
+        int,
+    ),
     # API limits and validation
     "api_max_events_per_request": ("web_server.api.max_events_per_request", 1000, int),
     "api_max_token_id_length": ("web_server.api.max_token_id_length", 100, int),
     "api_max_uid_length": ("web_server.api.max_uid_length", 100, int),
     "api_max_stage_length": ("web_server.api.max_stage_length", 50, int),
-
     # Analytics and dashboard settings
     "analytics_wait_sample_size": ("web_server.analytics.wait_sample_size", 20, int),
-    "analytics_recent_completions_limit": ("web_server.analytics.recent_completions_limit", 10, int),
-    "analytics_recent_events_limit": ("web_server.analytics.recent_events_limit", 15, int),
+    "analytics_recent_completions_limit": (
+        "web_server.analytics.recent_completions_limit",
+        10,
+        int,
+    ),
+    "analytics_recent_events_limit": (
+        "web_server.analytics.recent_events_limit",
+        15,
+        int,
+    ),
     "analytics_activity_hours": ("web_server.analytics.activity_hours", 12, int),
-    "analytics_max_estimate_minutes": ("web_server.analytics.max_estimate_minutes", 120, int),
-    "analytics_recent_service_window": ("web_server.analytics.recent_service_window_minutes", 30, int),
-    "analytics_confidence_sample_size": ("web_server.analytics.confidence_sample_size", 5, int),
-
+    "analytics_max_estimate_minutes": (
+        "web_server.analytics.max_estimate_minutes",
+        120,
+        int,
+    ),
+    "analytics_recent_service_window": (
+        "web_server.analytics.recent_service_window_minutes",
+        30,
+        int,
+    ),
+    "analytics_confidence_sample_size": (
+        "web_server.analytics.confidence_sample_size",
+        5,
+        int,
+    ),
     # Hardware monitoring thresholds
     "hardware_temp_warning": ("hardware.temp_warning_celsius", 70, int),
     "hardware_temp_critical": ("hardware.temp_critical_celsius", 80, int),
     "hardware_disk_warning": ("hardware.disk_warning_percent", 80, int),
     "hardware_disk_critical": ("hardware.disk_critical_percent", 90, int),
-
     # On-Site Setup Features
     "onsite_enabled": ("onsite.enabled", True, bool),
-
     # WiFi Management
     "onsite_wifi_enabled": ("onsite.wifi.enabled", True, bool),
     "onsite_wifi_setup_button_gpio": ("onsite.wifi.setup_button_gpio", 23, int),
-    "onsite_wifi_networks_file": ("onsite.wifi.networks_file", "config/wifi_networks.conf", str),
-
+    "onsite_wifi_networks_file": (
+        "onsite.wifi.networks_file",
+        "config/wifi_networks.conf",
+        str,
+    ),
     # mDNS Discovery
     "onsite_mdns_enabled": ("onsite.mdns.enabled", True, bool),
-
     # Failover Settings
     "onsite_failover_enabled": ("onsite.failover.enabled", True, bool),
     "onsite_failover_peer_hostname": ("onsite.failover.peer_hostname", None, str),
     "onsite_failover_check_interval": ("onsite.failover.check_interval", 30, int),
     "onsite_failover_failure_threshold": ("onsite.failover.failure_threshold", 2, int),
-
     # Status LEDs
     "onsite_status_leds_enabled": ("onsite.status_leds.enabled", True, bool),
     "onsite_status_leds_gpio_blue": ("onsite.status_leds.gpio_blue", None, int),
@@ -118,7 +132,7 @@ class Config:
 
         Args:
             config_path: Path to config.yaml file
-            
+
         Raises:
             ConfigurationError: If config file is missing or invalid
         """
@@ -240,22 +254,22 @@ class Config:
                 return default
 
         return value
-    
+
     def get_required(self, key_path: str) -> Any:
         """
         Get a required configuration value with better error message.
-        
+
         Args:
             key_path: Dot-separated path (e.g., "station.device_id")
-            
+
         Returns:
             Configuration value
-            
+
         Raises:
             ConfigurationError: If the required value is missing
         """
         value = self.get(key_path)
-        
+
         if value is None or value == "":
             error_msg = (
                 f"Required configuration field '{key_path}' is missing or empty.\n"
@@ -263,22 +277,22 @@ class Config:
                 f"  {self._format_example(key_path)}"
             )
             raise ConfigurationError(error_msg, config_key=key_path)
-        
+
         return value
-    
+
     def _format_example(self, key_path: str) -> str:
         """
         Format an example configuration snippet for a given key path.
-        
+
         Args:
             key_path: Dot-separated path
-            
+
         Returns:
             Formatted YAML example
         """
         keys = key_path.split(".")
         indent = "  "
-        
+
         # Build nested YAML structure
         lines = []
         for i, key in enumerate(keys):
@@ -286,7 +300,7 @@ class Config:
                 lines.append(f"{indent * i}{key}: <your-value-here>")
             else:
                 lines.append(f"{indent * i}{key}:")
-        
+
         return "\n  ".join(lines)
 
     def __getattr__(self, name: str) -> Any:

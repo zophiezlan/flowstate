@@ -34,12 +34,14 @@ In typical drug checking services:
 ### The Impact
 
 **For Participants:**
+
 - Lost trust in service
 - Loss of substances (financial/emotional impact)
 - Won't return or recommend service
 - Perceived lack of professionalism
 
 **For Service:**
+
 - Incident reports and complaints
 - Legal/insurance issues
 - Damaged reputation
@@ -47,6 +49,7 @@ In typical drug checking services:
 - No audit trail
 
 **For Harm Reduction:**
+
 - Reduced service utilization
 - Undermines community trust
 - Barriers to reaching at-risk populations
@@ -54,6 +57,7 @@ In typical drug checking services:
 ### The Solution
 
 A **formal confirmation system** that:
+
 - ✅ Creates accountability for staff
 - ✅ Provides audit trail
 - ✅ Alerts when substances not returned
@@ -80,6 +84,7 @@ A **formal confirmation system** that:
 ### The Critical Moment
 
 **SUBSTANCE_RETURNED stage:**
+
 - Staff physically hands substance back to participant
 - **Staff taps participant's NFC card** to confirm handback
 - System records: who, when, which substance
@@ -203,10 +208,10 @@ alerts:
 
 **When returning substance:**
 
-6. Retrieve participant's substance
-7. Physically hand substance back to participant
-8. **Tap card on SUBSTANCE_RETURNED station** ← CRITICAL
-9. Direct participant to exit station
+1. Retrieve participant's substance
+2. Physically hand substance back to participant
+3. **Tap card on SUBSTANCE_RETURNED station** ← CRITICAL
+4. Direct participant to exit station
 
 ### Training Points
 
@@ -233,16 +238,19 @@ alerts:
 When SUBSTANCE_RETURNED stage is enabled:
 
 **Status Indicators:**
+
 - **Awaiting Return:** Participants who completed service but haven't gotten substance back
 - **Return Time:** Average time between service completion and return
 - **Return Rate:** % of participants who got substances back
 
 **Alerts Section:**
+
 - 🟡 **Warning:** Substance unreturned for 15+ minutes
 - 🔴 **Critical:** Substance unreturned for 30+ minutes
 - Shows token ID, time elapsed, staff member
 
 **Shift Summary:**
+
 - Total substances received today
 - Total substances returned today
 - Currently awaiting return: [number]
@@ -280,12 +288,14 @@ When SUBSTANCE_RETURNED stage is enabled:
 ### 1. Incident Prevention
 
 **Before substance return tracking:**
+
 - "I think I gave it back?"
 - No proof of return
 - Participant vs staff disputes
 - Lost substances go unreported
 
 **After substance return tracking:**
+
 - Timestamped proof of handback
 - Clear accountability chain
 - Disputes resolved with data
@@ -294,12 +304,14 @@ When SUBSTANCE_RETURNED stage is enabled:
 ### 2. Trust Building
 
 **Participant perspective:**
+
 - "I saw them tap my card when they gave it back"
 - "The system tracks my substance"
 - "I trust this service"
 - "I'll recommend this to friends"
 
 **Service perspective:**
+
 - "We can prove we returned it"
 - "Our return rate is 99.2%"
 - "Zero substance loss incidents this year"
@@ -308,6 +320,7 @@ When SUBSTANCE_RETURNED stage is enabled:
 ### 3. Autonomy & Empowerment
 
 **Participants can:**
+
 - Check status online: "Has my substance been returned?"
 - See timestamps: "Service started at 14:30, returned at 14:38"
 - Have proof for their own records
@@ -316,6 +329,7 @@ When SUBSTANCE_RETURNED stage is enabled:
 ### 4. Operational Intelligence
 
 **Service coordinators can:**
+
 - Identify bottlenecks: "Return taking too long?"
 - Monitor staff performance: "Which staff forget returns?"
 - Track trends: "Return time increases during peak hours"
@@ -324,6 +338,7 @@ When SUBSTANCE_RETURNED stage is enabled:
 ### 5. Legal & Insurance
 
 **Documentation provides:**
+
 - Audit trail for liability protection
 - Proof of duty of care
 - Evidence for insurance claims
@@ -393,17 +408,20 @@ When SUBSTANCE_RETURNED stage is enabled:
 **Check:**
 
 1. Is SUBSTANCE_RETURNED stage configured?
+
    ```bash
    grep "SUBSTANCE_RETURNED" service_config.yaml
    ```
 
 2. Are any return events logged?
+
    ```bash
    # Use database path from your config.yaml (typically data/events.db)
    sqlite3 data/events.db "SELECT COUNT(*) FROM events WHERE stage='SUBSTANCE_RETURNED'"
    ```
 
 3. Is station configured correctly?
+
    ```yaml
    stage: "SUBSTANCE_RETURNED"  # Must be exact
    ```
@@ -453,11 +471,13 @@ alerts:
 ### Scenario 1: Busy Rush
 
 **Situation:**
+
 - 15 people in queue
 - Staff rushing
 - Risk of forgetting returns
 
 **Solution:**
+
 - Return confirmation FORCES the step
 - Dashboard shows who's awaiting return
 - Alerts prevent anyone being forgotten
@@ -466,11 +486,13 @@ alerts:
 ### Scenario 2: Staff Dispute
 
 **Situation:**
+
 - Participant claims substance not returned
 - Staff claims it was returned
 - No proof either way
 
 **Solution:**
+
 - Check system: "SUBSTANCE_RETURNED event logged at 14:38"
 - Timestamped proof
 - Staff protected from false claims
@@ -479,11 +501,13 @@ alerts:
 ### Scenario 3: End of Night
 
 **Situation:**
+
 - 2am, event ending
 - 3 substances still in storage
 - Whose are they?
 
 **Solution:**
+
 - Dashboard shows: "Tokens #045, #067, #089 awaiting return"
 - Can attempt to locate participants
 - Clear record of unreturned substances
@@ -496,18 +520,22 @@ alerts:
 ### Track These KPIs
 
 **Return Rate:**
+
 - Goal: 100% (or as close as possible)
 - Calculate: (Substances returned / Substances received) × 100
 
 **Average Return Time:**
+
 - Goal: < 5 minutes from service completion
 - Calculate: Average time between SERVICE_START and SUBSTANCE_RETURNED
 
 **Alert Response Time:**
+
 - Goal: < 5 minutes to respond to alert
 - Track: Time from alert to resolution
 
 **Incident Rate:**
+
 - Goal: 0 unreturned substances at event end
 - Track: Substances left unclaimed
 
@@ -547,30 +575,35 @@ System prevented potential issues.
 ### Implementation Plan
 
 **Week 1: Planning**
+
 - Review this guide with team
 - Decide on station layout
 - Customize service_config.yaml
 - Plan training sessions
 
 **Week 2: Setup**
+
 - Configure stations
 - Test workflow
 - Train staff
 - Create visual aids
 
 **Week 3: Testing**
+
 - Run mock scenarios
 - Validate alerts
 - Verify dashboard
 - Refine procedures
 
 **Day Of: Deployment**
+
 - Pre-event checklist
 - Station verification
 - Staff refresher
 - Monitor throughout event
 
 **Post-Event: Review**
+
 - Export data
 - Calculate metrics
 - Team debrief
@@ -581,15 +614,18 @@ System prevented potential issues.
 ## Support & Resources
 
 **Documentation:**
+
 - [3-Stage Tracking Guide](3_STAGE_TRACKING.md) - Understanding stages
 - [Operations Guide](OPERATIONS.md) - Day-of-event workflow
 - [Service Configuration](SERVICE_CONFIGURATION.md) - Customization
 
 **Configuration Examples:**
+
 - `examples/service_configs/substance_return_tracking.yaml`
 - `examples/service_configs/comprehensive_service.yaml`
 
 **Questions?**
+
 - Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - Open GitHub issue
 - Contact development team

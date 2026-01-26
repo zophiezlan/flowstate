@@ -75,7 +75,7 @@ class MDNSService:
                 ["systemctl", "is-active", "avahi-daemon"],
                 capture_output=True,
                 text=True,
-                timeout=2
+                timeout=2,
             )
             is_active = result.returncode == 0
 
@@ -105,7 +105,7 @@ class MDNSService:
         # Check current hostname (but don't change it - that should be done once during setup)
         try:
             current_hostname = socket.gethostname()
-            
+
             if current_hostname != self.hostname:
                 logger.info(
                     f"System hostname is '{current_hostname}' but config expects '{self.hostname}'. "

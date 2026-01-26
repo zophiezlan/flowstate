@@ -65,9 +65,7 @@ class NFCCleanupManager:
         processes = self._find_nfc_processes()
         if processes:
             issues_found.append("processes")
-            messages.append(
-                f"⚠️  Found {len(processes)} process(es) using NFC reader"
-            )
+            messages.append(f"⚠️  Found {len(processes)} process(es) using NFC reader")
 
             if self.auto_fix:
                 killed = self._cleanup_processes(processes)
@@ -110,9 +108,7 @@ class NFCCleanupManager:
 
         # If we found issues but didn't auto-fix, return failure
         if issues_found and not self.auto_fix:
-            messages.append(
-                "\nRun with auto_fix=True or manually fix the issues above"
-            )
+            messages.append("\nRun with auto_fix=True or manually fix the issues above")
             return False, messages
 
         # Success if no remaining issues
@@ -147,9 +143,7 @@ class NFCCleanupManager:
             # Try with sudo first
             cmd = ["sudo", "systemctl", "stop", "tap-station"]
 
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=10
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
 
             if result.returncode == 0:
                 # Give it time to fully stop
@@ -201,7 +195,7 @@ class NFCCleanupManager:
                             stripped = line.strip()
                             if stripped:
                                 pid_lines.append(stripped)
-                        
+
                         for pid_str in pid_lines:
                             try:
                                 pid = int(pid_str)
@@ -254,9 +248,7 @@ class NFCCleanupManager:
                 # Process already exited
                 pass
             except PermissionError:
-                logger.warning(
-                    f"No permission to kill PID {pid} (may need sudo)"
-                )
+                logger.warning(f"No permission to kill PID {pid} (may need sudo)")
             except Exception as e:
                 logger.error(f"Error killing PID {pid}: {e}")
 
@@ -270,12 +262,18 @@ class NFCCleanupManager:
             if os.access("/dev/i2c-1", os.R_OK | os.W_OK):
                 return True, "I2C device /dev/i2c-1 accessible"
             else:
-                return False, "I2C device exists but no permission (add user to i2c group)"
+                return (
+                    False,
+                    "I2C device exists but no permission (add user to i2c group)",
+                )
         elif os.path.exists("/dev/i2c-0"):
             if os.access("/dev/i2c-0", os.R_OK | os.W_OK):
                 return True, "I2C device /dev/i2c-0 accessible"
             else:
-                return False, "I2C device exists but no permission (add user to i2c group)"
+                return (
+                    False,
+                    "I2C device exists but no permission (add user to i2c group)",
+                )
         else:
             return False, "I2C device not found (enable I2C in raspi-config)"
 

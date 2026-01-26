@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ValidationResult:
     """Result of a validation operation"""
+
     valid: bool
     error: Optional[str] = None
     warnings: Optional[List[str]] = None
@@ -81,8 +82,7 @@ class EventValidator:
         if not isinstance(events, list):
             return (
                 ValidationResult(
-                    valid=False,
-                    error="Invalid format: expected list of events"
+                    valid=False, error="Invalid format: expected list of events"
                 ),
                 [],
             )
@@ -92,7 +92,7 @@ class EventValidator:
             return (
                 ValidationResult(
                     valid=False,
-                    error=f"Payload too large: max {self.max_events} events per request"
+                    error=f"Payload too large: max {self.max_events} events per request",
                 ),
                 [],
             )
@@ -100,8 +100,7 @@ class EventValidator:
         if len(events) == 0:
             return (
                 ValidationResult(
-                    valid=False,
-                    error="Empty payload: no events to process"
+                    valid=False, error="Empty payload: no events to process"
                 ),
                 [],
             )
@@ -125,18 +124,12 @@ class EventValidator:
 
         if not valid_events:
             return (
-                ValidationResult(
-                    valid=False,
-                    error="No valid events in payload"
-                ),
+                ValidationResult(valid=False, error="No valid events in payload"),
                 [],
             )
 
         return (
-            ValidationResult(
-                valid=True,
-                warnings=warnings if warnings else None
-            ),
+            ValidationResult(valid=True, warnings=warnings if warnings else None),
             valid_events,
         )
 
@@ -154,34 +147,34 @@ class EventValidator:
 
         # Must be a dictionary
         if not isinstance(event, dict):
-            return ValidationResult(
-                valid=False,
-                error="Event must be an object"
-            )
+            return ValidationResult(valid=False, error="Event must be an object")
 
         # Required fields
         required_fields = ["token_id", "stage"]
         missing = [f for f in required_fields if f not in event]
         if missing:
             return ValidationResult(
-                valid=False,
-                error=f"Missing required fields: {', '.join(missing)}"
+                valid=False, error=f"Missing required fields: {', '.join(missing)}"
             )
 
         # Validate token_id
         token_id = event.get("token_id")
-        if not self._validate_string_field(token_id, "token_id", self.max_token_id_length):
+        if not self._validate_string_field(
+            token_id, "token_id", self.max_token_id_length
+        ):
             return ValidationResult(
                 valid=False,
-                error=f"Invalid token_id: must be non-empty string <= {self.max_token_id_length} chars"
+                error=f"Invalid token_id: must be non-empty string <= {self.max_token_id_length} chars",
             )
 
         # Validate uid (optional but validate if present)
         uid = event.get("uid")
-        if uid is not None and not self._validate_string_field(uid, "uid", self.max_uid_length):
+        if uid is not None and not self._validate_string_field(
+            uid, "uid", self.max_uid_length
+        ):
             return ValidationResult(
                 valid=False,
-                error=f"Invalid uid: must be string <= {self.max_uid_length} chars"
+                error=f"Invalid uid: must be string <= {self.max_uid_length} chars",
             )
 
         # Validate stage
@@ -189,7 +182,7 @@ class EventValidator:
         if not self._validate_string_field(stage, "stage", self.max_stage_length):
             return ValidationResult(
                 valid=False,
-                error=f"Invalid stage: must be non-empty string <= {self.max_stage_length} chars"
+                error=f"Invalid stage: must be non-empty string <= {self.max_stage_length} chars",
             )
 
         # Normalize and check stage
@@ -204,10 +197,7 @@ class EventValidator:
             if not timestamp_result.valid:
                 warnings.append(f"Invalid timestamp format: {timestamp_result.error}")
 
-        return ValidationResult(
-            valid=True,
-            warnings=warnings if warnings else None
-        )
+        return ValidationResult(valid=True, warnings=warnings if warnings else None)
 
     def _validate_string_field(
         self, value: Any, field_name: str, max_length: int
@@ -227,13 +217,13 @@ class EventValidator:
         """Validate a timestamp value"""
         # Use centralized parse_timestamp function
         parsed_dt = parse_timestamp(timestamp, default_to_now=False)
-        
+
         if parsed_dt is None:
             return ValidationResult(
                 valid=False,
-                error="Invalid timestamp format: must be ISO string or milliseconds since epoch"
+                error="Invalid timestamp format: must be ISO string or milliseconds since epoch",
             )
-        
+
         # Validate reasonable time range (not too far in past or future)
         now = datetime.now(timezone.utc)
         max_age_hours = 24  # Accept events up to 24 hours old
@@ -252,7 +242,9 @@ class EventValidator:
                 f"Timestamp is more than {max_future_minutes} minutes in the future"
             )
 
-        return ValidationResult(valid=True, warnings=timestamp_warnings if timestamp_warnings else None)
+        return ValidationResult(
+            valid=True, warnings=timestamp_warnings if timestamp_warnings else None
+        )
 
     def normalize_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -272,7 +264,11 @@ class EventValidator:
         device_id = str(event.get("device_id") or event.get("deviceId") or "mobile")
 
         # Handle timestamp
-        ts_value = event.get("timestamp_ms") or event.get("timestamp") or event.get("timestampMs")
+        ts_value = (
+            event.get("timestamp_ms")
+            or event.get("timestamp")
+            or event.get("timestampMs")
+        )
         timestamp = self._coerce_timestamp(ts_value)
 
         return {
@@ -313,11 +309,11 @@ class TokenValidator:
         """
         if not isinstance(token_id, str):
             return False
-        
+
         if strict:
             # Legacy: only numeric
             return bool(re.compile(r"^\d{1,4}$").match(token_id))
-        
+
         return bool(cls.TOKEN_ID_PATTERN.match(token_id))
 
     @classmethod
@@ -395,7 +391,9 @@ class StageNameValidator:
 
         # Check if the normalized stage is in the valid list
         if normalized not in WorkflowStages.ALL_STAGES:
-            raise ValueError(f"Unknown stage: {stage}. Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}")
+            raise ValueError(
+                f"Unknown stage: {stage}. Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}"
+            )
 
         return normalized
 

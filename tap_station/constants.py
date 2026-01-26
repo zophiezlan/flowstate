@@ -15,8 +15,10 @@ from enum import Enum
 # Delivery Status (used by webhooks and integrations)
 # =============================================================================
 
+
 class DeliveryStatus(Enum):
     """Status of event delivery to external systems"""
+
     PENDING = "pending"
     DELIVERED = "delivered"
     FAILED = "failed"
@@ -27,6 +29,7 @@ class DeliveryStatus(Enum):
 # =============================================================================
 # Workflow Stage Constants
 # =============================================================================
+
 
 class WorkflowStages:
     """Standard workflow stage identifiers"""
@@ -90,9 +93,11 @@ class WorkflowStages:
 # Workflow Transition Rules
 # =============================================================================
 
+
 @dataclass
 class TransitionRule:
     """Defines a valid workflow transition"""
+
     from_stage: str
     to_stages: List[str]
     requires_previous: bool = True
@@ -271,6 +276,7 @@ def get_stage_label(stage_id: str, labels: Optional[Dict[str, str]] = None) -> s
 # Database Constants
 # =============================================================================
 
+
 class DatabaseDefaults:
     """Default values for database operations"""
 
@@ -282,6 +288,7 @@ class DatabaseDefaults:
 # =============================================================================
 # Feedback Constants
 # =============================================================================
+
 
 class FeedbackPatterns:
     """Default beep/LED patterns for feedback"""
@@ -299,6 +306,7 @@ class FeedbackPatterns:
 # =============================================================================
 # Time Units
 # =============================================================================
+
 
 class TimeUnits:
     """Standard time unit conversions"""
@@ -326,12 +334,13 @@ class TimeUnits:
 # Storage Units
 # =============================================================================
 
+
 class StorageUnits:
     """Storage unit conversions"""
 
     BYTES_PER_KB = 1024
-    BYTES_PER_MB = 1024 ** 2
-    BYTES_PER_GB = 1024 ** 3
+    BYTES_PER_MB = 1024**2
+    BYTES_PER_GB = 1024**3
 
     KB_PER_MB = 1024
     MB_PER_GB = 1024
@@ -340,6 +349,7 @@ class StorageUnits:
 # =============================================================================
 # Hardware Constants
 # =============================================================================
+
 
 class HardwareDefaults:
     """Default hardware-related values"""
@@ -364,6 +374,7 @@ class HardwareDefaults:
 # =============================================================================
 # API Constants
 # =============================================================================
+
 
 class APIDefaults:
     """Default API-related values"""

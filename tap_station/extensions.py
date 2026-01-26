@@ -18,8 +18,16 @@ import importlib.util
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import (
-    Dict, List, Optional, Any, Callable, TypeVar, Generic,
-    Set, Type, Union
+    Dict,
+    List,
+    Optional,
+    Any,
+    Callable,
+    TypeVar,
+    Generic,
+    Set,
+    Type,
+    Union,
 )
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -30,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class HookPriority(Enum):
     """Priority levels for hook execution order"""
+
     HIGHEST = 0
     HIGH = 25
     NORMAL = 50
@@ -39,6 +48,7 @@ class HookPriority(Enum):
 
 class HookType(Enum):
     """Types of hooks available in the system"""
+
     # Event lifecycle hooks
     PRE_EVENT_LOG = auto()
     POST_EVENT_LOG = auto()
@@ -74,6 +84,7 @@ class HookType(Enum):
 @dataclass
 class HookContext:
     """Context passed to hook handlers"""
+
     hook_type: HookType
     timestamp: datetime
     data: Dict[str, Any] = field(default_factory=dict)
@@ -95,13 +106,14 @@ class HookContext:
 @dataclass
 class HookResult:
     """Result from a hook handler"""
+
     success: bool
     modified_data: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ExtensionPoint(Generic[T], ABC):
@@ -166,7 +178,7 @@ class Plugin(ABC):
         """Called when plugin is unloaded"""
         pass
 
-    def register_hooks(self, registry: 'HookRegistry') -> None:
+    def register_hooks(self, registry: "HookRegistry") -> None:
         """Register hooks with the hook registry"""
         pass
 
@@ -181,6 +193,7 @@ HookHandler = Callable[[HookContext], HookResult]
 @dataclass
 class HookRegistration:
     """Represents a registered hook handler"""
+
     hook_type: HookType
     handler: HookHandler
     priority: HookPriority
@@ -207,7 +220,7 @@ class HookRegistry:
         handler: HookHandler,
         priority: HookPriority = HookPriority.NORMAL,
         plugin_name: str = "anonymous",
-        **metadata
+        **metadata,
     ) -> HookRegistration:
         """
         Register a hook handler.
@@ -227,7 +240,7 @@ class HookRegistry:
             handler=handler,
             priority=priority,
             plugin_name=plugin_name,
-            metadata=metadata
+            metadata=metadata,
         )
 
         if hook_type not in self._hooks:
@@ -248,7 +261,7 @@ class HookRegistry:
         hook_name: str,
         handler: HookHandler,
         priority: HookPriority = HookPriority.NORMAL,
-        plugin_name: str = "anonymous"
+        plugin_name: str = "anonymous",
     ) -> HookRegistration:
         """Register a custom named hook"""
         registration = HookRegistration(
@@ -256,7 +269,7 @@ class HookRegistry:
             handler=handler,
             priority=priority,
             plugin_name=plugin_name,
-            metadata={"custom_name": hook_name}
+            metadata={"custom_name": hook_name},
         )
 
         if hook_name not in self._custom_hooks:
@@ -309,10 +322,7 @@ class HookRegistry:
         return count
 
     def execute(
-        self,
-        hook_type: HookType,
-        context: HookContext,
-        stop_on_cancel: bool = True
+        self, hook_type: HookType, context: HookContext, stop_on_cancel: bool = True
     ) -> List[HookResult]:
         """
         Execute all handlers for a hook type.
@@ -350,20 +360,14 @@ class HookRegistry:
             except Exception as e:
                 logger.error(
                     f"Hook handler error ({registration.plugin_name}): {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
-                results.append(HookResult(
-                    success=False,
-                    error=str(e)
-                ))
+                results.append(HookResult(success=False, error=str(e)))
 
         return results
 
     def execute_custom(
-        self,
-        hook_name: str,
-        context: HookContext,
-        stop_on_cancel: bool = True
+        self, hook_name: str, context: HookContext, stop_on_cancel: bool = True
     ) -> List[HookResult]:
         """Execute all handlers for a custom hook"""
         results = []
@@ -405,9 +409,7 @@ class PluginLoader:
     """
 
     def __init__(
-        self,
-        plugin_dirs: Optional[List[Path]] = None,
-        auto_discover: bool = True
+        self, plugin_dirs: Optional[List[Path]] = None, auto_discover: bool = True
     ):
         """
         Initialize plugin loader.
@@ -442,12 +444,16 @@ class PluginLoader:
                 continue
 
             for path in plugin_dir.iterdir():
-                if path.is_file() and path.suffix == '.py' and not path.name.startswith('_'):
+                if (
+                    path.is_file()
+                    and path.suffix == ".py"
+                    and not path.name.startswith("_")
+                ):
                     name = path.stem
                     if name not in self._plugins:
                         discovered.append(name)
 
-                elif path.is_dir() and (path / 'plugin.py').exists():
+                elif path.is_dir() and (path / "plugin.py").exists():
                     name = path.name
                     if name not in self._plugins:
                         discovered.append(name)
@@ -496,9 +502,11 @@ class PluginLoader:
             # Find Plugin subclass in module
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type) and
-                    issubclass(attr, Plugin) and
-                    attr is not Plugin):
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, Plugin)
+                    and attr is not Plugin
+                ):
                     plugin = attr()
                     self._plugins[name] = plugin
                     self._load_order.append(name)
@@ -570,10 +578,7 @@ class ExtensionManager:
     Coordinates plugin loading, hook registration, and extension points.
     """
 
-    def __init__(
-        self,
-        plugin_dirs: Optional[List[Path]] = None
-    ):
+    def __init__(self, plugin_dirs: Optional[List[Path]] = None):
         """
         Initialize extension manager.
 
@@ -632,7 +637,7 @@ class ExtensionManager:
         hook_type: HookType,
         data: Optional[Dict[str, Any]] = None,
         source: str = "system",
-        cancellable: bool = True
+        cancellable: bool = True,
     ) -> Tuple[HookContext, List[HookResult]]:
         """
         Emit a hook event.
@@ -653,7 +658,7 @@ class ExtensionManager:
             timestamp=utc_now(),
             data=data or {},
             source=source,
-            cancellable=cancellable
+            cancellable=cancellable,
         )
 
         results = self._hook_registry.execute(hook_type, context)
@@ -672,6 +677,7 @@ class ExtensionManager:
 # =============================================================================
 # Built-in Extension Points
 # =============================================================================
+
 
 class EventProcessorExtension(ExtensionPoint[Callable]):
     """Extension point for custom event processors"""
@@ -716,9 +722,7 @@ class DashboardWidgetExtension(ExtensionPoint[dict]):
 _extension_manager: Optional[ExtensionManager] = None
 
 
-def get_extension_manager(
-    plugin_dirs: Optional[List[Path]] = None
-) -> ExtensionManager:
+def get_extension_manager(plugin_dirs: Optional[List[Path]] = None) -> ExtensionManager:
     """Get or create the global extension manager"""
     global _extension_manager
     if _extension_manager is None:
@@ -727,9 +731,7 @@ def get_extension_manager(
 
 
 def emit_hook(
-    hook_type: HookType,
-    data: Optional[Dict[str, Any]] = None,
-    **kwargs
+    hook_type: HookType, data: Optional[Dict[str, Any]] = None, **kwargs
 ) -> Tuple[HookContext, List[HookResult]]:
     """Convenience function to emit a hook"""
     return get_extension_manager().emit(hook_type, data, **kwargs)

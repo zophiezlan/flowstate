@@ -21,7 +21,7 @@ web_server:
     session_timeout_minutes: 60
 ```
 
-2. Restart the web server or tap-station service for changes to take effect.
+1. Restart the web server or tap-station service for changes to take effect.
 
 ### Accessing the Control Panel
 

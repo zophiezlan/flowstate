@@ -186,17 +186,22 @@
 
         <div class="info-card">
           <div class="info-value" id="avg-service">--</div>
-          <div class="info-label" data-label="avg_service_time">avg service time</div>
+          <div class="info-label" data-label="avg_service_time">
+            avg service time
+          </div>
         </div>
 
         <div class="info-card">
           <div class="info-value" id="status-text">OPEN</div>
-          <div class="info-label" data-label="service_status">service status</div>
+          <div class="info-label" data-label="service_status">
+            service status
+          </div>
         </div>
       </div>
 
       <div class="footer">
-        <span id="refresh-text">Updates every 5 seconds</span> • Session: <span id="session-id">--</span>
+        <span id="refresh-text">Updates every 5 seconds</span> • Session:
+        <span id="session-id">--</span>
       </div>
     </div>
 
@@ -206,25 +211,30 @@
       let refreshInterval = 5000; // Default 5 seconds
 
       // Initialize service config and update page title and refresh interval
-      ServiceConfig.init().then(() => {
-        // Update page title with service name
-        document.title = 'Queue Status - ' + ServiceConfig.getServiceName();
+      ServiceConfig.init()
+        .then(() => {
+          // Update page title with service name
+          document.title = "Queue Status - " + ServiceConfig.getServiceName();
 
-        // Get configured refresh interval
-        refreshInterval = ServiceConfig.getRefreshInterval() * 1000;
+          // Get configured refresh interval
+          refreshInterval = ServiceConfig.getRefreshInterval() * 1000;
 
-        // Update footer text
-        const refreshText = document.getElementById('refresh-text');
-        if (refreshText) {
-          refreshText.textContent = `Updates every ${ServiceConfig.getRefreshInterval()} seconds`;
-        }
+          // Update footer text
+          const refreshText = document.getElementById("refresh-text");
+          if (refreshText) {
+            refreshText.textContent = `Updates every ${ServiceConfig.getRefreshInterval()} seconds`;
+          }
 
-        // Restart interval with new timing if it changed
-        if (refreshInterval !== 5000) {
-          clearInterval(window.publicDisplayInterval);
-          window.publicDisplayInterval = setInterval(updateDisplay, refreshInterval);
-        }
-      }).catch(console.error);
+          // Restart interval with new timing if it changed
+          if (refreshInterval !== 5000) {
+            clearInterval(window.publicDisplayInterval);
+            window.publicDisplayInterval = setInterval(
+              updateDisplay,
+              refreshInterval,
+            );
+          }
+        })
+        .catch(console.error);
 
       async function updateDisplay() {
         try {
@@ -269,10 +279,16 @@
 
           if (data.service_active) {
             indicator.className = "status-indicator status-active";
-            statusText.textContent = ServiceConfig.getLabel('status_active', 'OPEN');
+            statusText.textContent = ServiceConfig.getLabel(
+              "status_active",
+              "OPEN",
+            );
           } else {
             indicator.className = "status-indicator status-inactive";
-            statusText.textContent = ServiceConfig.getLabel('status_idle', 'CLOSED');
+            statusText.textContent = ServiceConfig.getLabel(
+              "status_idle",
+              "CLOSED",
+            );
           }
 
           lastUpdate = Date.now();
@@ -283,7 +299,8 @@
           if (Date.now() - lastUpdate > INACTIVE_THRESHOLD) {
             document.getElementById("status-indicator").className =
               "status-indicator status-inactive";
-            document.getElementById("status-text").textContent = ServiceConfig.getLabel('status_stopped', 'OFFLINE');
+            document.getElementById("status-text").textContent =
+              ServiceConfig.getLabel("status_stopped", "OFFLINE");
           }
         }
       }
@@ -292,7 +309,10 @@
       updateDisplay();
 
       // Auto-refresh (interval will be updated by ServiceConfig.init())
-      window.publicDisplayInterval = setInterval(updateDisplay, refreshInterval);
+      window.publicDisplayInterval = setInterval(
+        updateDisplay,
+        refreshInterval,
+      );
     </script>
   </body>
 </html>

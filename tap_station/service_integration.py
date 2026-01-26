@@ -27,6 +27,7 @@ try:
         ServiceConfig,
         WorkflowStage,
     )
+
     SERVICE_CONFIG_AVAILABLE = True
 except ImportError:
     logger.warning("service_config_loader not available, using defaults")
@@ -79,7 +80,9 @@ class ServiceIntegration:
         if SERVICE_CONFIG_AVAILABLE:
             try:
                 self._config = get_service_config()
-                logger.info(f"Service configuration loaded: {self._config.service_name}")
+                logger.info(
+                    f"Service configuration loaded: {self._config.service_name}"
+                )
             except Exception as e:
                 logger.error(f"Failed to load service config: {e}")
                 self._config = None
@@ -308,6 +311,7 @@ def get_service_integration() -> ServiceIntegration:
 # Convenience Functions
 # =============================================================================
 
+
 def get_first_stage() -> str:
     """Get the first stage ID (typically QUEUE_JOIN)"""
     return get_service_integration().get_first_stage()
@@ -341,16 +345,24 @@ if __name__ == "__main__":
 
     print(f"\nService: {integration.get_service_name()}")
     print(f"\nWorkflow Stages:")
-    print(f"  First: {integration.get_first_stage()} ({integration.get_stage_label(integration.get_first_stage())})")
+    print(
+        f"  First: {integration.get_first_stage()} ({integration.get_stage_label(integration.get_first_stage())})"
+    )
     if integration.has_service_start_stage():
         svc_stage = integration.get_service_start_stage()
         print(f"  Service: {svc_stage} ({integration.get_stage_label(svc_stage)})")
-    print(f"  Last: {integration.get_last_stage()} ({integration.get_stage_label(integration.get_last_stage())})")
+    print(
+        f"  Last: {integration.get_last_stage()} ({integration.get_stage_label(integration.get_last_stage())})"
+    )
 
     print(f"\nCapacity:")
     print(f"  {integration.get_people_per_hour()} people/hour")
     print(f"  {integration.get_avg_service_minutes()} min average")
 
     print(f"\nAlert Thresholds:")
-    print(f"  Queue: {integration.get_queue_warning_threshold()} warn, {integration.get_queue_critical_threshold()} critical")
-    print(f"  Wait: {integration.get_wait_warning_minutes()} warn, {integration.get_wait_critical_minutes()} critical min")
+    print(
+        f"  Queue: {integration.get_queue_warning_threshold()} warn, {integration.get_queue_critical_threshold()} critical"
+    )
+    print(
+        f"  Wait: {integration.get_wait_warning_minutes()} warn, {integration.get_wait_critical_minutes()} critical min"
+    )

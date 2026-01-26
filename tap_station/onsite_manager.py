@@ -44,7 +44,7 @@ class OnSiteManager:
         web_port: int = 8080,
         peer_hostname: Optional[str] = None,
         wifi_enabled: bool = True,
-        failover_enabled: bool = True
+        failover_enabled: bool = True,
     ):
         """
         Initialize on-site manager
@@ -85,10 +85,7 @@ class OnSiteManager:
         """Initialize status LED manager"""
         try:
             self.status_leds = StatusLEDManager(
-                enabled=True,
-                gpio_green=27,
-                gpio_red=22,
-                gpio_blue=None  # Optional
+                enabled=True, gpio_green=27, gpio_red=22, gpio_blue=None  # Optional
             )
             logger.info("Status LEDs initialized")
         except Exception as e:
@@ -104,7 +101,7 @@ class OnSiteManager:
                 enabled=True,
                 gpio_pin=23,
                 setup_callback=self._enter_wifi_setup,
-                rescan_callback=self._rescan_wifi
+                rescan_callback=self._rescan_wifi,
             )
 
             logger.info("WiFi management initialized")
@@ -135,7 +132,7 @@ class OnSiteManager:
                 primary_stage=self.stage,
                 fallback_stages=fallback_stages,
                 on_failover_enable=self._on_failover_enable,
-                on_failover_disable=self._on_failover_disable
+                on_failover_disable=self._on_failover_disable,
             )
 
             # Initialize peer monitor
@@ -146,7 +143,7 @@ class OnSiteManager:
                 timeout=5,
                 failure_threshold=2,
                 on_peer_down=self._on_peer_down,
-                on_peer_up=self._on_peer_up
+                on_peer_up=self._on_peer_up,
             )
 
             logger.info(f"Peer monitoring initialized for {self.peer_hostname}")
@@ -206,7 +203,11 @@ class OnSiteManager:
                 if self.status_leds:
                     self.status_leds.show_wifi_status(
                         connected=False,
-                        ap_mode=self.wifi_manager.ap_mode_active if self.wifi_manager else False
+                        ap_mode=(
+                            self.wifi_manager.ap_mode_active
+                            if self.wifi_manager
+                            else False
+                        ),
                     )
 
         # Start peer monitoring
@@ -372,32 +373,32 @@ class OnSiteManager:
             Status dictionary
         """
         status = {
-            'device_id': self.device_id,
-            'stage': self.stage,
-            'wifi': None,
-            'peer': None,
-            'failover': None,
-            'mdns': None
+            "device_id": self.device_id,
+            "stage": self.stage,
+            "wifi": None,
+            "peer": None,
+            "failover": None,
+            "mdns": None,
         }
 
         if self.wifi_manager:
-            status['wifi'] = {
-                'connected': self.wifi_manager.is_connected(),
-                'network': self.wifi_manager.get_current_network(),
-                'ip_address': self.wifi_manager.get_ip_address(),
-                'ap_mode': self.wifi_manager.ap_mode_active
+            status["wifi"] = {
+                "connected": self.wifi_manager.is_connected(),
+                "network": self.wifi_manager.get_current_network(),
+                "ip_address": self.wifi_manager.get_ip_address(),
+                "ap_mode": self.wifi_manager.ap_mode_active,
             }
 
         if self.peer_monitor:
-            status['peer'] = self.peer_monitor.get_status()
+            status["peer"] = self.peer_monitor.get_status()
 
         if self.failover_manager:
-            status['failover'] = self.failover_manager.get_status()
+            status["failover"] = self.failover_manager.get_status()
 
         if self.mdns_service:
-            status['mdns'] = {
-                'hostname': self.mdns_service.hostname,
-                'url': self.mdns_service.get_access_url()
+            status["mdns"] = {
+                "hostname": self.mdns_service.hostname,
+                "url": self.mdns_service.get_access_url(),
             }
 
         return status

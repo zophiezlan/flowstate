@@ -12,6 +12,7 @@ This implementation adds two major improvements to the NFC Tap Logger system:
 ### Problem Solved
 
 Previously, organizers needed to pre-initialize hundreds of NFC cards before each event using the `init_cards.py` script. This was time-consuming and created issues:
+
 - Hours of setup time required
 - Lost/stolen cards created gaps in numbering (e.g., missing card #037 breaks sequence)
 - Cards had to be pre-assigned to specific numbers
@@ -20,6 +21,7 @@ Previously, organizers needed to pre-initialize hundreds of NFC cards before eac
 ### Solution
 
 Cards can now be automatically initialized when first tapped. The system:
+
 - Detects uninitialized cards (cards with UIDs instead of token IDs)
 - Assigns the next available sequential token ID
 - Writes the token ID to the card (optional, falls back to database tracking)
@@ -28,6 +30,7 @@ Cards can now be automatically initialized when first tapped. The system:
 ### Technical Implementation
 
 **Configuration (`config.yaml`):**
+
 ```yaml
 nfc:
   auto_init_cards: false          # Enable/disable auto-init
@@ -35,6 +38,7 @@ nfc:
 ```
 
 **Database Schema:**
+
 ```sql
 CREATE TABLE auto_init_counter (
     session_id TEXT PRIMARY KEY,
@@ -44,6 +48,7 @@ CREATE TABLE auto_init_counter (
 ```
 
 **Core Logic (`tap_station/main.py`):**
+
 ```python
 def _is_uninitialized_card(self, token_id: str) -> bool:
     """Check if token ID looks like a UID (8+ hex chars)"""
@@ -58,6 +63,7 @@ def _handle_tap(self, uid: str, token_id: str):
 ```
 
 **Database Method (`tap_station/database.py`):**
+
 ```python
 def get_next_auto_init_token_id(self, session_id: str, start_id: int = 1):
     # Use atomic transaction to prevent race conditions
@@ -77,6 +83,7 @@ def get_next_auto_init_token_id(self, session_id: str, start_id: int = 1):
 ### Usage Example
 
 **Event Setup:**
+
 1. Enable auto-init in config: `auto_init_cards: true`
 2. Set starting ID: `auto_init_start_id: 1`
 3. Start the service
@@ -84,10 +91,12 @@ def get_next_auto_init_token_id(self, session_id: str, start_id: int = 1):
 5. Cards automatically get IDs 001, 002, 003... on first tap
 
 **Mixed Scenario:**
+
 ```yaml
 auto_init_cards: true
 auto_init_start_id: 100  # Start from 100
 ```
+
 - Pre-initialized cards (001-099) work normally
 - Blank cards get IDs 100, 101, 102...
 - No collisions between pre-init and auto-init
@@ -139,6 +148,7 @@ However, this distinction wasn't clearly documented, leading to confusion about 
 ### Solution
 
 Created comprehensive documentation explaining:
+
 - The difference between queue wait and service time
 - Why each metric matters for different purposes
 - How the system calculates each metric
@@ -147,12 +157,14 @@ Created comprehensive documentation explaining:
 ### Key Clarifications
 
 **Queue Wait Time (QUEUE_JOIN → SERVICE_START):**
+
 - Highly variable: 0 minutes to 3+ hours
 - Depends on demand, staffing, time of day
 - What participants experience as "waiting"
 - Used for: Communicating wait times to arrivals, staffing decisions
 
 **Service Time (SERVICE_START → EXIT):**
+
 - Relatively consistent: Usually 5-15 minutes
 - Depends on service type, not demand
 - Time actively being served
@@ -161,6 +173,7 @@ Created comprehensive documentation explaining:
 ### Technical Implementation
 
 **Already Implemented in Code:**
+
 ```python
 def _calculate_3stage_metrics(self, limit=20):
     # Query for QUEUE_JOIN, SERVICE_START, EXIT events
@@ -171,6 +184,7 @@ def _calculate_3stage_metrics(self, limit=20):
 ```
 
 **Enhanced Configuration Comments:**
+
 ```yaml
 capacity:
   # Average service time per person (in minutes)
@@ -206,12 +220,14 @@ capacity:
 ## Files Changed
 
 ### New Files Created
+
 - `docs/AUTO_INIT_CARDS.md` (8KB)
 - `docs/WAIT_TIME_METRICS.md` (10KB)
 - `tests/test_auto_init.py` (11KB)
 - `scripts/demo_auto_init.py` (5KB)
 
 ### Files Modified
+
 - `config.yaml.example` - Added auto-init options
 - `config.yaml` - Added auto-init options
 - `tap_station/config.py` - Added auto-init properties
@@ -223,12 +239,14 @@ capacity:
 ## Testing Results
 
 **All Tests Pass:**
+
 - Auto-init tests: 14/14 ✅
 - Database tests: 8/8 ✅
 - Config tests: 4/4 ✅
 - **Total: 22/22 tests passing** ✅
 
 **Demo Script:**
+
 - Successfully demonstrates auto-init feature
 - Shows sequential ID assignment (001-005)
 - Shows mixed pre-init + auto-init scenario (050, 100, 025, 101)
@@ -236,6 +254,7 @@ capacity:
 ## Backward Compatibility
 
 ✅ **No Breaking Changes**
+
 - Auto-init is disabled by default
 - Existing pre-initialized card workflows work unchanged
 - Configuration is backward compatible (new options have defaults)
@@ -244,17 +263,20 @@ capacity:
 ## Migration Path
 
 **For existing deployments:**
+
 1. Pull latest code
 2. Database migration happens automatically (new table created on first run)
 3. Keep `auto_init_cards: false` in config (default)
 4. Continue using existing pre-initialization workflow
 
 **To enable auto-init:**
+
 1. Set `auto_init_cards: true` in config
 2. Optionally set `auto_init_start_id` to avoid conflicts with existing cards
 3. Start handing out blank cards
 
 **Hybrid approach:**
+
 ```yaml
 auto_init_cards: true
 auto_init_start_id: 100  # Keep 001-099 for pre-init
@@ -297,6 +319,7 @@ Both features are production-ready:
 ✅ Comprehensive documentation  
 
 The implementation addresses the original requirements:
+
 1. ✅ "option where it initialises a new code on initial tap"
 2. ✅ "review the current 'waiting time' system"
 
