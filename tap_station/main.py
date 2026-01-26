@@ -227,16 +227,31 @@ class TapStation:
 
         # Determine stage (may be overridden in failover mode)
         stage = self.config.stage
-
-        # Check if in failover mode
         use_alternate_beep = False
+
+        # Check if in failover mode and determine appropriate stage
         if self.onsite_manager and self.onsite_manager.failover_manager:
-            if self.onsite_manager.failover_manager.failover_active:
-                # In failover mode, we might need to alternate stages
-                # For now, keep the primary stage but use alternate beep
-                # Future: Could implement smart stage detection based on tap sequence
+            failover_mgr = self.onsite_manager.failover_manager
+            
+            if failover_mgr.failover_active:
+                # Get participant's tap count to determine stage alternation
+                tap_count = self.db.get_participant_tap_count(
+                    token_id=token_id,
+                    session_id=self.config.session_id
+                )
+                
+                # Next tap will be tap_count + 1 (since we're about to log it)
+                next_tap_number = tap_count + 1
+                
+                # Get the appropriate stage for this tap based on alternation logic
+                stage = failover_mgr.get_stage_for_tap_number(next_tap_number)
+                
                 use_alternate_beep = True
-                self.logger.info("Handling tap in FAILOVER MODE")
+                self.logger.info(
+                    f"FAILOVER MODE: tap #{next_tap_number} → stage {stage} "
+                    f"(alternating between {failover_mgr.primary_stage} and "
+                    f"{failover_mgr.fallback_stages})"
+                )
 
         # Check if auto-initialization is enabled and card appears uninitialized
         # Uninitialized cards will have token_id that looks like a UID (8+ hex chars)
@@ -270,11 +285,11 @@ class TapStation:
 
             token_id = new_token_id
 
-        # Log to database
+        # Log to database - use the determined stage (which may be from failover logic)
         result = self.db.log_event(
             token_id=token_id,
             uid=uid,
-            stage=self.config.stage,
+            stage=stage,  # Use failover-determined stage, not self.config.stage
             device_id=self.config.device_id,
             session_id=self.config.session_id,
         )

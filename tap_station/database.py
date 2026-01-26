@@ -463,6 +463,27 @@ class Database:
 
         return cursor.fetchone()["count"]
 
+    def get_participant_tap_count(self, token_id: str, session_id: str) -> int:
+        """
+        Get the number of taps for a specific participant in a session
+        
+        This is used for failover stage alternation to determine which stage
+        should handle the next tap (odd taps vs even taps).
+        
+        Args:
+            token_id: Token ID to count taps for
+            session_id: Session ID to filter by
+            
+        Returns:
+            Number of taps for this participant in this session
+        """
+        cursor = self.conn.execute(
+            "SELECT COUNT(*) as count FROM events WHERE token_id = ? AND session_id = ?",
+            (token_id, session_id)
+        )
+        row = cursor.fetchone()
+        return row["count"] if row else 0
+
     def add_manual_event(
         self,
         token_id: str,
