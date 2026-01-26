@@ -1,5 +1,5 @@
 # NFC Tap Logger Configuration
-# Copy this to each Pi and customize
+# Copy this file to config.yaml and customize for your deployment
 
 station:
   # Unique ID for this device (station1, station2, etc.)
@@ -11,7 +11,7 @@ station:
 
   # Session ID for this deployment (e.g., festival name + date)
   # All events logged during this session will have this ID
-  session_id: "test-session-2025"
+  session_id: "my-event-2026"
 
 database:
   # Path to SQLite database
@@ -34,7 +34,7 @@ nfc:
   retries: 3
 
   # Debounce time (seconds) - ignore same card within this window
-  debounce_seconds: 1
+  debounce_seconds: 1.0
 
   # Auto-initialize cards on first tap (assigns next available token ID)
   # When enabled, fresh cards can be used without pre-initialization
@@ -56,9 +56,18 @@ feedback:
     led_red: 22
 
   # Beep patterns (on/off times in seconds)
-  beep_success: [0.1, 0.1, 0.1] # Short beep
-  beep_duplicate: [0.1, 0.05, 0.1] # Double beep
+  # Format: [on, off, on, off, ...]
+  # These can be customized for different audio signatures
+  beep_success: [0.1] # Short single beep
+  beep_duplicate: [0.1, 0.05, 0.1] # Quick double beep
   beep_error: [0.3] # Long beep
+
+  # LED Behavior:
+  # - Solid green = Ready/idle state
+  # - Flashing green (3x) = Success
+  # - Flashing yellow (2x) = Duplicate/Warning
+  # - Flashing red (3x) = Error
+  # Events automatically return to solid green after feedback
 
 shutdown_button:
   # Enable shutdown button (GPIO 26)
@@ -105,48 +114,3 @@ web_server:
 
     # Session timeout in minutes (auto-logout after inactivity)
     session_timeout_minutes: 60
-
-# On-Site Setup Features (NEW!)
-onsite:
-  # Enable on-site management features
-  enabled: true
-
-  # WiFi Management
-  wifi:
-    # Enable WiFi auto-connect and setup button
-    enabled: true
-
-    # WiFi setup button GPIO (BCM numbering)
-    setup_button_gpio: 23
-
-    # WiFi networks configuration file
-    networks_file: "config/wifi_networks.conf"
-
-  # mDNS/Avahi Discovery
-  mdns:
-    # Enable mDNS service (auto-discovery via hostname.local)
-    enabled: true
-
-  # Peer Monitoring & Failover
-  failover:
-    # Enable automatic failover when peer station fails
-    enabled: true
-
-    # Peer station hostname or IP
-    # For QUEUE_JOIN station: set to "tapstation-exit.local"
-    # For EXIT station: set to "tapstation-queue.local"
-    peer_hostname: "tapstation-exit.local"
-
-    # Health check interval (seconds)
-    check_interval: 30
-
-    # Number of failures before declaring peer down
-    failure_threshold: 2
-
-  # Status LED Indicators
-  status_leds:
-    # Enable status LED patterns (uses existing feedback LEDs)
-    enabled: true
-
-    # Optional blue LED for WiFi status (set to null if not present)
-    gpio_blue: null

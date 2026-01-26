@@ -36,6 +36,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
 
 # Data files
 data/*.db
@@ -56,3 +57,8 @@ Thumbs.db
 
 # Archived
 docs/archive/
+
+# Secrets
+secrets.yml
+config.yaml
+.env

@@ -36,7 +36,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
-.mypy_cache
+.mypy_cache/
 
 # Data files
 data/*.db
