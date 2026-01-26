@@ -355,8 +355,8 @@ else
     echo "  - Service setup: bash scripts/install.sh"
     echo ""
     echo "For detailed help, see:"
-    echo "  - docs/FRESH_DEPLOYMENT_GUIDE.md"
-    echo "  - docs/I2C_SETUP.md"
+    echo "  - docs/SETUP.md"
+    echo "  - docs/TROUBLESHOOTING.md"
     echo "  - README.md"
     echo ""
     exit 1

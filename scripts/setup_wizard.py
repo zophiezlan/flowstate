@@ -266,7 +266,7 @@ def main():
             print("\nSetup cancelled.")
             print("\nTo fix NFC issues:")
             print("  1. Run: bash scripts/enable_i2c.sh")
-            print("  2. Verify wiring (see docs/HARDWARE.md)")
+            print("  2. Verify wiring (see docs/SETUP.md)")
             print("  3. Check I2C: sudo i2cdetect -y 1")
             return 1
 

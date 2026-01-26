@@ -1,17 +1,32 @@
+# FlowState Station Service - TEMPLATE
+#
+# This is a template file. The install.sh script automatically generates
+# the correct service file with your system's paths.
+#
+# If manually installing, replace these placeholders:
+#   - YOUR_USERNAME: Your system username (e.g., pi, dc-nfc-1)
+#   - /home/YOUR_USERNAME/flowstate: Path to your FlowState installation
+#
+# Manual installation:
+#   1. Edit this file with your values
+#   2. Copy to: sudo cp tap-station.service /etc/systemd/system/
+#   3. Enable: sudo systemctl enable tap-station
+#   4. Start: sudo systemctl start tap-station
+
 [Unit]
 Description=FlowState Station Service
 After=network.target
 
 [Service]
 Type=simple
-User=dc-nfc-1
-WorkingDirectory=/home/dc-nfc-1/flowstate
-Environment="PATH=/home/dc-nfc-1/flowstate/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/home/dc-nfc-1/flowstate/venv/bin/python -m tap_station.main --config /home/dc-nfc-1/flowstate/config.yaml
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/flowstate
+Environment="PATH=/home/YOUR_USERNAME/flowstate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/YOUR_USERNAME/flowstate/venv/bin/python -m tap_station.main --config /home/YOUR_USERNAME/flowstate/config.yaml
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/dc-nfc-1/flowstate/logs/tap-station.log
-StandardError=append:/home/dc-nfc-1/flowstate/logs/tap-station-error.log
+StandardOutput=journal
+StandardError=journal
 
 # Restart on failure
 StartLimitInterval=200

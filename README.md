@@ -23,7 +23,7 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **🆔 [Auto-Initialize Cards](docs/AUTO_INIT_CARDS.md)** - **NEW!** Use fresh cards without pre-initialization
 - **⏱️ [Wait Time Metrics Guide](docs/WAIT_TIME_METRICS.md)** - **NEW!** Understanding queue wait vs. service time
 - **🤝 [Substance Return Confirmation](docs/SUBSTANCE_RETURN_CONFIRMATION.md)** - **NEW!** Accountability for substance handback
-- **�️ [Human Error Handling](docs/HUMAN_ERROR_HANDLING.md)** - **NEW!** Adapt to mistakes, forgotten taps, and operational errors
+- **🛡️ [Human Error Handling](docs/HUMAN_ERROR_HANDLING.md)** - **NEW!** Adapt to mistakes, forgotten taps, and operational errors
 - **📱 [Mobile App Guide](docs/MOBILE.md)** - Use Android phones instead of Raspberry Pis
 - **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
 - **✅ [Pre-Deployment Checklist](docs/PRE_DEPLOYMENT_CHECKLIST.md)** - Ensure you're ready before your event
@@ -539,39 +539,6 @@ flowstate/
 └── README.md               # This file
 ```
 
-│ ├── web_server.py # Flask status server
-│ └── ndef_writer.py # NDEF writing (NFC Tools)
-├── scripts/ # Utility scripts
-│ ├── install.sh # Automated installation
-│ ├── verify_hardware.py # Hardware diagnostics
-│ ├── init_cards.py # Card initialization
-│ ├── export_data.py # Data export
-│ ├── ingest_mobile_batch.py # Mobile data import
-│ └── health_check.py # Remote health monitoring
-├── mobile_app/ # Progressive Web App
-│ ├── index.html # App interface
-│ ├── app.js # NFC scanning logic
-│ ├── service-worker.js # Offline support
-│ └── manifest.webmanifest # PWA manifest
-├── tests/ # Test suite
-├── docs/ # Documentation
-│ ├── SETUP.md # Installation & setup
-│ ├── OPERATIONS.md # Day-of-event guide
-│ ├── TROUBLESHOOTING.md # Problem solving
-│ ├── MOBILE.md # Mobile app guide
-│ └── CONTRIBUTING.md # Developer guide
-├── data/ # Database & mappings
-│ ├── events.db # Main event database
-│ └── card_mapping.csv # Card UID → Token ID
-└── logs/ # Application logs
-└── tap-station.log # Rotating logs
-├── backups/ # Database backups
-├── config.yaml # Configuration file
-├── requirements.txt # Python dependencies
-└── README.md # This file
-
-````
-
 ## Configuration
 
 ### Station Configuration
@@ -684,19 +651,30 @@ sudo journalctl -u tap-station -n 50
 
 ## Version History
 
-**v1.1 (Current)**
+**v2.5+ (Current)**
 
+- Password-protected control panel with session management
+- Human error handling with sequence validation and adaptive recovery
+- Auto-initialize cards on first tap
+- Enhanced wait time metrics (queue wait vs. service time)
+- Substance return confirmation tracking
+- Force-exit tool for stuck cards
+- Real-time CSV export from dashboard
+- 3-stage service tracking (QUEUE_JOIN → SERVICE_START → EXIT)
+- Public queue display, shift summaries, and insights pages
+
+**v2.0**
+
+- Architecture improvements (WAL mode, optimization)
+- Enhanced operational dashboards
 - Mobile Progressive Web App support
 - Web status server with health endpoints
-- NDEF writing for NFC Tools integration
-- Improved hardware verification
-- Mobile data ingest script
 
 **v1.0**
 
 - Initial release
 - Dual-station tap logging
-- SQLite with WAL mode
+- SQLite database
 - Buzzer/LED feedback
 - systemd service with auto-restart
 

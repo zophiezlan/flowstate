@@ -55,7 +55,7 @@ def check_i2c():
         print("       - Add line: dtparam=i2c_arm=on")
         print("       - Reboot: sudo reboot")
         print("\n    3. After reboot, run this verification again")
-        print("\n  For detailed troubleshooting, see docs/HARDWARE.md")
+        print("\n  For detailed troubleshooting, see docs/SETUP.md")
         return False
 
     # Determine which I2C bus to use
@@ -465,7 +465,8 @@ def main():
     else:
         print("✗ Some checks failed. Please fix the issues above.")
         print("\nFor help, see:")
-        print("  - docs/HARDWARE.md")
+        print("  - docs/SETUP.md")
+        print("  - docs/TROUBLESHOOTING.md")
         print("  - README.md")
         return 1
 
