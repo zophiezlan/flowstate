@@ -8,6 +8,20 @@ we eliminate hardcoded values and make it easier to modify workflows.
 
 from typing import Dict, List, Set, Optional
 from dataclasses import dataclass
+from enum import Enum
+
+
+# =============================================================================
+# Delivery Status (used by webhooks and integrations)
+# =============================================================================
+
+class DeliveryStatus(Enum):
+    """Status of event delivery to external systems"""
+    PENDING = "pending"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    RETRYING = "retrying"
+    DROPPED = "dropped"
 
 
 # =============================================================================

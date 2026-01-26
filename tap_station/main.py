@@ -12,6 +12,8 @@ from tap_station.config import Config
 from tap_station.database import Database
 from tap_station.nfc_reader import NFCReader, MockNFCReader
 from tap_station.feedback import FeedbackController
+from tap_station.validation import TokenValidator
+from tap_station.path_utils import ensure_parent_dir
 
 
 class TapStation:
@@ -124,8 +126,7 @@ class TapStation:
     def _setup_logging(self):
         """Setup logging to file and console"""
         # Ensure log directory exists
-        log_path = Path(self.config.log_path)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path = ensure_parent_dir(self.config.log_path)
 
         # Get log level
         log_level = getattr(logging, self.config.log_level.upper(), logging.INFO)
@@ -275,7 +276,8 @@ class TapStation:
         Returns:
             True if token_id looks like a UID (8+ hex chars), False otherwise
         """
-        return len(token_id) >= 8 and all(c in "0123456789ABCDEF" for c in token_id)
+        # Use centralized TokenValidator for consistent UID detection
+        return TokenValidator.looks_like_uid(token_id)
 
     def shutdown(self):
         """Cleanup and shutdown"""

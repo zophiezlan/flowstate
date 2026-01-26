@@ -33,6 +33,7 @@ from urllib.error import URLError, HTTPError
 from urllib.parse import urlparse
 
 from .datetime_utils import utc_now, to_iso
+from .constants import DeliveryStatus
 
 logger = logging.getLogger(__name__)
 
@@ -67,14 +68,6 @@ class WebhookEventType(Enum):
 
     # Test event
     TEST = "test"
-
-
-class DeliveryStatus(Enum):
-    """Status of webhook delivery"""
-    PENDING = "pending"
-    DELIVERED = "delivered"
-    FAILED = "failed"
-    RETRYING = "retrying"
 
 
 @dataclass

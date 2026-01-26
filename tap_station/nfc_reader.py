@@ -1,11 +1,15 @@
 """NFC reader wrapper for PN532 via I2C"""
 
+import re
 import time
 import logging
 from typing import Optional, Tuple
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Compiled pattern for extracting token IDs from NDEF text records
+TOKEN_ID_PATTERN = re.compile(r"Token\s+([A-Za-z0-9]+)")
 
 
 class NFCReader:
@@ -226,9 +230,7 @@ class NFCReader:
                             for record in records:
                                 if isinstance(record, ndef.TextRecord):
                                     text = record.text
-                                    import re
-
-                                    match = re.search(r"Token\s+([A-Za-z0-9]+)", text)
+                                    match = TOKEN_ID_PATTERN.search(text)
                                     if match:
                                         return match.group(1)
                         except Exception as e:
@@ -241,9 +243,7 @@ class NFCReader:
             # This searches the raw dump so it works even with malformed NDEF
             try:
                 text = raw_data.decode("utf-8", errors="ignore")
-                import re
-
-                match = re.search(r"Token\s+([A-Za-z0-9]+)", text)
+                match = TOKEN_ID_PATTERN.search(text)
                 if match:
                     return match.group(1)
             except Exception as e:
@@ -540,9 +540,9 @@ class MockNFCReader(NFCReader):
     """
     Mock NFC reader for testing without hardware.
 
-    Note: For new tests, consider using tests/mocks.py which provides
-    a more comprehensive MockNFCReader with additional test utilities.
-    This class is kept for backward compatibility.
+    This mock inherits from NFCReader and provides a drop-in replacement
+    for testing scenarios. Use add_mock_card() to queue cards that will
+    be returned by read_card().
     """
 
     def __init__(self, *args, **kwargs):

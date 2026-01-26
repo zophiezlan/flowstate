@@ -349,50 +349,59 @@ class TokenValidator:
         return cls.looks_like_uid(token_id) and not cls.is_valid_token_id(token_id)
 
 
-class StageValidator:
-    """Validates workflow stage names"""
-    
+class StageNameValidator:
+    """
+    Validates workflow stage names.
+
+    Note: This class validates stage name strings. For workflow-level validation
+    with context and rules, see StageValidator in workflow_validators.py.
+    """
+
     @classmethod
     def is_valid_stage(cls, stage: str) -> bool:
         """
         Check if a stage name is valid.
-        
+
         Args:
             stage: Stage name to validate
-            
+
         Returns:
             True if stage is recognized
         """
         if not isinstance(stage, str):
             return False
-        
+
         normalized = WorkflowStages.normalize(stage)
         return normalized in WorkflowStages.ALL_STAGES
-    
+
     @classmethod
     def validate_stage_or_raise(cls, stage: str) -> str:
         """
         Validate stage and return normalized version, or raise ValueError.
-        
+
         Args:
             stage: Stage name to validate
-            
+
         Returns:
             Normalized stage name
-            
+
         Raises:
             ValueError: If stage is invalid
         """
         if not isinstance(stage, str):
             raise ValueError(f"Stage must be a string, got {type(stage)}")
-        
+
         normalized = WorkflowStages.normalize(stage)
-        
+
         # Check if the normalized stage is in the valid list
         if normalized not in WorkflowStages.ALL_STAGES:
             raise ValueError(f"Unknown stage: {stage}. Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}")
-        
+
         return normalized
+
+
+# Backward compatibility alias
+StageValidator = StageNameValidator
 
 
 # =============================================================================

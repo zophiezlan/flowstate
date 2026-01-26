@@ -5,10 +5,11 @@ This module provides centralized logging configuration for the tap station
 application. It consolidates logging setup from main.py and other modules.
 """
 
-import os
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import Optional
+
+from .path_utils import ensure_parent_dir
 
 
 # Default logging format
@@ -63,10 +64,8 @@ def setup_logging(
 
     # File handler with rotation
     if file_output:
-        # Ensure log directory exists
-        log_dir = os.path.dirname(log_path)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
+        # Ensure log directory exists (uses centralized path utility)
+        ensure_parent_dir(log_path)
 
         file_handler = RotatingFileHandler(
             log_path,

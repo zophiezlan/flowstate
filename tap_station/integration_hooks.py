@@ -38,6 +38,7 @@ import time
 import sqlite3
 
 from .datetime_utils import utc_now
+from .constants import DeliveryStatus
 
 logger = logging.getLogger(__name__)
 
@@ -68,15 +69,6 @@ class IntegrationEventType(Enum):
 
     # All events wildcard
     ALL = "*"
-
-
-class DeliveryStatus(Enum):
-    """Status of event delivery"""
-    PENDING = "pending"
-    DELIVERED = "delivered"
-    FAILED = "failed"
-    RETRYING = "retrying"
-    DROPPED = "dropped"
 
 
 @dataclass
