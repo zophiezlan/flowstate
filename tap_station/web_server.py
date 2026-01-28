@@ -322,6 +322,70 @@ class StatusWebServer:
                     500,
                 )
 
+        @self.app.route("/healthz")
+        def healthz():
+            """
+            Kubernetes-style liveness probe.
+
+            Returns:
+                200 OK if service is alive (can respond to requests)
+                503 if service is not functioning
+            """
+            try:
+                # Simple liveness check - just verify app is responding
+                return jsonify({"status": "ok"}), 200
+            except Exception as e:
+                logger.error(f"Liveness check failed: {e}")
+                return jsonify({"status": "error", "error": str(e)}), 503
+
+        @self.app.route("/readyz")
+        def readyz():
+            """
+            Kubernetes-style readiness probe.
+
+            Returns:
+                200 OK if service is ready to accept traffic
+                503 if service is not ready (e.g., database not accessible)
+            """
+            errors = []
+
+            # Check database connectivity
+            try:
+                count = self.db.get_event_count()
+            except Exception as e:
+                errors.append(f"database: {e}")
+
+            # Check disk space (warn if > 90% full)
+            try:
+                usage = shutil.disk_usage("/")
+                percent_used = (usage.used / usage.total) * 100
+                if percent_used > 90:
+                    errors.append(f"disk: {percent_used:.1f}% full (critical)")
+            except Exception:
+                pass  # Don't fail on disk check errors
+
+            if errors:
+                return (
+                    jsonify(
+                        {
+                            "status": "not_ready",
+                            "errors": errors,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ),
+                    503,
+                )
+
+            return (
+                jsonify(
+                    {
+                        "status": "ready",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                ),
+                200,
+            )
+
         @self.app.route("/api/ingest", methods=["POST"])
         def ingest_events():
             """

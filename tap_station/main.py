@@ -11,6 +11,7 @@ from pathlib import Path
 from tap_station.config import Config
 from tap_station.database import Database
 from tap_station.feedback import FeedbackController
+from tap_station.health import HealthMonitor
 from tap_station.nfc_reader import MockNFCReader, NFCReader
 from tap_station.onsite_manager import OnSiteManager
 from tap_station.path_utils import ensure_parent_dir
@@ -275,15 +276,22 @@ class TapStation:
             token_id
         ):
             # This looks like an uninitialized card (UID being used as token_id)
-            # Auto-assign the next token ID
-            _, new_token_id = self.db.get_next_auto_init_token_id(
+            # Use get_or_create_token_for_uid to prevent duplicate assignments
+            # if the same card is tapped again after a failed write
+            new_token_id, is_new = self.db.get_or_create_token_for_uid(
+                uid=uid,
                 session_id=self.config.session_id,
                 start_id=self.config.auto_init_start_id,
             )
 
-            self.logger.info(
-                f"Auto-initializing card UID={uid} with token ID {new_token_id}"
-            )
+            if is_new:
+                self.logger.info(
+                    f"Auto-initializing card UID={uid} with token ID {new_token_id}"
+                )
+            else:
+                self.logger.info(
+                    f"Reusing previously assigned token {new_token_id} for UID={uid}"
+                )
 
             # Try to write the new token ID to the card
             try:
@@ -291,6 +299,10 @@ class TapStation:
                 if write_success:
                     self.logger.info(
                         f"Successfully wrote token ID {new_token_id} to card"
+                    )
+                    # Update mapping to record successful write
+                    self.db.update_uid_token_mapping_write_success(
+                        uid, self.config.session_id
                     )
                 else:
                     self.logger.warning(

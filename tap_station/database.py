@@ -1,11 +1,13 @@
 """SQLite database operations for event logging"""
 
 import csv
+import functools
 import logging
 import sqlite3
+import threading
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .anomaly_detector import AnomalyDetector
 from .constants import (
@@ -20,6 +22,15 @@ from .validation import StageNameValidator, TokenValidator
 logger = logging.getLogger(__name__)
 
 
+def synchronized(method):
+    """Decorator to synchronize database methods with threading lock."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
 class Database:
     """Handle all SQLite database operations"""
 
@@ -32,6 +43,9 @@ class Database:
             wal_mode: Enable WAL mode for crash resistance
         """
         self.db_path = db_path
+
+        # Thread safety lock for concurrent access
+        self._lock = threading.RLock()
 
         # Ensure directory exists (uses centralized path utility)
         ensure_parent_dir(db_path)
@@ -84,6 +98,18 @@ class Database:
             )
         """)
 
+        # Create table for UID to token ID mapping (prevents duplicates on write failure)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS uid_token_mapping (
+                uid TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                token_id TEXT NOT NULL,
+                assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                write_success INTEGER DEFAULT 0,
+                PRIMARY KEY (uid, session_id)
+            )
+        """)
+
         # Create audit table for deleted events
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS deleted_events (
@@ -111,6 +137,7 @@ class Database:
         self.conn.commit()
         logger.info("Database tables initialized")
 
+    @synchronized
     def log_event(
         self,
         token_id: str,
@@ -310,6 +337,7 @@ class Database:
         transitions = get_workflow_transitions()
         return transitions.validate_sequence(existing_stages, stage)
 
+    @synchronized
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Get recent events for monitoring
@@ -331,6 +359,7 @@ class Database:
 
         return [dict(row) for row in cursor.fetchall()]
 
+    @synchronized
     def get_anomalies(self, session_id: str) -> Dict[str, Any]:
         """
         Detect various human error patterns and anomalies in real-time.
@@ -457,6 +486,7 @@ class Database:
 
         return anomalies
 
+    @synchronized
     def get_event_count(self, session_id: Optional[str] = None) -> int:
         """
         Get total event count, optionally filtered by session
@@ -477,6 +507,7 @@ class Database:
 
         return cursor.fetchone()["count"]
 
+    @synchronized
     def get_participant_tap_count(self, token_id: str, session_id: str) -> int:
         """
         Get the number of taps for a specific participant in a session
@@ -498,6 +529,7 @@ class Database:
         row = cursor.fetchone()
         return row["count"] if row else 0
 
+    @synchronized
     def add_manual_event(
         self,
         token_id: str,
@@ -552,6 +584,7 @@ class Database:
 
         return result
 
+    @synchronized
     def remove_event(
         self,
         event_id: int,
@@ -635,6 +668,7 @@ class Database:
                 "error": str(e),
             }
 
+    @synchronized
     def get_next_auto_init_token_id(
         self, session_id: str, start_id: int = 1
     ) -> tuple[int, str]:
@@ -706,6 +740,112 @@ class Database:
             logger.warning(f"Using fallback token ID: {fallback_str}")
             return (fallback_id, fallback_str)
 
+    @synchronized
+    def get_token_for_uid(self, uid: str, session_id: str) -> Optional[str]:
+        """
+        Check if a UID already has a token ID assigned.
+
+        Args:
+            uid: Card UID
+            session_id: Session ID
+
+        Returns:
+            Token ID if mapping exists, None otherwise
+        """
+        cursor = self.conn.execute(
+            "SELECT token_id FROM uid_token_mapping WHERE uid = ? AND session_id = ?",
+            (uid, session_id),
+        )
+        row = cursor.fetchone()
+        return row["token_id"] if row else None
+
+    @synchronized
+    def save_uid_token_mapping(
+        self, uid: str, token_id: str, session_id: str, write_success: bool = False
+    ) -> bool:
+        """
+        Save a UID to token ID mapping.
+
+        Args:
+            uid: Card UID
+            token_id: Assigned token ID
+            session_id: Session ID
+            write_success: Whether the token was successfully written to the card
+
+        Returns:
+            True if saved successfully
+        """
+        try:
+            self.conn.execute(
+                """
+                INSERT OR REPLACE INTO uid_token_mapping
+                (uid, session_id, token_id, assigned_at, write_success)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """,
+                (uid, session_id, token_id, 1 if write_success else 0),
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"Failed to save UID token mapping: {e}")
+            return False
+
+    @synchronized
+    def update_uid_token_mapping_write_success(self, uid: str, session_id: str) -> bool:
+        """
+        Mark a UID token mapping as successfully written to card.
+
+        Args:
+            uid: Card UID
+            session_id: Session ID
+
+        Returns:
+            True if updated successfully
+        """
+        try:
+            self.conn.execute(
+                "UPDATE uid_token_mapping SET write_success = 1 WHERE uid = ? AND session_id = ?",
+                (uid, session_id),
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"Failed to update UID token mapping: {e}")
+            return False
+
+    def get_or_create_token_for_uid(
+        self, uid: str, session_id: str, start_id: int = 1
+    ) -> Tuple[str, bool]:
+        """
+        Get existing token for a UID, or create and assign a new one.
+
+        This prevents duplicate token assignments when card writing fails.
+        If the same UID is seen again, it reuses the previously assigned token.
+
+        Args:
+            uid: Card UID
+            session_id: Session ID
+            start_id: Starting token ID if creating new assignment
+
+        Returns:
+            Tuple of (token_id, is_new) where is_new indicates if a new token was assigned
+        """
+        # Check if this UID already has a token assigned
+        existing = self.get_token_for_uid(uid, session_id)
+        if existing:
+            logger.info(f"Reusing existing token {existing} for UID {uid}")
+            return (existing, False)
+
+        # Assign new token ID
+        _, token_id = self.get_next_auto_init_token_id(session_id, start_id)
+
+        # Save mapping (write_success=False until card write is confirmed)
+        self.save_uid_token_mapping(uid, token_id, session_id, write_success=False)
+
+        logger.info(f"Assigned new token {token_id} to UID {uid}")
+        return (token_id, True)
+
+    @synchronized
     def export_to_csv(
         self, output_path: str, session_id: Optional[str] = None
     ) -> int:

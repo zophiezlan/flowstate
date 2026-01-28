@@ -272,9 +272,54 @@ class Config:
                 f"must be one of: {', '.join(valid_levels)}"
             )
 
+        # Cross-validate station stage against service config workflow
+        stage_warnings = self._validate_stage_against_service_config()
+        config_warnings.extend(stage_warnings)
+
         # Log all warnings
         for warning in config_warnings:
             logger.warning(f"Configuration: {warning}")
+
+    def _validate_stage_against_service_config(self) -> List[str]:
+        """
+        Validate that this station's stage exists in the service config workflow.
+
+        Returns:
+            List of warning messages if validation fails
+        """
+        warnings = []
+        stage = self.get("station.stage")
+
+        # Skip validation for UNKNOWN or missing stage (already caught above)
+        if not stage or stage == "UNKNOWN":
+            return warnings
+
+        try:
+            # Try to import and load service config
+            from .service_config_loader import ServiceConfigLoader
+
+            service_config = ServiceConfigLoader.get_config()
+            if service_config and service_config.workflow_stages:
+                valid_stages = [s.id for s in service_config.workflow_stages]
+
+                # Normalize the stage for comparison (handle case differences)
+                from .constants import WorkflowStages
+                normalized_stage = WorkflowStages.normalize(stage)
+
+                if normalized_stage not in valid_stages:
+                    warnings.append(
+                        f"Station stage '{stage}' (normalized: '{normalized_stage}') "
+                        f"not found in service config workflow. "
+                        f"Valid stages: {', '.join(valid_stages)}"
+                    )
+        except ImportError:
+            # Service config loader not available, skip validation
+            pass
+        except Exception as e:
+            # Don't fail startup for service config issues
+            logger.debug(f"Could not validate stage against service config: {e}")
+
+        return warnings
 
     def get(self, key_path: str, default: Any = None) -> Any:
         """

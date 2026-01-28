@@ -180,9 +180,14 @@ if [ ! -f "config.yaml" ]; then
     echo ""
     echo -e "${BLUE}Step 8: Creating default configuration...${NC}"
 
-    # Backup original if it exists
-    if [ -f "config.yaml" ]; then
-        cp config.yaml "config.yaml.backup.$(date +%Y%m%d-%H%M%S)"
+    # Copy from example template first
+    if [ -f "config.yaml.example" ]; then
+        cp config.yaml.example config.yaml
+        echo "Created config.yaml from config.yaml.example"
+    else
+        echo -e "${RED}ERROR: config.yaml.example not found!${NC}"
+        echo "Cannot create configuration file. Please check installation."
+        exit 1
     fi
 
     # Prompt for basic configuration
@@ -199,13 +204,11 @@ if [ ! -f "config.yaml" ]; then
     read -p "Session ID (e.g., festival-2025-summer): " SESSION_ID
     SESSION_ID=${SESSION_ID:-test-session-2025}
 
-    # Create config from template or update existing
-    if [ -f "config.yaml" ]; then
-        sed -i.bak "s/device_id: \".*\"/device_id: \"$DEVICE_ID\"/" config.yaml
-        sed -i.bak "s/stage: \".*\"/stage: \"$STAGE\"/" config.yaml
-        sed -i.bak "s/session_id: \".*\"/session_id: \"$SESSION_ID\"/" config.yaml
-        rm -f config.yaml.bak
-    fi
+    # Update config with user values
+    sed -i.bak "s/device_id: \".*\"/device_id: \"$DEVICE_ID\"/" config.yaml
+    sed -i.bak "s/stage: \".*\"/stage: \"$STAGE\"/" config.yaml
+    sed -i.bak "s/session_id: \".*\"/session_id: \"$SESSION_ID\"/" config.yaml
+    rm -f config.yaml.bak
 
     echo ""
     echo -e "${GREEN}✓ Configuration file created: config.yaml${NC}"
