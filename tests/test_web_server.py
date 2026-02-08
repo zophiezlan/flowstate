@@ -233,13 +233,11 @@ def test_logout_clears_session(client, mock_config):
 def test_control_api_endpoints_require_auth(client):
     """Test that control API endpoints require authentication"""
     # Test various control endpoints
+    # Only test core routes (extension routes tested in test_extensions.py)
     endpoints = [
         ("/api/control/status", "GET"),
         ("/api/control/execute", "POST"),
-        ("/api/control/force-exit", "POST"),
-        ("/api/control/stuck-cards", "GET"),
         ("/api/control/backup-database", "GET"),
-        ("/api/control/hardware-status", "GET"),
     ]
 
     for endpoint, method in endpoints:

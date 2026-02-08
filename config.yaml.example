@@ -114,3 +114,20 @@ web_server:
     
     # Session timeout in minutes (auto-logout after inactivity)
     session_timeout_minutes: 60
+
+# Extensions - modular features that can be enabled/disabled
+# Each extension adds specific functionality. Enable only what you need.
+extensions:
+  enabled:
+    - notes                # Operational notes for staff during shifts
+    - export               # CSV/JSON data export
+    - shift_summary        # Shift handoff reports
+    - event_summary        # End-of-day summary with goals
+    - insights             # Service quality SLI/SLO metrics
+    - anomalies            # Real-time anomaly detection
+    - stuck_cards          # Detect and force-exit stuck cards
+    - manual_corrections   # Manual event add/remove for corrections
+    - hardware_monitor     # Raspberry Pi hardware status
+    - three_stage          # Queue wait vs service time breakdown
+    - smart_estimates      # Intelligent wait time predictions
+    - substance_tracking   # Substance return rate tracking

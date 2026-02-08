@@ -161,6 +161,8 @@ _CONFIG_SCHEMA: Dict[str, Tuple[str, Any, Optional[Callable]]] = {
         None,
         int,
     ),
+    # Extensions
+    "extensions_enabled": ("extensions.enabled", [], None),
 }
 
 
@@ -442,6 +444,21 @@ class Config:
         normalized = WorkflowStages.normalize(stage)
         self._cache["stage"] = normalized
         return normalized
+
+    def get_extension_config(
+        self, ext_name: str, key: str, default: Any = None
+    ) -> Any:
+        """Get config value for a specific extension.
+
+        Args:
+            ext_name: Extension name (e.g., "notes")
+            key: Config key within extension namespace
+            default: Default value if not found
+
+        Returns:
+            Configuration value or default
+        """
+        return self.get(f"extensions.{ext_name}.{key}", default)
 
     def reload(self, config_path: Optional[str] = None) -> None:
         """

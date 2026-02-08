@@ -15,6 +15,7 @@ from tap_station.health import HealthMonitor
 from tap_station.nfc_reader import MockNFCReader, NFCReader
 from tap_station.onsite_manager import OnSiteManager
 from tap_station.path_utils import ensure_parent_dir
+from tap_station.registry import ExtensionRegistry
 from tap_station.validation import TokenValidator
 
 
@@ -98,13 +99,21 @@ class TapStation:
                     f"Failed to initialize shutdown button: {e}", exc_info=True
                 )
 
+        # Initialize extension registry
+        self.registry = ExtensionRegistry()
+        ext_names = self.config.extensions_enabled
+        if ext_names:
+            self.registry.load(ext_names)
+
         self.web_server = None
         self.web_thread = None
         if self.config.web_server_enabled:
             try:
                 from tap_station.web_server import StatusWebServer
 
-                self.web_server = StatusWebServer(self.config, self.db)
+                self.web_server = StatusWebServer(
+                    self.config, self.db, self.registry
+                )
                 self.web_thread = threading.Thread(
                     target=self.web_server.run,
                     kwargs={
@@ -201,6 +210,14 @@ class TapStation:
                 self.logger.error(
                     f"On-site manager startup failed: {e}", exc_info=True
                 )
+
+        # Start extensions
+        self.registry.startup({
+            'db': self.db,
+            'config': self.config,
+            'nfc': self.nfc,
+            'app': self.web_server.app if self.web_server else None,
+        })
 
         # Startup feedback
         self.feedback.startup()
@@ -375,6 +392,9 @@ class TapStation:
     def shutdown(self):
         """Cleanup and shutdown"""
         self.logger.info("Shutting down...")
+
+        # Stop extensions
+        self.registry.shutdown()
 
         # Stop on-site manager
         if self.onsite_manager:
