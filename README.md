@@ -28,9 +28,9 @@ Drug checking services at festivals need data to optimize flow, measure impact, 
 - **📋 [Operations Guide](docs/OPERATIONS.md)** - Day-of-event workflow, live monitoring & decision-making
 - **✅ [Pre-Deployment Checklist](docs/PRE_DEPLOYMENT_CHECKLIST.md)** - Ensure you're ready before your event
 - **📊 [Live Dashboard](#live-monitoring)** - Real-time queue tracking & operational metrics
-- **🔥 [New Features Guide](docs/NEW_FEATURES.md)** - Public display, enhanced alerts, shift summaries
 - **🎛️ [Control Panel](docs/CONTROL_PANEL.md)** - Web-based system administration
 - **🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)** - Fix common issues
+- **🧩 [Extensions](docs/EXTENSIONS.md)** - Modular feature system & extension reference
 - **💻 [Contributing](CONTRIBUTING.md)** - For developers
 
 ## What's New (v2.5+)
@@ -99,7 +99,7 @@ See [Substance Return Confirmation Guide](docs/SUBSTANCE_RETURN_CONFIRMATION.md)
 - **Shift Summary** (`/shift`) - Quick handoff information for shift changes
 - **Activity Monitoring** - Automatic detection of stuck cards, service anomalies, and capacity issues
 
-See [Force-Exit & Export Guide](docs/FORCE_EXIT_AND_EXPORT.md), [3-Stage Tracking Guide](docs/3_STAGE_TRACKING.md), and [New Features Guide](docs/NEW_FEATURES.md) for details.
+See [Force-Exit & Export Guide](docs/FORCE_EXIT_AND_EXPORT.md) and [3-Stage Tracking Guide](docs/3_STAGE_TRACKING.md) for details.
 
 ## ⚙️ Configurable for Any Festival Service
 
@@ -151,6 +151,7 @@ Different services have different needs:
 - Python 3.9+ with `pn532pi` library
 - SQLite database (WAL mode for crash resistance)
 - Flask web server for live dashboard & status checks
+- **Modular extension system** - 12 pluggable feature modules
 - systemd service for auto-start/restart
 - Real-time operational analytics
 
@@ -471,73 +472,62 @@ print(f"90th percentile: {pivoted['wait_time'].quantile(0.9)}")
 
 ```
 flowstate/
-├── tap_station/              # Main application
+├── tap_station/              # Core application
 │   ├── main.py              # Service entry point
 │   ├── config.py            # Configuration management
 │   ├── database.py          # SQLite operations
 │   ├── nfc_reader.py        # PN532 NFC interface
+│   ├── web_server.py        # Flask server (dashboards, API, control panel)
+│   ├── extension.py         # Extension base class & TapEvent protocol
+│   ├── registry.py          # Extension loader & hook dispatcher
 │   ├── feedback.py          # Buzzer/LED control
-│   ├── web_server.py        # Flask server (dashboards + control panel)
-│   ├── ndef_writer.py       # NDEF writing (NFC Tools)
-│   └── templates/           # Web interface templates
+│   ├── validation.py        # Event sequence validation
+│   ├── anomaly_detector.py  # Real-time anomaly detection
+│   ├── service_integration.py # Service workflow integration
+│   ├── health.py            # System health monitoring
+│   ├── failover_manager.py  # Multi-station failover
+│   ├── peer_monitor.py      # Peer station HTTP monitoring
+│   ├── onsite_manager.py    # Onsite event management
+│   └── templates/           # Web interface (11 templates)
 │       ├── dashboard.html   # Full analytics dashboard
 │       ├── monitor.html     # Simplified peer worker view
 │       ├── control.html     # System administration panel
+│       ├── public.html      # Public queue display
+│       ├── shift.html       # Shift handoff summary
+│       ├── event_summary.html # End-of-day summary
+│       ├── insights.html    # Service quality metrics (SLI/SLO)
+│       ├── login.html       # Admin authentication
 │       ├── index.html       # Landing page
 │       ├── status.html      # Participant status check
 │       └── error.html       # Error display
+├── extensions/               # Modular feature plugins
+│   ├── anomalies/           # Real-time anomaly alerting
+│   ├── event_summary/       # End-of-day summary reports
+│   ├── export/              # CSV/JSON data export
+│   ├── hardware_monitor/    # Raspberry Pi hardware health
+│   ├── insights/            # Service quality metrics (SLI/SLO)
+│   ├── manual_corrections/  # Manual event add/remove with audit trail
+│   ├── notes/               # Operational notes during shifts
+│   ├── shift_summary/       # Shift handoff reports
+│   ├── smart_estimates/     # Intelligent wait time prediction
+│   ├── stuck_cards/         # Stuck card detection & force-exit
+│   ├── substance_tracking/  # Substance return accountability
+│   └── three_stage/         # 3-stage tracking (queue vs service time)
 ├── scripts/                  # Utility scripts
-│   ├── install.sh           # Automated installation
-│   ├── verify_hardware.py   # Hardware diagnostics
-│   ├── verify_deployment.sh # Full system verification
-│   ├── init_cards.py        # Card initialization
-│   ├── init_cards_with_ndef.py # NDEF card programming
-│   ├── export_data.py       # Data export
-│   ├── ingest_mobile_batch.py  # Mobile data import
-│   ├── health_check.py      # Remote health monitoring
-│   ├── service_manager.py   # Service control utility
-│   ├── dev_reset.py         # Development reset tool
-│   ├── setup_wizard.py      # Interactive configuration
-│   ├── enable_i2c.sh        # I2C setup automation
-│   ├── format.ps1           # Format code (Windows)
-│   ├── format.sh            # Format code (Linux/Mac)
-│   ├── format.bat           # Format code (Windows CMD)
-│   └── README_FORMATTING.md # Formatting guide
-├── mobile_app/              # Progressive Web App
-│   ├── index.html           # App interface
-│   ├── app.js               # NFC scanning logic
-│   ├── service-worker.js    # Offline support
-│   ├── style.css            # Styling
-│   └── manifest.webmanifest # PWA manifest
-├── tests/                   # Test suite
-│   ├── test_config.py       # Configuration tests
-│   ├── test_database.py     # Database tests
-│   ├── test_nfc_reader.py   # NFC reader tests
-│   ├── test_web_server.py   # Web server tests
-│   ├── test_integration.py  # End-to-end tests
-│   └── test_mobile_ingest.py # Mobile ingest tests
+├── mobile_app/              # Offline-first Android PWA
+├── tests/                   # Pytest test suite
 ├── docs/                    # Documentation
-│   ├── SETUP.md            # Installation & setup
-│   ├── OPERATIONS.md       # Day-of-event operations
-│   ├── PRE_DEPLOYMENT_CHECKLIST.md # Pre-event verification
-│   ├── CONTROL_PANEL.md    # Control panel reference
-│   ├── TROUBLESHOOTING.md  # Problem solving
-│   ├── MOBILE.md           # Mobile app guide
-│   └── ROADMAP.md          # Future plans
-├── data/                    # Database & mappings
-│   ├── events.db           # Main event database
-│   └── card_mapping.csv    # Card UID → Token ID
-├── logs/                    # Application logs
-│   └── tap-station.log     # Rotating logs
+├── examples/                # Example service configurations
+├── data/                    # SQLite database files
+├── logs/                    # Rotating application logs
 ├── backups/                 # Database backups
-├── config.yaml              # Configuration file
 ├── config.yaml.example      # Configuration template
+├── pyproject.toml           # Python project configuration
 ├── requirements.txt         # Python dependencies
-├── tap-station.service      # systemd service file
-├── CONTRIBUTING.md          # Developer guide
-├── PRODUCTION_READINESS.md  # Production status report
-└── README.md               # This file
+└── tap-station.service      # systemd service file
 ```
+
+See [docs/EXTENSIONS.md](docs/EXTENSIONS.md) for details on the extension system.
 
 ## Configuration
 
@@ -651,17 +641,18 @@ sudo journalctl -u tap-station -n 50
 
 ## Version History
 
-**v2.5+ (Current)**
+**v2.6 (Current)**
 
+- Modular extension system (12 pluggable feature modules)
 - Password-protected control panel with session management
 - Human error handling with sequence validation and adaptive recovery
+- Complete anomaly detection (6 types), rate limiting, input validation
 - Auto-initialize cards on first tap
-- Enhanced wait time metrics (queue wait vs. service time)
 - Substance return confirmation tracking
-- Force-exit tool for stuck cards
-- Real-time CSV export from dashboard
 - 3-stage service tracking (QUEUE_JOIN → SERVICE_START → EXIT)
-- Public queue display, shift summaries, and insights pages
+- Service quality metrics (SLI/SLO) and insights dashboard
+- Public queue display, shift summaries, event summaries
+- Force-exit tool and real-time CSV export
 
 **v2.0**
 

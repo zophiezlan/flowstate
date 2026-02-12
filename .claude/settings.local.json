@@ -15,7 +15,10 @@
       "Bash(while read file)",
       "Bash(do if ! grep -q 'logger\\\\.\\\\\\(debug\\\\|info\\\\|warning\\\\|error\\\\|critical\\\\\\)\\(f\"\"' \"$file\")",
       "Bash(then if grep -q 'logger\\\\.\\\\\\(debug\\\\|info\\\\|warning\\\\|error\\\\|critical\\\\\\)' \"$file\")",
-      "Bash(then echo \"$file\" fi fi done)"
+      "Bash(then echo \"$file\" fi fi done)",
+      "Bash(cd:*)",
+      "Bash(test:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

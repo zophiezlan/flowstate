@@ -469,7 +469,7 @@ If SERVICE_START exists → 3-stage calculation
 Questions?
 
 - Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- Check [NEW_FEATURES.md](NEW_FEATURES.md)
+- Check [EXTENSIONS.md](EXTENSIONS.md) for the three_stage extension
 - Open GitHub issue
 - Contact development team
 
