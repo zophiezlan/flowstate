@@ -51,7 +51,7 @@ class WiFiManager:
             True if networks loaded successfully
         """
         if not self.config_file.exists():
-            logger.info(f"WiFi config file not found: {self.config_file}")
+            logger.info("WiFi config file not found: %s", self.config_file)
             logger.info("Will create file with default networks")
             self._create_default_config()
             return False
@@ -83,11 +83,11 @@ class WiFiManager:
             # Sort by priority (lower number = higher priority)
             self.networks.sort(key=lambda x: x["priority"])
 
-            logger.info(f"Loaded {len(self.networks)} WiFi networks")
+            logger.info("Loaded %s WiFi networks", len(self.networks))
             return len(self.networks) > 0
 
         except Exception as e:
-            logger.error(f"Error loading WiFi config: {e}", exc_info=True)
+            logger.error("Error loading WiFi config: %s", e, exc_info=True)
             return False
 
     def _create_default_config(self):
@@ -114,10 +114,10 @@ class WiFiManager:
             with open(self.config_file, "w") as f:
                 f.write(default_config)
 
-            logger.info(f"Created default WiFi config at {self.config_file}")
+            logger.info("Created default WiFi config at %s", self.config_file)
 
         except Exception as e:
-            logger.error(f"Error creating default config: {e}")
+            logger.error("Error creating default config: %s", e)
 
     def get_current_network(self) -> Optional[str]:
         """
@@ -182,11 +182,11 @@ class WiFiManager:
                         if ssid and ssid not in ssids:
                             ssids.append(ssid)
 
-            logger.info(f"Found {len(ssids)} networks: {ssids}")
+            logger.info("Found %s networks: %s", len(ssids), ssids)
             return ssids
 
         except Exception as e:
-            logger.error(f"Error scanning networks: {e}")
+            logger.error("Error scanning networks: %s", e)
             return []
 
     def connect_to_network(
@@ -204,7 +204,7 @@ class WiFiManager:
             True if connected successfully
         """
         try:
-            logger.info(f"Attempting to connect to '{ssid}'...")
+            logger.info("Attempting to connect to '%s'...", ssid)
 
             # Create temporary wpa_supplicant config with restricted permissions
             wpa_config = f"""
@@ -248,21 +248,21 @@ network={{
             try:
                 config_path.unlink(missing_ok=True)
             except Exception as e:
-                logger.warning(f"Could not delete temporary config file: {e}")
+                logger.warning("Could not delete temporary config file: %s", e)
 
             # Wait for connection
             for i in range(timeout):
                 if self.get_current_network() == ssid:
-                    logger.info(f"Successfully connected to '{ssid}'")
+                    logger.info("Successfully connected to '%s'", ssid)
                     self.current_network = ssid
                     return True
                 time.sleep(1)
 
-            logger.warning(f"Connection timeout for '{ssid}'")
+            logger.warning("Connection timeout for '%s'", ssid)
             return False
 
         except Exception as e:
-            logger.error(f"Error connecting to '{ssid}': {e}", exc_info=True)
+            logger.error("Error connecting to '%s': %s", ssid, e, exc_info=True)
             return False
 
     def auto_connect(self, max_attempts: int = 3) -> bool:
@@ -278,7 +278,7 @@ network={{
         # Check if already connected
         current = self.get_current_network()
         if current:
-            logger.info(f"Already connected to '{current}'")
+            logger.info("Already connected to '%s'", current)
             self.current_network = current
             return True
 
@@ -303,12 +303,12 @@ network={{
 
             # Skip if not available (unless we couldn't scan)
             if available and ssid not in available:
-                logger.debug(f"Network '{ssid}' not in range, skipping")
+                logger.debug("Network '%s' not in range, skipping", ssid)
                 continue
 
             # Try connecting
             logger.info(
-                f"Trying network '{ssid}' (priority {network['priority']})"
+                "Trying network '%s' (priority %s)", ssid, network['priority']
             )
 
             for attempt in range(max_attempts):
@@ -316,7 +316,7 @@ network={{
                     return True
 
                 if attempt < max_attempts - 1:
-                    logger.info(f"Retry {attempt + 2}/{max_attempts}...")
+                    logger.info("Retry %s/%s...", attempt + 2, max_attempts)
                     time.sleep(2)
 
         logger.warning("Could not connect to any configured network")
@@ -357,11 +357,11 @@ network={{
             finally:
                 os.umask(old_umask)
 
-            logger.info(f"Added network '{ssid}' with priority {priority}")
+            logger.info("Added network '%s' with priority %s", ssid, priority)
             return True
 
         except Exception as e:
-            logger.error(f"Error adding network: {e}")
+            logger.error("Error adding network: %s", e)
             return False
 
     def get_ip_address(self) -> Optional[str]:
@@ -385,7 +385,7 @@ network={{
             return None
 
         except Exception as e:
-            logger.debug(f"Could not get IP address: {e}")
+            logger.debug("Could not get IP address: %s", e)
             return None
 
     def enable_ap_mode(
@@ -402,7 +402,7 @@ network={{
             True if AP mode enabled
         """
         try:
-            logger.info(f"Enabling AP mode: {ssid}")
+            logger.info("Enabling AP mode: %s", ssid)
 
             # This requires hostapd and dnsmasq to be installed
             # We'll create a simple AP configuration
@@ -427,7 +427,7 @@ network={{
             return True
 
         except Exception as e:
-            logger.error(f"Error enabling AP mode: {e}")
+            logger.error("Error enabling AP mode: %s", e)
             return False
 
     def disable_ap_mode(self) -> bool:
@@ -453,5 +453,5 @@ network={{
             return True
 
         except Exception as e:
-            logger.error(f"Error disabling AP mode: {e}")
+            logger.error("Error disabling AP mode: %s", e)
             return False

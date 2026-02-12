@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from .datetime_utils import utc_now
+from tap_station.datetime_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -382,7 +382,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["avg_wait"] if row and row["avg_wait"] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating avg wait time: {e}")
+            logger.error("Error calculating avg wait time: %s", e)
             return 0.0
 
     def _calc_median_wait_time(self, session_id: str) -> float:
@@ -413,7 +413,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["median"] if row and row["median"] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating median wait time: {e}")
+            logger.error("Error calculating median wait time: %s", e)
             return 0.0
 
     def _calc_percentile_wait_time(
@@ -445,7 +445,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["wait"] if row and row["wait"] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating p{percentile} wait time: {e}")
+            logger.error("Error calculating p%s wait time: %s", percentile, e)
             return 0.0
 
     def _calc_wait_time_under_target(self, session_id: str) -> float:
@@ -478,7 +478,7 @@ class ServiceQualityMetrics:
                 else 100.0
             )
         except Exception as e:
-            logger.error(f"Error calculating wait time under target: {e}")
+            logger.error("Error calculating wait time under target: %s", e)
             return 100.0
 
     def _calc_current_throughput(self, session_id: str) -> float:
@@ -499,7 +499,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["throughput"] if row and row["throughput"] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating throughput: {e}")
+            logger.error("Error calculating throughput: %s", e)
             return 0.0
 
     def _calc_throughput_rate(self, session_id: str) -> float:
@@ -531,7 +531,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["completion"] if row and row["completion"] else 100.0
         except Exception as e:
-            logger.error(f"Error calculating completion rate: {e}")
+            logger.error("Error calculating completion rate: %s", e)
             return 100.0
 
     def _calc_active_journeys(self, session_id: str) -> int:
@@ -553,7 +553,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["active"] if row else 0
         except Exception as e:
-            logger.error(f"Error calculating active journeys: {e}")
+            logger.error("Error calculating active journeys: %s", e)
             return 0
 
     def _calc_error_free_rate(self, session_id: str) -> float:
@@ -591,7 +591,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["compliance"] if row and row["compliance"] else 100.0
         except Exception as e:
-            logger.error(f"Error calculating sequence compliance: {e}")
+            logger.error("Error calculating sequence compliance: %s", e)
             return 100.0
 
     def _calc_avg_service_time(self, session_id: str) -> float:
@@ -616,7 +616,7 @@ class ServiceQualityMetrics:
             row = cursor.fetchone()
             return row["avg_service"] if row and row["avg_service"] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating avg service time: {e}")
+            logger.error("Error calculating avg service time: %s", e)
             return 0.0
 
     def _calc_service_efficiency(self, session_id: str) -> float:
@@ -652,7 +652,7 @@ class ServiceQualityMetrics:
                 return max(0, 100 - (cv * 100))
             return 100.0
         except Exception as e:
-            logger.error(f"Error calculating service efficiency: {e}")
+            logger.error("Error calculating service efficiency: %s", e)
             return 100.0
 
     # =========================================================================

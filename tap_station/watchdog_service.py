@@ -77,7 +77,7 @@ class WatchdogService:
                 return True
             else:
                 logger.warning(
-                    f"Web server returned status {response.status_code}"
+                    "Web server returned status %s", response.status_code
                 )
                 self.web_consecutive_failures += 1
                 return False
@@ -93,7 +93,7 @@ class WatchdogService:
             return False
 
         except Exception as e:
-            logger.error(f"Web server health check error: {e}")
+            logger.error("Web server health check error: %s", e)
             self.web_consecutive_failures += 1
             return False
 
@@ -116,8 +116,8 @@ class WatchdogService:
 
         if len(recent_restarts) >= self.max_restarts_per_hour:
             logger.error(
-                f"Restart rate limit exceeded: "
-                f"{len(recent_restarts)} restarts in last hour"
+                "Restart rate limit exceeded: "
+                "%s restarts in last hour", len(recent_restarts)
             )
             return False
 
@@ -234,8 +234,8 @@ def main():
 
             if not healthy:
                 logger.warning(
-                    f"Web server unhealthy "
-                    f"({watchdog.web_consecutive_failures}/{watchdog.restart_threshold})"
+                    "Web server unhealthy "
+                    "(%s/%s)", watchdog.web_consecutive_failures, watchdog.restart_threshold
                 )
 
                 # Check if restart is needed
@@ -250,7 +250,7 @@ def main():
         watchdog._running = False
 
     except Exception as e:
-        logger.error(f"Watchdog error: {e}", exc_info=True)
+        logger.error("Watchdog error: %s", e, exc_info=True)
 
     logger.info("Watchdog service stopped")
 

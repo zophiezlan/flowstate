@@ -110,26 +110,28 @@ class MDNSService:
 
             if current_hostname != self.hostname:
                 logger.info(
-                    f"System hostname is '{current_hostname}' but config expects '{self.hostname}'. "
-                    f"Station will be accessible via {current_hostname}.local"
+                    "System hostname is '%s' but config expects '%s'. "
+                    "Station will be accessible via %s.local",
+                    current_hostname, self.hostname, current_hostname
                 )
                 logger.info(
                     "To change hostname, run the install script or manually set it with: "
-                    f"sudo hostnamectl set-hostname {self.hostname}"
+                    "sudo hostnamectl set-hostname %s",
+                    self.hostname
                 )
             else:
-                logger.info(f"Hostname matches config: {self.hostname}")
+                logger.info("Hostname matches config: %s", self.hostname)
 
         except Exception as e:
-            logger.warning(f"Error checking hostname: {e}")
+            logger.warning("Error checking hostname: %s", e)
 
         # Avahi will automatically advertise the hostname.local
         # We don't need to manually register with avahi-publish since
         # the system hostname + avahi-daemon handles it automatically
 
-        logger.info(f"mDNS service ready:")
-        logger.info(f"  Access via: http://{self.hostname}.local:{self.port}")
-        logger.info(f"  Service name: {self.service_name}")
+        logger.info("mDNS service ready:")
+        logger.info("  Access via: http://%s.local:%s", self.hostname, self.port)
+        logger.info("  Service name: %s", self.service_name)
 
         return True
 
@@ -165,5 +167,5 @@ def setup_mdns(device_id: str, port: int = 8080) -> Optional[MDNSService]:
             return mdns
         return None
     except Exception as e:
-        logger.error(f"Failed to setup mDNS: {e}", exc_info=True)
+        logger.error("Failed to setup mDNS: %s", e, exc_info=True)
         return None

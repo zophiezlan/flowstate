@@ -227,7 +227,7 @@ class StatusWebServer:
         if SERVICE_CONFIG_AVAILABLE:
             self.svc = get_service_integration()
             logger.info(
-                f"Service configuration loaded: {self.svc.get_service_name()}"
+                "Service configuration loaded: %s", self.svc.get_service_name()
             )
         else:
             self.svc = None
@@ -310,7 +310,7 @@ class StatusWebServer:
                 )
 
             except Exception as e:
-                logger.error(f"Health check failed: {e}")
+                logger.error("Health check failed: %s", e)
                 return (
                     jsonify(
                         {
@@ -337,7 +337,7 @@ class StatusWebServer:
                 # Simple liveness check - just verify app is responding
                 return jsonify({"status": "ok"}), 200
             except Exception as e:
-                logger.error(f"Liveness check failed: {e}")
+                logger.error("Liveness check failed: %s", e)
                 return jsonify({"status": "error", "error": str(e)}), 503
 
         @self.app.route("/readyz")
@@ -413,7 +413,7 @@ class StatusWebServer:
 
                 # Payload size limit (max 1000 events per request)
                 if len(events) > 1000:
-                    logger.warning(f"Payload too large: {len(events)} events")
+                    logger.warning("Payload too large: %d events", len(events))
                     return (
                         jsonify(
                             {"error": "Too many events (max 1000 per request)"}
@@ -434,7 +434,7 @@ class StatusWebServer:
                         # Basic type validation
                         if not isinstance(event, dict):
                             logger.warning(
-                                f"Invalid event type: {type(event)}"
+                                "Invalid event type: %s", type(event)
                             )
                             errors += 1
                             continue
@@ -459,9 +459,9 @@ class StatusWebServer:
                         # Validate stage against service configuration
                         if self.svc and not self.svc.is_valid_stage(stage):
                             logger.warning(
-                                f"Invalid stage '{stage}' in event for token "
-                                f"'{event.get('token_id')}'. Valid stages: "
-                                f"{self.svc.get_all_stage_ids()}"
+                                "Invalid stage '%s' in event for token "
+                                "'%s'. Valid stages: %s",
+                                stage, event.get('token_id'), self.svc.get_all_stage_ids()
                             )
                             # Continue processing - log event but flag it
                             # This allows review of misconfigured stages later
@@ -483,7 +483,7 @@ class StatusWebServer:
                             or len(uid) > 100
                             or len(stage) > 50
                         ):
-                            logger.warning(f"Field too long in event: {event}")
+                            logger.warning("Field too long in event: %s", event)
                             errors += 1
                             continue
 
@@ -511,12 +511,12 @@ class StatusWebServer:
                             duplicates += 1
 
                     except Exception as e:
-                        logger.warning(f"Failed to ingest event: {e}")
+                        logger.warning("Failed to ingest event: %s", e)
                         errors += 1
 
                 logger.info(
-                    f"Ingested {len(events)} events from mobile: "
-                    f"+{inserted}, ={duplicates}, !{errors}"
+                    "Ingested %d events from mobile: +%d, =%d, !%d",
+                    len(events), inserted, duplicates, errors
                 )
                 return (
                     jsonify(
@@ -534,7 +534,7 @@ class StatusWebServer:
                 )
 
             except Exception as e:
-                logger.error(f"Ingest failed: {e}")
+                logger.error("Ingest failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/")
@@ -579,7 +579,7 @@ class StatusWebServer:
                 )
 
             except Exception as e:
-                logger.error(f"Status check failed for token {token_id}: {e}")
+                logger.error("Status check failed for token %s: %s", token_id, e)
                 return (
                     render_template(
                         "error.html", error=f"Error checking status: {e}"
@@ -604,7 +604,7 @@ class StatusWebServer:
 
             except Exception as e:
                 logger.error(
-                    f"API status check failed for token {token_id}: {e}"
+                    "API status check failed for token %s: %s", token_id, e
                 )
                 return jsonify({"error": str(e)}), 500
 
@@ -630,7 +630,7 @@ class StatusWebServer:
                 return jsonify(stats), 200
 
             except Exception as e:
-                logger.error(f"API stats failed: {e}")
+                logger.error("API stats failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/api/service-config")
@@ -724,7 +724,7 @@ class StatusWebServer:
                 return jsonify(config), 200
 
             except Exception as e:
-                logger.error(f"API service config failed: {e}")
+                logger.error("API service config failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/dashboard")
@@ -811,7 +811,7 @@ class StatusWebServer:
                 status = self._get_system_status()
                 return jsonify(status), 200
             except Exception as e:
-                logger.error(f"Control status failed: {e}")
+                logger.error("Control status failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/api/control/execute", methods=["POST"])
@@ -834,7 +834,7 @@ class StatusWebServer:
                 return jsonify(result), 200
 
             except Exception as e:
-                logger.error(f"Command execution failed: {e}")
+                logger.error("Command execution failed: %s", e)
                 return jsonify({"success": False, "error": str(e)}), 500
 
         @self.app.route("/api/card-lookup")
@@ -849,7 +849,7 @@ class StatusWebServer:
                 return jsonify(card_info), 200
 
             except Exception as e:
-                logger.error(f"Card lookup failed: {e}")
+                logger.error("Card lookup failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/api/control/backup-database")
@@ -880,7 +880,7 @@ class StatusWebServer:
                 )
 
             except Exception as e:
-                logger.error(f"Database backup failed: {e}")
+                logger.error("Database backup failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/public")
@@ -901,7 +901,7 @@ class StatusWebServer:
                 return jsonify(stats), 200
 
             except Exception as e:
-                logger.error(f"API public failed: {e}")
+                logger.error("API public failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/api/dashboard")
@@ -917,7 +917,7 @@ class StatusWebServer:
                 return jsonify(stats), 200
 
             except Exception as e:
-                logger.error(f"API dashboard failed: {e}")
+                logger.error("API dashboard failed: %s", e)
                 return jsonify({"error": str(e)}), 500
 
         # Let extensions register their API routes
@@ -1526,7 +1526,7 @@ class StatusWebServer:
             return int(total_wait / len(journeys))
 
         except Exception as e:
-            logger.warning(f"Failed to calculate avg wait time: {e}")
+            logger.warning("Failed to calculate avg wait time: %s", e)
             return 0
 
     def _get_recent_completions(self, limit=10) -> list:
@@ -1573,7 +1573,7 @@ class StatusWebServer:
             return completions
 
         except Exception as e:
-            logger.warning(f"Failed to get recent completions: {e}")
+            logger.warning("Failed to get recent completions: %s", e)
             return []
 
     def _get_hourly_activity(self, hours=12) -> list:
@@ -1599,7 +1599,7 @@ class StatusWebServer:
             ]
 
         except Exception as e:
-            logger.warning(f"Failed to get hourly activity: {e}")
+            logger.warning("Failed to get hourly activity: %s", e)
             return []
 
     def _get_recent_events_feed(self, limit=15) -> list:
@@ -1635,7 +1635,7 @@ class StatusWebServer:
             return events
 
         except Exception as e:
-            logger.warning(f"Failed to get recent events: {e}")
+            logger.warning("Failed to get recent events: %s", e)
             return []
 
     def _get_token_status(self, token_id: str) -> dict:
@@ -1697,7 +1697,7 @@ class StatusWebServer:
                     (exit_time - queue_time).total_seconds() / 60
                 )
             except Exception as e:
-                logger.warning(f"Failed to calculate wait time: {e}")
+                logger.warning("Failed to calculate wait time: %s", e)
 
         return result
 
@@ -1753,7 +1753,7 @@ class StatusWebServer:
             return int(avg_wait)
 
         except Exception as e:
-            logger.warning(f"Failed to estimate wait time: {e}")
+            logger.warning("Failed to estimate wait time: %s", e)
             return 20  # Default fallback
 
     def _get_system_status(self) -> dict:
@@ -1805,7 +1805,7 @@ class StatusWebServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get system status: {e}")
+            logger.error("Failed to get system status: %s", e)
             return {
                 "service_running": False,
                 "total_events": 0,
@@ -1823,7 +1823,7 @@ class StatusWebServer:
         Returns:
             Dictionary with success status and output
         """
-        logger.info(f"Executing control command: {command}")
+        logger.info("Executing control command: %s", command)
 
         try:
             # Service management commands
@@ -2110,7 +2110,7 @@ class StatusWebServer:
         except subprocess.TimeoutExpired:
             return {"success": False, "error": "Command timed out"}
         except Exception as e:
-            logger.error(f"Command execution failed: {e}", exc_info=True)
+            logger.error("Command execution failed: %s", e, exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _get_public_stats(self) -> dict:
@@ -2243,7 +2243,7 @@ class StatusWebServer:
                 time_in_stage = int((now - stage_dt).total_seconds() / 60)
             except Exception as e:
                 logger.warning(
-                    f"Could not parse timestamp for card {token_id}: {e}"
+                    "Could not parse timestamp for card %s: %s", token_id, e
                 )
                 time_in_stage = 0
 
@@ -2272,8 +2272,8 @@ class StatusWebServer:
             # Override with display names from service config if available
             if self.svc and self.svc._config:
                 for stage in self.svc._config.workflow_stages:
-                    if stage.id in status_map and stage.display_name:
-                        status_map[stage.id] = stage.display_name
+                    if stage.id in status_map and stage.label:
+                        status_map[stage.id] = stage.label
             status = status_map.get(current_stage, current_stage)
 
             # Calculate total time if completed
@@ -2301,7 +2301,7 @@ class StatusWebServer:
 
                     total_time = int((last_dt - first_dt).total_seconds() / 60)
                 except Exception as e:
-                    logger.warning(f"Could not calculate total time: {e}")
+                    logger.warning("Could not calculate total time: %s", e)
 
             return {
                 "found": True,
@@ -2316,7 +2316,7 @@ class StatusWebServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get card status for {token_id}: {e}")
+            logger.error("Failed to get card status for %s: %s", token_id, e)
             return {
                 "found": False,
                 "token_id": token_id,
@@ -2332,7 +2332,7 @@ class StatusWebServer:
             host: Host to bind to
             port: Port to listen on
         """
-        logger.info(f"Starting web server on {host}:{port}")
+        logger.info("Starting web server on %s:%s", host, port)
         self.app.run(host=host, port=port, debug=False)
 
 
@@ -2391,5 +2391,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("\nShutting down...")
     except Exception as e:
-        logger.error(f"Error: {e}", exc_info=True)
+        logger.error("Error: %s", e, exc_info=True)
         sys.exit(1)

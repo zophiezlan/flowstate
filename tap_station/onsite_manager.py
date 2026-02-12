@@ -92,7 +92,7 @@ class OnSiteManager:
             )
             logger.info("Status LEDs initialized")
         except Exception as e:
-            logger.warning(f"Failed to initialize status LEDs: {e}")
+            logger.warning("Failed to initialize status LEDs: %s", e)
 
     def _init_wifi_management(self):
         """Initialize WiFi manager and setup button"""
@@ -109,7 +109,7 @@ class OnSiteManager:
 
             logger.info("WiFi management initialized")
         except Exception as e:
-            logger.warning(f"Failed to initialize WiFi management: {e}")
+            logger.warning("Failed to initialize WiFi management: %s", e)
 
     def _init_mdns(self):
         """Initialize mDNS service"""
@@ -118,13 +118,13 @@ class OnSiteManager:
 
             if self.mdns_service:
                 logger.info(
-                    f"mDNS initialized: {self.mdns_service.get_access_url()}"
+                    "mDNS initialized: %s", self.mdns_service.get_access_url()
                 )
             else:
                 logger.warning("mDNS setup failed (avahi not available)")
 
         except Exception as e:
-            logger.warning(f"Failed to initialize mDNS: {e}")
+            logger.warning("Failed to initialize mDNS: %s", e)
 
     def _init_peer_monitoring(self):
         """Initialize peer monitoring and failover"""
@@ -152,11 +152,11 @@ class OnSiteManager:
             )
 
             logger.info(
-                f"Peer monitoring initialized for {self.peer_hostname}"
+                "Peer monitoring initialized for %s", self.peer_hostname
             )
 
         except Exception as e:
-            logger.warning(f"Failed to initialize peer monitoring: {e}")
+            logger.warning("Failed to initialize peer monitoring: %s", e)
 
     def _get_fallback_stages(self, primary_stage: str) -> list:
         """
@@ -229,16 +229,16 @@ class OnSiteManager:
 
         logger.info("=" * 60)
         logger.info("ON-SITE MANAGER READY")
-        logger.info(f"Device: {self.device_id}")
-        logger.info(f"Stage: {self.stage}")
+        logger.info("Device: %s", self.device_id)
+        logger.info("Stage: %s", self.stage)
 
         if self.mdns_service:
-            logger.info(f"Access: {self.mdns_service.get_access_url()}")
+            logger.info("Access: %s", self.mdns_service.get_access_url())
 
         if self.wifi_manager:
             ip = self.wifi_manager.get_ip_address()
             if ip:
-                logger.info(f"IP: {ip}")
+                logger.info("IP: %s", ip)
 
         logger.info("=" * 60)
 
@@ -264,7 +264,7 @@ class OnSiteManager:
 
         if connected:
             network = self.wifi_manager.get_current_network()
-            logger.info(f"✅ Connected to WiFi: {network}")
+            logger.info("Connected to WiFi: %s", network)
             return True
         else:
             logger.warning("⚠️  Could not connect to any WiFi network")
@@ -283,15 +283,15 @@ class OnSiteManager:
             ap_ssid = f"TapStation-{self.device_id}"
             ap_password = "tapstation123"
 
-            logger.info(f"Starting AP: {ap_ssid}")
-            logger.info(f"Password: {ap_password}")
+            logger.info("Starting AP: %s", ap_ssid)
+            logger.info("Password: %s", ap_password)
 
             success = self.wifi_manager.enable_ap_mode(ap_ssid, ap_password)
 
             if success:
                 logger.info("📱 WiFi setup ready!")
-                logger.info(f"1. Connect to: {ap_ssid}")
-                logger.info(f"2. Password: {ap_password}")
+                logger.info("1. Connect to: %s", ap_ssid)
+                logger.info("2. Password: %s", ap_password)
                 logger.info("3. Configure network via web portal")
             else:
                 logger.error("Failed to enable AP mode")

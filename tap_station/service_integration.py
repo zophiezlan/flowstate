@@ -11,18 +11,12 @@ The integration layer ensures that:
 """
 
 import logging
-import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path to import service_config_loader
-parent_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(parent_dir))
-
 try:
-    from service_config_loader import (
+    from .service_config_loader import (
         ServiceConfig,
         WorkflowStage,
         get_service_config,
@@ -82,10 +76,10 @@ class ServiceIntegration:
             try:
                 self._config = get_service_config()
                 logger.info(
-                    f"Service configuration loaded: {self._config.service_name}"
+                    "Service configuration loaded: %s", self._config.service_name
                 )
             except Exception as e:
-                logger.error(f"Failed to load service config: {e}")
+                logger.error("Failed to load service config: %s", e)
                 self._config = None
         else:
             self._config = None
@@ -391,66 +385,3 @@ def get_service_integration() -> ServiceIntegration:
     if _service_integration is None:
         _service_integration = ServiceIntegration()
     return _service_integration
-
-
-# =============================================================================
-# Convenience Functions
-# =============================================================================
-
-
-def get_first_stage() -> str:
-    """Get the first stage ID (typically QUEUE_JOIN)"""
-    return get_service_integration().get_first_stage()
-
-
-def get_last_stage() -> str:
-    """Get the last stage ID (typically EXIT)"""
-    return get_service_integration().get_last_stage()
-
-
-def get_service_start_stage() -> Optional[str]:
-    """Get the service start stage ID (if it exists)"""
-    return get_service_integration().get_service_start_stage()
-
-
-def get_stage_label(stage_id: str) -> str:
-    """Get the display label for a stage"""
-    return get_service_integration().get_stage_label(stage_id)
-
-
-def get_ui_label(key: str, default: str = None) -> str:
-    """Get a UI label by key"""
-    return get_service_integration().get_ui_label(key, default)
-
-
-if __name__ == "__main__":
-    # Test the service integration
-    logging.basicConfig(level=logging.INFO)
-
-    integration = get_service_integration()
-
-    print(f"\nService: {integration.get_service_name()}")
-    print(f"\nWorkflow Stages:")
-    print(
-        f"  First: {integration.get_first_stage()} ({integration.get_stage_label(integration.get_first_stage())})"
-    )
-    if integration.has_service_start_stage():
-        svc_stage = integration.get_service_start_stage()
-        print(
-            f"  Service: {svc_stage} ({integration.get_stage_label(svc_stage)})"
-        )
-    print(
-        f"  Last: {integration.get_last_stage()} ({integration.get_stage_label(integration.get_last_stage())})"
-    )
-
-    print(f"\nCapacity:")
-    print(f"  {integration.get_people_per_hour()} people/hour")
-    print(f"  {integration.get_avg_service_minutes()} min average")
-
-    print(f"\nAlert Thresholds:")
-    print(
-        f"  Queue: {integration.get_queue_warning_threshold()} warn, {integration.get_queue_critical_threshold()} critical"
-    )
-    print(
-        f"  Wait: {integration.get_wait_warning_minutes()} warn, {integration.get_wait_critical_minutes()} critical min"
-    )

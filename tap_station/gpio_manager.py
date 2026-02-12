@@ -56,7 +56,7 @@ class GPIOManager:
             GPIOManager._GPIO = None
 
         except RuntimeError as e:
-            logger.warning(f"GPIO not available (not on Raspberry Pi?): {e}")
+            logger.warning("GPIO not available (not on Raspberry Pi?): %s", e)
             GPIOManager._GPIO = None
 
     @property
@@ -82,7 +82,7 @@ class GPIOManager:
         """
         if not self.available:
             logger.debug(
-                f"GPIO unavailable, skipping output setup for pin {pin}"
+                "GPIO unavailable, skipping output setup for pin %s", pin
             )
             return False
 
@@ -97,12 +97,12 @@ class GPIOManager:
             )
             GPIOManager._configured_pins[pin] = "OUT"
             logger.debug(
-                f"Configured GPIO {pin} as OUTPUT (initial: {'HIGH' if initial_state else 'LOW'})"
+                "Configured GPIO %s as OUTPUT (initial: %s)", pin, 'HIGH' if initial_state else 'LOW'
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to setup GPIO {pin} as output: {e}")
+            logger.error("Failed to setup GPIO %s as output: %s", pin, e)
             return False
 
     def setup_input(
@@ -121,7 +121,7 @@ class GPIOManager:
         """
         if not self.available:
             logger.debug(
-                f"GPIO unavailable, skipping input setup for pin {pin}"
+                "GPIO unavailable, skipping input setup for pin %s", pin
             )
             return False
 
@@ -137,12 +137,12 @@ class GPIOManager:
             )
             GPIOManager._configured_pins[pin] = "IN"
             logger.debug(
-                f"Configured GPIO {pin} as INPUT (pull_up={pull_up}, pull_down={pull_down})"
+                "Configured GPIO %s as INPUT (pull_up=%s, pull_down=%s)", pin, pull_up, pull_down
             )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to setup GPIO {pin} as input: {e}")
+            logger.error("Failed to setup GPIO %s as input: %s", pin, e)
             return False
 
     def output(self, pin: int, state: bool) -> bool:
@@ -165,7 +165,7 @@ class GPIOManager:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to set GPIO {pin} output: {e}")
+            logger.error("Failed to set GPIO %s output: %s", pin, e)
             return False
 
     def input(self, pin: int) -> Optional[bool]:
@@ -186,7 +186,7 @@ class GPIOManager:
             return value == GPIOManager._GPIO.HIGH
 
         except Exception as e:
-            logger.error(f"Failed to read GPIO {pin} input: {e}")
+            logger.error("Failed to read GPIO %s input: %s", pin, e)
             return None
 
     def is_low(self, pin: int) -> bool:
@@ -230,14 +230,14 @@ class GPIOManager:
                 for pin in pins:
                     GPIOManager._GPIO.cleanup(pin)
                     GPIOManager._configured_pins.pop(pin, None)
-                logger.info(f"Cleaned up GPIO pins: {pins}")
+                logger.info("Cleaned up GPIO pins: %s", pins)
             else:
                 GPIOManager._GPIO.cleanup()
                 GPIOManager._configured_pins.clear()
                 logger.info("Cleaned up all GPIO pins")
 
         except Exception as e:
-            logger.warning(f"Error during GPIO cleanup: {e}")
+            logger.warning("Error during GPIO cleanup: %s", e)
 
     def get_configured_pins(self) -> Dict[int, str]:
         """Get dictionary of configured pins and their modes."""

@@ -1,7 +1,7 @@
 """Extension protocol for FlowState modules."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -48,3 +48,35 @@ class Extension:
     def on_api_routes(self, app, db, config) -> None:
         """Called once at startup. Register additional Flask routes."""
         pass
+
+
+def resolve_stage(fallback: str) -> Optional[str]:
+    """Resolve a stage name from service integration, or return fallback.
+
+    Used by extensions to get the configured stage ID for EXIT,
+    QUEUE_JOIN, SERVICE_START, etc. Returns None for SERVICE_START
+    if not configured.
+
+    Args:
+        fallback: Stage name to resolve (e.g. "EXIT", "QUEUE_JOIN",
+                  "SERVICE_START")
+
+    Returns:
+        Resolved stage ID string, or None for optional stages
+    """
+    try:
+        from tap_station.service_integration import get_service_integration
+
+        svc = get_service_integration()
+        if svc:
+            if fallback == "EXIT":
+                return svc.get_last_stage()
+            elif fallback == "QUEUE_JOIN":
+                return svc.get_first_stage()
+            elif fallback == "SERVICE_START":
+                return svc.get_service_start_stage()
+    except ImportError:
+        pass
+    if fallback == "SERVICE_START":
+        return None
+    return fallback

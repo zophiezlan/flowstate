@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timezone
 
-from tap_station.extension import Extension
+from tap_station.extension import Extension, resolve_stage
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,9 @@ class ThreeStageExtension(Extension):
     def on_startup(self, ctx):
         self._config = ctx["config"]
         self._db = ctx["db"]
-        self._stage_exit = _get_stage(ctx["config"], "EXIT")
-        self._stage_join = _get_stage(ctx["config"], "QUEUE_JOIN")
-        self._stage_service_start = _get_stage(ctx["config"], "SERVICE_START")
+        self._stage_exit = resolve_stage("EXIT")
+        self._stage_join = resolve_stage("QUEUE_JOIN")
+        self._stage_service_start = resolve_stage("SERVICE_START")
 
     def on_dashboard_stats(self, stats):
         """Add 3-stage metrics and in-service count to dashboard."""
@@ -177,26 +177,6 @@ class ThreeStageExtension(Extension):
         except Exception as e:
             logger.warning("Failed to get in-service count: %s", e)
             return 0
-
-
-def _get_stage(config, fallback):
-    """Resolve stage name from service integration or use fallback."""
-    try:
-        from tap_station.service_integration import get_service_integration
-
-        svc = get_service_integration()
-        if svc:
-            if fallback == "EXIT":
-                return svc.get_last_stage()
-            elif fallback == "QUEUE_JOIN":
-                return svc.get_first_stage()
-            elif fallback == "SERVICE_START":
-                return svc.get_service_start_stage()
-    except ImportError:
-        pass
-    if fallback == "SERVICE_START":
-        return None
-    return fallback
 
 
 extension = ThreeStageExtension()

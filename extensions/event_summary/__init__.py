@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from flask import jsonify, render_template
 
-from tap_station.extension import Extension
+from tap_station.extension import Extension, resolve_stage
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,9 @@ class EventSummaryExtension(Extension):
     order = 50
 
     def on_api_routes(self, app, db, config):
-        stage_exit = _get_stage(config, "EXIT")
-        stage_join = _get_stage(config, "QUEUE_JOIN")
-        stage_service_start = _get_stage(config, "SERVICE_START")
+        stage_exit = resolve_stage("EXIT")
+        stage_join = resolve_stage("QUEUE_JOIN")
+        stage_service_start = resolve_stage("SERVICE_START")
 
         @app.route("/event-summary")
         def event_summary():
@@ -338,26 +338,6 @@ class EventSummaryExtension(Extension):
                     "ADMIN_SESSION_TIMEOUT_MINUTES", 60,
                 ),
             }
-
-
-def _get_stage(config, fallback):
-    """Resolve stage name from service integration or use fallback."""
-    try:
-        from tap_station.service_integration import get_service_integration
-
-        svc = get_service_integration()
-        if svc:
-            if fallback == "EXIT":
-                return svc.get_last_stage()
-            elif fallback == "QUEUE_JOIN":
-                return svc.get_first_stage()
-            elif fallback == "SERVICE_START":
-                return svc.get_service_start_stage()
-    except ImportError:
-        pass
-    if fallback == "SERVICE_START":
-        return None
-    return fallback
 
 
 extension = EventSummaryExtension()

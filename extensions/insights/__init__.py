@@ -38,7 +38,7 @@ class InsightsExtension(Extension):
 
         def _get_service_insights(db, config):
             try:
-                from tap_station.service_quality import ServiceQualityMetrics
+                from extensions.insights.service_quality import ServiceQualityMetrics
 
                 session_id = config.session_id
                 quality = ServiceQualityMetrics(db.conn)

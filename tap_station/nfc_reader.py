@@ -67,21 +67,21 @@ class NFCReader:
                 raise RuntimeError("Failed to communicate with PN532")
 
             logger.info(
-                f"PN532 reader initialized on I2C bus {self.i2c_bus}, address 0x{self.address:02x}"
+                "PN532 reader initialized on I2C bus %s, address 0x%02x", self.i2c_bus, self.address
             )
             logger.info(
-                f"Firmware version: {(versiondata >> 24) & 0xFF}.{(versiondata >> 16) & 0xFF}"
+                "Firmware version: %s.%s", (versiondata >> 24) & 0xFF, (versiondata >> 16) & 0xFF
             )
 
             # Configure for reading MiFare cards
             self.pn532.SAMConfig()
 
         except ImportError as e:
-            logger.error(f"pn532pi not installed: {e}")
+            logger.error("pn532pi not installed: %s", e)
             raise
 
         except Exception as e:
-            logger.error(f"Failed to initialize PN532: {e}")
+            logger.error("Failed to initialize PN532: %s", e)
             raise
 
     def read_card(self) -> Optional[Tuple[str, str]]:
@@ -107,7 +107,7 @@ class NFCReader:
 
                     # Check debounce
                     if self._should_debounce(uid_hex):
-                        logger.debug(f"Debouncing UID: {uid_hex}")
+                        logger.debug("Debouncing UID: %s", uid_hex)
                         return None
 
                     # Update debounce state
@@ -121,16 +121,16 @@ class NFCReader:
                         # Fall back to using UID as token ID
                         token_id = uid_hex[:8]  # Use first 8 chars of UID
                         logger.warning(
-                            f"Card appears uninitialized (no token ID found), "
-                            f"using UID prefix: {token_id}"
+                            "Card appears uninitialized (no token ID found), "
+                            "using UID prefix: %s", token_id
                         )
 
-                    logger.info(f"Card read: UID={uid_hex}, Token={token_id}")
+                    logger.info("Card read: UID=%s, Token=%s", uid_hex, token_id)
                     return (uid_hex, token_id)
 
             except Exception as e:
                 logger.warning(
-                    f"Read attempt {attempt + 1}/{self.retries} failed: {e}"
+                    "Read attempt %s/%s failed: %s", attempt + 1, self.retries, e
                 )
                 time.sleep(0.1)
 
@@ -200,7 +200,7 @@ class NFCReader:
                         break
                     raw_data.extend(chunk)
                 except Exception as e:
-                    logger.debug(f"Failed to read page {page}: {e}")
+                    logger.debug("Failed to read page %s: %s", page, e)
                     break
 
             if not raw_data:
@@ -238,7 +238,7 @@ class NFCReader:
                                     if match:
                                         return match.group(1)
                         except Exception as e:
-                            logger.debug(f"NDEF parsing failed: {e}")
+                            logger.debug("NDEF parsing failed: %s", e)
             except ImportError:
                 # ndeflib not available, fall through to other methods
                 pass
@@ -251,7 +251,7 @@ class NFCReader:
                 if match:
                     return match.group(1)
             except Exception as e:
-                logger.debug(f"Text pattern search failed: {e}")
+                logger.debug("Text pattern search failed: %s", e)
 
             # 3. Legacy Fallback (Plain ASCII at page 4)
             # Only if it doesn't look like NDEF (header 0x03)
@@ -269,7 +269,7 @@ class NFCReader:
             return None
 
         except Exception as e:
-            logger.debug(f"Could not read token ID from card: {e}")
+            logger.debug("Could not read token ID from card: %s", e)
             return None
 
     def write_token_id(self, token_id: str) -> bool:
@@ -318,15 +318,15 @@ class NFCReader:
                 )
                 if read_token and read_token != token_id:
                     logger.error(
-                        f"Token ID verification mismatch: wrote {token_id}, read {read_token}"
+                        "Token ID verification mismatch: wrote %s, read %s", token_id, read_token
                     )
                     return False
 
-            logger.info(f"Wrote token ID '{token_id}' to card")
+            logger.info("Wrote token ID '%s' to card", token_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to write token ID: {e}")
+            logger.error("Failed to write token ID: %s", e)
             return False
 
     def write_ndef_tlv(self, tlv_bytes: bytes) -> bool:
@@ -352,7 +352,7 @@ class NFCReader:
             return self._write_ntag_pages(4, tlv_bytes)
 
         except Exception as e:
-            logger.error(f"Failed to write NDEF TLV: {e}")
+            logger.error("Failed to write NDEF TLV: %s", e)
             return False
 
     def _write_ntag_pages(self, start_page: int, data: bytes) -> bool:
@@ -399,37 +399,38 @@ class NFCReader:
 
             # Ensure exactly 4 bytes
             if len(chunk) != 4:
-                logger.error(f"Chunk size is {len(chunk)}, expected 4 bytes")
+                logger.error("Chunk size is %s, expected 4 bytes", len(chunk))
                 return False
 
-            logger.debug(f"Writing page {page}: {chunk.hex()}")
+            logger.debug("Writing page %s: %s", page, chunk.hex())
 
             try:
                 # Call with the correct signature: (page: int, buffer: bytearray)
                 result = write_page(page, chunk)
 
                 logger.debug(
-                    f"Write result for page {page}: {result} (type: {type(result)})"
+                    "Write result for page %s: %s (type: %s)", page, result, type(result)
                 )
 
                 # Check result - some implementations return None on success, others return True
                 if result is False:
                     logger.error(
-                        f"Failed to write page {page} (write returned False)"
+                        "Failed to write page %s (write returned False)", page
                     )
                     return False
                 elif result is None:
                     logger.debug(
-                        f"Write returned None for page {page} - assuming success"
+                        "Write returned None for page %s - assuming success", page
                     )
                 # If result is True or any other truthy value, continue
 
             except TypeError as e:
                 # This usually means wrong number/type of arguments
                 logger.error(
-                    f"TypeError writing page {page}: {e}\n"
-                    f"  Attempted call: write_page({page}, bytearray({chunk.hex()}))\n"
-                    f"  This suggests the library version may not match the expected signature."
+                    "TypeError writing page %s: %s\n"
+                    "  Attempted call: write_page(%s, bytearray(%s))\n"
+                    "  This suggests the library version may not match the expected signature.",
+                    page, e, page, chunk.hex()
                 )
 
                 # Try fallback method with individual bytes (for older library versions)
@@ -440,16 +441,16 @@ class NFCReader:
                     )
                     if result is False:
                         logger.error(
-                            f"Fallback method also failed for page {page}"
+                            "Fallback method also failed for page %s", page
                         )
                         return False
                 except Exception as e2:
-                    logger.error(f"Fallback method failed: {e2}")
+                    logger.error("Fallback method failed: %s", e2)
                     return False
 
             except Exception as e:
                 logger.error(
-                    f"Unexpected error writing page {page}: {type(e).__name__}: {e}"
+                    "Unexpected error writing page %s: %s: %s", page, type(e).__name__, e
                 )
                 return False
 
@@ -473,7 +474,7 @@ class NFCReader:
             time.sleep(0.1)
 
         except Exception as e:
-            logger.warning(f"Failed to reset reader: {e}")
+            logger.warning("Failed to reset reader: %s", e)
 
     def is_card_present(self) -> bool:
         """
@@ -611,17 +612,17 @@ class MockNFCReader(NFCReader):
         self.last_uid = uid
         self.last_read_time = datetime.now()
 
-        logger.info(f"Mock card read: UID={uid}, Token={token_id}")
+        logger.info("Mock card read: UID=%s, Token=%s", uid, token_id)
         return (uid, token_id)
 
     def write_token_id(self, token_id: str) -> bool:
         """Mock write always succeeds"""
-        logger.info(f"Mock write: {token_id}")
+        logger.info("Mock write: %s", token_id)
         return True
 
     def write_ndef_tlv(self, tlv_bytes: bytes) -> bool:
         """Mock NDEF TLV write always succeeds"""
-        logger.info(f"Mock NDEF TLV write: {len(tlv_bytes)} bytes")
+        logger.info("Mock NDEF TLV write: %s bytes", len(tlv_bytes))
         return True
 
     def reset_reader(self):

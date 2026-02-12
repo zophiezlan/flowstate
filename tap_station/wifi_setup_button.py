@@ -68,7 +68,7 @@ class WiFiSetupButton:
             return
 
         if self._gpio.setup_input(self.gpio_pin, pull_up=True):
-            logger.info(f"WiFi setup button enabled on GPIO {self.gpio_pin}")
+            logger.info("WiFi setup button enabled on GPIO %s", self.gpio_pin)
         else:
             logger.warning(
                 "Failed to setup WiFi button GPIO - button disabled"
@@ -106,7 +106,7 @@ class WiFiSetupButton:
                         # Check if hold time reached
                         if elapsed >= self.hold_time and not held_long_enough:
                             logger.info(
-                                f"Button held for {self.hold_time}s - triggering rescan"
+                                "Button held for %ss - triggering rescan", self.hold_time
                             )
                             held_long_enough = True
                             self._trigger_rescan()
@@ -128,7 +128,7 @@ class WiFiSetupButton:
                 time.sleep(0.1)
 
             except Exception as e:
-                logger.error(f"Error in WiFi button monitoring: {e}")
+                logger.error("Error in WiFi button monitoring: %s", e)
                 time.sleep(1)
 
     def _trigger_setup(self):
@@ -139,7 +139,7 @@ class WiFiSetupButton:
             try:
                 self.setup_callback()
             except Exception as e:
-                logger.error(f"Error in setup callback: {e}")
+                logger.error("Error in setup callback: %s", e)
         else:
             logger.warning("No setup callback configured")
 
@@ -151,7 +151,7 @@ class WiFiSetupButton:
             try:
                 self.rescan_callback()
             except Exception as e:
-                logger.error(f"Error in rescan callback: {e}")
+                logger.error("Error in rescan callback: %s", e)
         else:
             logger.warning("No rescan callback configured")
 

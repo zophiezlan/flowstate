@@ -82,7 +82,7 @@ class HealthMonitor:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to check disk space: {e}")
+            logger.error("Failed to check disk space: %s", e)
             return (False, f"ERROR: Could not check disk space: {e}", {})
 
     def check_cpu_temperature(self) -> Tuple[bool, str, Dict[str, Any]]:
@@ -125,7 +125,7 @@ class HealthMonitor:
                 return (True, "N/A: Not running on Raspberry Pi", {})
 
         except Exception as e:
-            logger.debug(f"Could not read CPU temperature: {e}")
+            logger.debug("Could not read CPU temperature: %s", e)
             return (True, f"N/A: Could not read temperature: {e}", {})
 
     def check_database(self, db_path: str) -> Tuple[bool, str, Dict[str, Any]]:
@@ -171,7 +171,7 @@ class HealthMonitor:
             return (True, f"OK: Database {size_mb:.1f}MB", details)
 
         except Exception as e:
-            logger.error(f"Failed to check database: {e}")
+            logger.error("Failed to check database: %s", e)
             return (False, f"ERROR: Could not check database: {e}", {})
 
     def get_health_status(
@@ -260,8 +260,8 @@ class HealthMonitor:
         status = self.get_health_status(db_path, nfc_reader)
 
         if status["overall"] == "critical":
-            logger.critical(f"Health check CRITICAL: {status}")
+            logger.critical("Health check CRITICAL: %s", status)
         elif status["overall"] == "warning":
-            logger.warning(f"Health check WARNING: {status}")
+            logger.warning("Health check WARNING: %s", status)
         else:
-            logger.info(f"Health check OK")
+            logger.info("Health check OK")

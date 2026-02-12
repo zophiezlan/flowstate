@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timezone
 
-from tap_station.extension import Extension
+from tap_station.extension import Extension, resolve_stage
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ class SmartEstimatesExtension(Extension):
         self._config = ctx["config"]
         self._db = ctx["db"]
         self._svc = None
-        self._stage_exit = _get_stage(ctx["config"], "EXIT")
-        self._stage_join = _get_stage(ctx["config"], "QUEUE_JOIN")
+        self._stage_exit = resolve_stage("EXIT")
+        self._stage_join = resolve_stage("QUEUE_JOIN")
 
         try:
             from tap_station.service_integration import get_service_integration
@@ -219,22 +219,6 @@ class SmartEstimatesExtension(Extension):
                 "recent_completions": 0,
                 "avg_service_time": 0,
             }
-
-
-def _get_stage(config, fallback):
-    """Resolve stage name from service integration or use fallback."""
-    try:
-        from tap_station.service_integration import get_service_integration
-
-        svc = get_service_integration()
-        if svc:
-            if fallback == "EXIT":
-                return svc.get_last_stage()
-            elif fallback == "QUEUE_JOIN":
-                return svc.get_first_stage()
-    except ImportError:
-        pass
-    return fallback
 
 
 extension = SmartEstimatesExtension()

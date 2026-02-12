@@ -62,8 +62,8 @@ class ButtonHandler:
 
         if self._gpio.setup_input(self.gpio_pin, pull_up=True):
             logger.info(
-                f"Shutdown button enabled on GPIO {self.gpio_pin} "
-                f"(hold for {self.hold_time}s)"
+                "Shutdown button enabled on GPIO %s (hold for %ss)",
+                self.gpio_pin, self.hold_time
             )
         else:
             logger.warning(
@@ -108,8 +108,8 @@ class ButtonHandler:
                         # Check if hold time reached
                         if elapsed >= self.hold_time:
                             logger.warning(
-                                f"Shutdown button held for {self.hold_time}s - "
-                                "initiating shutdown"
+                                "Shutdown button held for %ss - "
+                                "initiating shutdown", self.hold_time
                             )
 
                             # Confirmation feedback
@@ -125,15 +125,15 @@ class ButtonHandler:
                     elapsed = time.time() - press_start
                     if elapsed < self.hold_time:
                         logger.info(
-                            f"Button released after {elapsed:.1f}s "
-                            f"(need {self.hold_time}s to shutdown)"
+                            "Button released after %.1fs "
+                            "(need %ss to shutdown)", elapsed, self.hold_time
                         )
 
                 # Poll every 100ms when button not pressed
                 time.sleep(0.1)
 
             except Exception as e:
-                logger.error(f"Error in button monitoring: {e}")
+                logger.error("Error in button monitoring: %s", e)
                 time.sleep(1)
 
     def _trigger_shutdown(self):
@@ -156,7 +156,7 @@ class ButtonHandler:
                 logger.info("Running shutdown callback...")
                 self.shutdown_callback()
             except Exception as e:
-                logger.error(f"Error in shutdown callback: {e}")
+                logger.error("Error in shutdown callback: %s", e)
 
         # Trigger system shutdown
         try:
@@ -169,8 +169,8 @@ class ButtonHandler:
                 or self.shutdown_delay_minutes < 0
             ):
                 logger.error(
-                    f"Invalid shutdown_delay_minutes: {self.shutdown_delay_minutes}. "
-                    "Using default of 1 minute."
+                    "Invalid shutdown_delay_minutes: %s. "
+                    "Using default of 1 minute.", self.shutdown_delay_minutes
                 )
                 self.shutdown_delay_minutes = 1
 
@@ -196,11 +196,11 @@ class ButtonHandler:
                 ],
                 check=True,
             )
-            logger.warning(f"Shutdown scheduled {delay_msg}")
+            logger.warning("Shutdown scheduled %s", delay_msg)
         except subprocess.CalledProcessError as e:
             logger.error(
-                f"Failed to execute shutdown command: {e}. "
-                "Ensure passwordless sudo is configured for shutdown."
+                "Failed to execute shutdown command: %s. "
+                "Ensure passwordless sudo is configured for shutdown.", e
             )
         except FileNotFoundError:
             logger.error("shutdown command not found (not on Linux?)")

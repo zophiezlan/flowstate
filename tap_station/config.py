@@ -280,7 +280,7 @@ class Config:
 
         # Log all warnings
         for warning in config_warnings:
-            logger.warning(f"Configuration: {warning}")
+            logger.warning("Configuration: %s", warning)
 
     def _validate_stage_against_service_config(self) -> List[str]:
         """
@@ -298,9 +298,9 @@ class Config:
 
         try:
             # Try to import and load service config
-            from .service_config_loader import ServiceConfigLoader
+            from .service_config_loader import get_service_config
 
-            service_config = ServiceConfigLoader.get_config()
+            service_config = get_service_config()
             if service_config and service_config.workflow_stages:
                 valid_stages = [s.id for s in service_config.workflow_stages]
 
@@ -319,7 +319,7 @@ class Config:
             pass
         except Exception as e:
             # Don't fail startup for service config issues
-            logger.debug(f"Could not validate stage against service config: {e}")
+            logger.debug("Could not validate stage against service config: %s", e)
 
         return warnings
 
@@ -421,8 +421,8 @@ class Config:
                     value = type_converter(value)
                 except (ValueError, TypeError) as e:
                     logger.warning(
-                        f"Configuration: Failed to convert '{name}' value '{value}' "
-                        f"to {type_converter.__name__}, using default: {default}"
+                        "Configuration: Failed to convert '%s' value '%s' "
+                        "to %s, using default: %s", name, value, type_converter.__name__, default
                     )
                     value = default
 

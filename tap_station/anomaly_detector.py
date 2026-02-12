@@ -135,7 +135,7 @@ class AnomalyDetector:
                 )
         except Exception as e:
             logger.error(
-                f"Error detecting forgotten exit taps: {e}", exc_info=True
+                "Error detecting forgotten exit taps: %s", e, exc_info=True
             )
 
     def _detect_stuck_in_service(
@@ -192,7 +192,7 @@ class AnomalyDetector:
                 )
         except Exception as e:
             logger.error(
-                f"Error detecting stuck in service: {e}", exc_info=True
+                "Error detecting stuck in service: %s", e, exc_info=True
             )
 
     def _detect_long_service_times(
@@ -260,7 +260,7 @@ class AnomalyDetector:
                 )
         except Exception as e:
             logger.error(
-                f"Error detecting long service times: {e}", exc_info=True
+                "Error detecting long service times: %s", e, exc_info=True
             )
 
     def _detect_rapid_fire_taps(
@@ -312,5 +312,5 @@ class AnomalyDetector:
                 )
         except Exception as e:
             logger.error(
-                f"Error detecting rapid-fire taps: {e}", exc_info=True
+                "Error detecting rapid-fire taps: %s", e, exc_info=True
             )

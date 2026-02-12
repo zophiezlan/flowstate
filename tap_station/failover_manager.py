@@ -71,7 +71,7 @@ class FailoverManager:
             return False
 
         logger.warning("🔄 ENTERING FAILOVER MODE")
-        logger.warning(f"This station will now handle: {self.active_stages}")
+        logger.warning("This station will now handle: %s", self.active_stages)
 
         self.failover_active = True
         self.failover_start_time = datetime.now()
@@ -81,7 +81,7 @@ class FailoverManager:
             try:
                 self.on_failover_enable()
             except Exception as e:
-                logger.error(f"Error in failover enable callback: {e}")
+                logger.error("Error in failover enable callback: %s", e)
 
         return True
 
@@ -103,7 +103,7 @@ class FailoverManager:
         logger.info("✅ EXITING FAILOVER MODE - Peer station recovered")
 
         if duration:
-            logger.info(f"Failover mode was active for {duration}")
+            logger.info("Failover mode was active for %s", duration)
 
         self.failover_active = False
         self.failover_start_time = None
@@ -113,7 +113,7 @@ class FailoverManager:
             try:
                 self.on_failover_disable()
             except Exception as e:
-                logger.error(f"Error in failover disable callback: {e}")
+                logger.error("Error in failover disable callback: %s", e)
 
         return True
 
@@ -127,7 +127,7 @@ class FailoverManager:
         if stage in self.tap_counts:
             self.tap_counts[stage] += 1
             logger.debug(
-                f"Tap recorded for {stage}: {self.tap_counts[stage]} total"
+                "Tap recorded for %s: %s total", stage, self.tap_counts[stage]
             )
 
     def get_status(self) -> dict:

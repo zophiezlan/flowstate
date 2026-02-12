@@ -144,7 +144,7 @@ class NFCCleanupManager:
             # systemctl not available (not a systemd system)
             return False, "systemctl not available"
         except Exception as e:
-            logger.debug(f"Error checking service: {e}")
+            logger.debug("Error checking service: %s", e)
             return False, str(e)
 
     def _stop_service(self) -> bool:
@@ -162,11 +162,11 @@ class NFCCleanupManager:
                 time.sleep(2)
                 return True
             else:
-                logger.error(f"Failed to stop service: {result.stderr}")
+                logger.error("Failed to stop service: %s", result.stderr)
                 return False
 
         except Exception as e:
-            logger.error(f"Error stopping service: {e}")
+            logger.error("Error stopping service: %s", e)
             return False
 
     def _find_nfc_processes(self) -> List[Tuple[int, str]]:
@@ -213,7 +213,7 @@ class NFCCleanupManager:
                                 pid = int(pid_str)
                             except ValueError:
                                 logger.debug(
-                                    f"Skipping invalid PID: {pid_str}"
+                                    "Skipping invalid PID: %s", pid_str
                                 )
                                 continue
 
@@ -233,12 +233,12 @@ class NFCCleanupManager:
                                 pass
 
                 except subprocess.TimeoutExpired:
-                    logger.debug(f"Timeout searching for pattern: {pattern}")
+                    logger.debug("Timeout searching for pattern: %s", pattern)
                 except Exception as e:
-                    logger.debug(f"Error searching for pattern {pattern}: {e}")
+                    logger.debug("Error searching for pattern %s: %s", pattern, e)
 
         except Exception as e:
-            logger.error(f"Error finding NFC processes: {e}")
+            logger.error("Error finding NFC processes: %s", e)
 
         return processes
 
@@ -258,17 +258,17 @@ class NFCCleanupManager:
             try:
                 # Send SIGTERM (graceful shutdown)
                 os.kill(pid, signal.SIGTERM)
-                logger.info(f"Sent SIGTERM to PID {pid}: {cmdline[:60]}")
+                logger.info("Sent SIGTERM to PID %s: %s", pid, cmdline[:60])
                 killed += 1
             except ProcessLookupError:
                 # Process already exited
                 pass
             except PermissionError:
                 logger.warning(
-                    f"No permission to kill PID {pid} (may need sudo)"
+                    "No permission to kill PID %s (may need sudo)", pid
                 )
             except Exception as e:
-                logger.error(f"Error killing PID {pid}: {e}")
+                logger.error("Error killing PID %s: %s", pid, e)
 
         return killed
 
@@ -351,11 +351,11 @@ class NFCCleanupManager:
                 time.sleep(1)  # Give bus time to stabilize
                 return True
             else:
-                logger.error(f"Failed to reload i2c_dev: {result.stderr}")
+                logger.error("Failed to reload i2c_dev: %s", result.stderr)
                 return False
 
         except Exception as e:
-            logger.error(f"Error resetting I2C bus: {e}")
+            logger.error("Error resetting I2C bus: %s", e)
             return False
 
 

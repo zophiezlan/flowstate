@@ -183,7 +183,7 @@ class Database:
         try:
             # Validate token_id format
             if not TokenValidator.is_valid_token_id(token_id):
-                logger.warning(f"Invalid token_id format: {token_id}")
+                logger.warning("Invalid token_id format: %s", token_id)
                 result["warning"] = f"Invalid token ID format: {token_id}"
                 # Still allow it to proceed for backward compatibility
 
@@ -191,12 +191,12 @@ class Database:
             try:
                 stage = StageNameValidator.validate_stage_or_raise(stage)
             except ValueError as e:
-                logger.error(f"Invalid stage: {e}")
+                logger.error("Invalid stage: %s", e)
                 result["warning"] = str(e)
                 return result
 
         except Exception as e:
-            logger.error(f"Validation error: {e}")
+            logger.error("Validation error: %s", e)
             result["warning"] = f"Validation error: {str(e)}"
             return result
 
@@ -206,7 +206,7 @@ class Database:
             token_id, stage, session_id
         ):
             logger.warning(
-                f"Duplicate tap detected: token={token_id}, stage={stage}"
+                "Duplicate tap detected: token=%s, stage=%s", token_id, stage
             )
             result["duplicate"] = True
             result["warning"] = f"Card already tapped at {stage}"
@@ -219,8 +219,8 @@ class Database:
             )
             if not sequence_check["valid"]:
                 logger.warning(
-                    f"Out-of-order tap detected: token={token_id}, "
-                    f"stage={stage}, reason={sequence_check['reason']}"
+                    "Out-of-order tap detected: token=%s, "
+                    "stage=%s, reason=%s", token_id, stage, sequence_check['reason']
                 )
                 result["out_of_order"] = True
                 result["warning"] = sequence_check["reason"]
@@ -242,13 +242,13 @@ class Database:
 
             self.conn.commit()
             logger.info(
-                f"Logged event: token={token_id}, stage={stage}, device={device_id}"
+                "Logged event: token=%s, stage=%s, device=%s", token_id, stage, device_id
             )
             result["success"] = True
             return result
 
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            logger.error("Database error: %s", e)
             self.conn.rollback()
             result["warning"] = f"Database error: {str(e)}"
             return result
@@ -296,9 +296,10 @@ class Database:
         # This helps with accidental taps at wrong station
         if mins_elapsed <= grace_minutes:
             logger.info(
-                f"Tap within {grace_minutes}min grace period: "
-                f"token={token_id}, stage={stage}, "
-                f"last_tap={mins_elapsed:.1f}min ago - allowing correction"
+                "Tap within %smin grace period: "
+                "token=%s, stage=%s, "
+                "last_tap=%.1fmin ago - allowing correction",
+                grace_minutes, token_id, stage, mins_elapsed
             )
             return False
 
@@ -403,7 +404,7 @@ class Database:
                 )
         except Exception as e:
             logger.error(
-                f"Error detecting incomplete journeys: {e}", exc_info=True
+                "Error detecting incomplete journeys: %s", e, exc_info=True
             )
 
         try:
@@ -452,7 +453,7 @@ class Database:
                         )
         except Exception as e:
             logger.error(
-                f"Error detecting out-of-order events: {e}", exc_info=True
+                "Error detecting out-of-order events: %s", e, exc_info=True
             )
 
         # Calculate summary statistics
@@ -558,8 +559,9 @@ class Database:
 
         # Log the manual addition
         logger.info(
-            f"Manual event addition: token={token_id}, stage={stage}, "
-            f"operator={operator_id}, reason={reason}"
+            "Manual event addition: token=%s, stage=%s, "
+            "operator=%s, reason=%s",
+            token_id, stage, operator_id, reason
         )
 
         # Use allow_out_of_order=True to bypass sequence validation
@@ -578,8 +580,9 @@ class Database:
         if result["success"]:
             # Log to audit trail (you could create a separate audit table)
             logger.info(
-                f"✓ Manual event added successfully: {token_id} at {stage}, "
-                f"backdated to {timestamp.isoformat()}"
+                "Manual event added successfully: %s at %s, "
+                "backdated to %s",
+                token_id, stage, timestamp.isoformat()
             )
 
         return result
@@ -618,8 +621,9 @@ class Database:
 
             # Log the removal
             logger.warning(
-                f"Manual event removal: id={event_id}, token={event['token_id']}, "
-                f"stage={event['stage']}, operator={operator_id}, reason={reason}"
+                "Manual event removal: id=%s, token=%s, "
+                "stage=%s, operator=%s, reason=%s",
+                event_id, event['token_id'], event['stage'], operator_id, reason
             )
 
             # Archive to deleted_events table before deletion
@@ -652,7 +656,7 @@ class Database:
             self.conn.commit()
 
             logger.info(
-                f"✓ Event {event_id} removed and archived to deleted_events table"
+                "Event %s removed and archived to deleted_events table", event_id
             )
 
             return {
@@ -661,7 +665,7 @@ class Database:
             }
 
         except sqlite3.Error as e:
-            logger.error(f"Failed to remove event {event_id}: {e}")
+            logger.error("Failed to remove event %s: %s", event_id, e)
             self.conn.rollback()
             return {
                 "success": False,
@@ -723,13 +727,13 @@ class Database:
             # Format as 3-digit string
             token_id_str = f"{next_id:03d}"
             logger.info(
-                f"Auto-assigned token ID {token_id_str} for session {session_id}"
+                "Auto-assigned token ID %s for session %s", token_id_str, session_id
             )
 
             return (next_id, token_id_str)
 
         except sqlite3.Error as e:
-            logger.error(f"Failed to get next auto-init token ID: {e}")
+            logger.error("Failed to get next auto-init token ID: %s", e)
             self.conn.rollback()
 
             # Return a fallback using UUID to ensure uniqueness
@@ -737,7 +741,7 @@ class Database:
             fallback_str = (
                 f"E{fallback_id:03d}"  # E prefix indicates error/fallback
             )
-            logger.warning(f"Using fallback token ID: {fallback_str}")
+            logger.warning("Using fallback token ID: %s", fallback_str)
             return (fallback_id, fallback_str)
 
     @synchronized
@@ -787,7 +791,7 @@ class Database:
             self.conn.commit()
             return True
         except sqlite3.Error as e:
-            logger.error(f"Failed to save UID token mapping: {e}")
+            logger.error("Failed to save UID token mapping: %s", e)
             return False
 
     @synchronized
@@ -810,7 +814,7 @@ class Database:
             self.conn.commit()
             return True
         except sqlite3.Error as e:
-            logger.error(f"Failed to update UID token mapping: {e}")
+            logger.error("Failed to update UID token mapping: %s", e)
             return False
 
     def get_or_create_token_for_uid(
@@ -833,7 +837,7 @@ class Database:
         # Check if this UID already has a token assigned
         existing = self.get_token_for_uid(uid, session_id)
         if existing:
-            logger.info(f"Reusing existing token {existing} for UID {uid}")
+            logger.info("Reusing existing token %s for UID %s", existing, uid)
             return (existing, False)
 
         # Assign new token ID
@@ -842,7 +846,7 @@ class Database:
         # Save mapping (write_success=False until card write is confirmed)
         self.save_uid_token_mapping(uid, token_id, session_id, write_success=False)
 
-        logger.info(f"Assigned new token {token_id} to UID {uid}")
+        logger.info("Assigned new token %s to UID %s", token_id, uid)
         return (token_id, True)
 
     @synchronized
@@ -887,7 +891,7 @@ class Database:
             for row in rows:
                 writer.writerow(row)
 
-        logger.info(f"Exported {len(rows)} events to {output_path}")
+        logger.info("Exported %s events to %s", len(rows), output_path)
         return len(rows)
 
     def close(self):

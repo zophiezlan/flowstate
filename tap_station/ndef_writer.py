@@ -68,7 +68,7 @@ class NDEFWriter:
             return self.nfc.write_ndef_tlv(tlv)
 
         except Exception as e:
-            logger.error(f"Failed to write NDEF URL: {e}")
+            logger.error("Failed to write NDEF URL: %s", e)
             return False
 
     def _wrap_ndef_tlv(self, message: bytes) -> bytes:
@@ -120,7 +120,7 @@ class NDEFWriter:
             return self.nfc.write_ndef_tlv(tlv)
 
         except Exception as e:
-            logger.error(f"Failed to write NDEF text: {e}")
+            logger.error("Failed to write NDEF text: %s", e)
             return False
 
     def format_status_url(self, base_url: str, token_id: str) -> str:
@@ -161,13 +161,13 @@ class MockNDEFWriter(NDEFWriter):
     def write_url(self, url: str, token_id: str = None) -> bool:
         """Mock write URL - always succeeds"""
         self.written_urls.append({"url": url, "token_id": token_id})
-        logger.info(f"Mock NDEF URL write: {url} (Token: {token_id})")
+        logger.info("Mock NDEF URL write: %s (Token: %s)", url, token_id)
         return True
 
     def write_text(self, text: str) -> bool:
         """Mock write text - always succeeds"""
         self.written_texts.append(text)
-        logger.info(f"Mock NDEF text write: {text}")
+        logger.info("Mock NDEF text write: %s", text)
         return True
 
     def get_written_urls(self):

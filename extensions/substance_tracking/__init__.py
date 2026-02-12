@@ -2,7 +2,7 @@
 
 import logging
 
-from tap_station.extension import Extension
+from tap_station.extension import Extension, resolve_stage
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ class SubstanceTrackingExtension(Extension):
         self._config = ctx["config"]
         self._db = ctx["db"]
         self._svc = None
-        self._stage_exit = _get_stage(ctx["config"], "EXIT")
-        self._stage_service_start = _get_stage(ctx["config"], "SERVICE_START")
+        self._stage_exit = resolve_stage("EXIT")
+        self._stage_service_start = resolve_stage("SERVICE_START")
         self._stage_substance_returned = None
 
         try:
@@ -119,24 +119,6 @@ class SubstanceTrackingExtension(Extension):
                 "completed_returns": 0,
                 "return_rate_percent": 0,
             }
-
-
-def _get_stage(config, fallback):
-    """Resolve stage name from service integration or use fallback."""
-    try:
-        from tap_station.service_integration import get_service_integration
-
-        svc = get_service_integration()
-        if svc:
-            if fallback == "EXIT":
-                return svc.get_last_stage()
-            elif fallback == "SERVICE_START":
-                return svc.get_service_start_stage()
-    except ImportError:
-        pass
-    if fallback == "SERVICE_START":
-        return None
-    return fallback
 
 
 extension = SubstanceTrackingExtension()

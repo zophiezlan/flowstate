@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from flask import jsonify, request
 
-from tap_station.extension import Extension
+from tap_station.extension import Extension, resolve_stage
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,8 @@ class StuckCardsExtension(Extension):
     def on_api_routes(self, app, db, config):
         from tap_station.web_server import require_admin_auth
 
-        stage_exit = _get_stage(config, "EXIT")
-        stage_join = _get_stage(config, "QUEUE_JOIN")
+        stage_exit = resolve_stage("EXIT")
+        stage_join = resolve_stage("QUEUE_JOIN")
 
         @app.route("/api/control/stuck-cards")
         @require_admin_auth
@@ -151,22 +151,6 @@ class StuckCardsExtension(Extension):
                     "processed": 0,
                     "success_count": 0,
                 }
-
-
-def _get_stage(config, fallback):
-    """Resolve stage name from service integration or use fallback."""
-    try:
-        from tap_station.service_integration import get_service_integration
-
-        svc = get_service_integration()
-        if svc:
-            if fallback == "EXIT":
-                return svc.get_last_stage()
-            elif fallback == "QUEUE_JOIN":
-                return svc.get_first_stage()
-    except ImportError:
-        pass
-    return fallback
 
 
 extension = StuckCardsExtension()

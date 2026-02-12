@@ -80,7 +80,7 @@ class PeerMonitor:
             return
 
         logger.info(
-            f"Starting peer monitor for {self.peer_hostname}:{self.peer_port}"
+            "Starting peer monitor for %s:%s", self.peer_hostname, self.peer_port
         )
 
         self._running = True
@@ -103,7 +103,7 @@ class PeerMonitor:
     def _monitor_loop(self):
         """Main monitoring loop"""
         logger.info(
-            f"Peer monitoring started (check every {self.check_interval}s)"
+            "Peer monitoring started (check every %ss)", self.check_interval
         )
 
         while self._running:
@@ -112,7 +112,7 @@ class PeerMonitor:
                 time.sleep(self.check_interval)
 
             except Exception as e:
-                logger.error(f"Error in peer monitor loop: {e}", exc_info=True)
+                logger.error("Error in peer monitor loop: %s", e, exc_info=True)
                 time.sleep(5)
 
     def _check_peer_health(self) -> bool:
@@ -133,22 +133,22 @@ class PeerMonitor:
                 self._handle_success()
                 return True
             else:
-                logger.warning(f"Peer returned status {response.status_code}")
+                logger.warning("Peer returned status %s", response.status_code)
                 self._handle_failure()
                 return False
 
         except requests.exceptions.Timeout:
-            logger.warning(f"Peer health check timeout ({self.timeout}s)")
+            logger.warning("Peer health check timeout (%ss)", self.timeout)
             self._handle_failure()
             return False
 
         except requests.exceptions.ConnectionError:
-            logger.warning(f"Cannot connect to peer at {self.peer_url}")
+            logger.warning("Cannot connect to peer at %s", self.peer_url)
             self._handle_failure()
             return False
 
         except Exception as e:
-            logger.warning(f"Peer health check failed: {e}")
+            logger.warning("Peer health check failed: %s", e)
             self._handle_failure()
             return False
 
@@ -168,7 +168,7 @@ class PeerMonitor:
                     try:
                         self.on_peer_up()
                     except Exception as e:
-                        logger.error(f"Error in peer_up callback: {e}")
+                        logger.error("Error in peer_up callback: %s", e)
 
                 peer_up_thread = threading.Thread(
                     target=_run_callback, daemon=True
@@ -180,16 +180,16 @@ class PeerMonitor:
         self.consecutive_failures += 1
 
         logger.debug(
-            f"Peer check failed "
-            f"({self.consecutive_failures}/{self.failure_threshold})"
+            "Peer check failed (%s/%s)",
+            self.consecutive_failures, self.failure_threshold
         )
 
         # If we've reached failure threshold, declare peer down
         if self.consecutive_failures >= self.failure_threshold:
             if self.peer_healthy:
                 logger.warning(
-                    f"⚠️  Peer station is DOWN "
-                    f"({self.consecutive_failures} consecutive failures)"
+                    "⚠️  Peer station is DOWN (%s consecutive failures)",
+                    self.consecutive_failures
                 )
                 self.peer_healthy = False
 
@@ -199,7 +199,7 @@ class PeerMonitor:
                         try:
                             self.on_peer_down()
                         except Exception as e:
-                            logger.error(f"Error in peer_down callback: {e}")
+                            logger.error("Error in peer_down callback: %s", e)
 
                     peer_down_thread = threading.Thread(
                         target=_run_callback, daemon=True

@@ -319,7 +319,7 @@ def parse_timestamp(
         try:
             return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
         except (ValueError, OSError) as e:
-            logger.warning(f"Failed to parse numeric timestamp {value}: {e}")
+            logger.warning("Failed to parse numeric timestamp %s: %s", value, e)
             return utc_now() if default_to_now else None
 
     # String timestamp
@@ -332,7 +332,7 @@ def parse_timestamp(
                 )
             except (ValueError, OSError) as e:
                 logger.warning(
-                    f"Failed to parse string numeric timestamp '{value}': {e}"
+                    "Failed to parse string numeric timestamp '%s': %s", value, e
                 )
                 return utc_now() if default_to_now else None
 
@@ -341,9 +341,9 @@ def parse_timestamp(
             dt = datetime.fromisoformat(value)
             return to_utc(dt)
         except ValueError as e:
-            logger.warning(f"Failed to parse ISO timestamp '{value}': {e}")
+            logger.warning("Failed to parse ISO timestamp '%s': %s", value, e)
             return utc_now() if default_to_now else None
 
     # Unknown type
-    logger.warning(f"Unknown timestamp type: {type(value)}")
+    logger.warning("Unknown timestamp type: %s", type(value))
     return utc_now() if default_to_now else None

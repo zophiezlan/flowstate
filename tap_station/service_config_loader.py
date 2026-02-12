@@ -183,7 +183,7 @@ class ServiceConfigLoader:
         """
         if not self.config_path.exists():
             logger.warning(
-                f"Service config not found at {self.config_path}, using defaults"
+                "Service config not found at %s, using defaults", self.config_path
             )
             return self._create_default_config()
 
@@ -199,18 +199,18 @@ class ServiceConfigLoader:
             self.config = config
 
             logger.info(
-                f"Loaded service configuration for: {config.service_name}"
+                "Loaded service configuration for: %s", config.service_name
             )
-            logger.info(f"  Workflow stages: {len(config.workflow_stages)}")
-            logger.info(f"  Stage IDs: {config.get_all_stage_ids()}")
+            logger.info("  Workflow stages: %s", len(config.workflow_stages))
+            logger.info("  Stage IDs: %s", config.get_all_stage_ids())
 
             return config
 
         except yaml.YAMLError as e:
-            logger.error(f"Error parsing service config: {e}")
+            logger.error("Error parsing service config: %s", e)
             return self._create_default_config()
         except Exception as e:
-            logger.error(f"Unexpected error loading service config: {e}")
+            logger.error("Unexpected error loading service config: %s", e)
             return self._create_default_config()
 
     def _parse_config(self, raw: Dict[str, Any]) -> ServiceConfig:

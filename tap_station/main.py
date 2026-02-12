@@ -41,9 +41,9 @@ class TapStation:
         self.logger = logging.getLogger(__name__)
         self.logger.info("=" * 60)
         self.logger.info("FlowState Station Starting")
-        self.logger.info(f"Device: {self.config.device_id}")
-        self.logger.info(f"Stage: {self.config.stage}")
-        self.logger.info(f"Session: {self.config.session_id}")
+        self.logger.info("Device: %s", self.config.device_id)
+        self.logger.info("Stage: %s", self.config.stage)
+        self.logger.info("Session: %s", self.config.session_id)
         self.logger.info("=" * 60)
 
         # Initialize components
@@ -96,7 +96,7 @@ class TapStation:
                 self.logger.info("Shutdown button handler initialized")
             except Exception as e:
                 self.logger.error(
-                    f"Failed to initialize shutdown button: {e}", exc_info=True
+                    "Failed to initialize shutdown button: %s", e, exc_info=True
                 )
 
         # Initialize extension registry
@@ -124,12 +124,12 @@ class TapStation:
                 )
                 self.web_thread.start()
                 self.logger.info(
-                    f"Web server started on "
-                    f"{self.config.web_server_host}:{self.config.web_server_port}"
+                    "Web server started on %s:%s",
+                    self.config.web_server_host, self.config.web_server_port
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Failed to start web server: {e}", exc_info=True
+                    "Failed to start web server: %s", e, exc_info=True
                 )
 
         # Initialize on-site manager (WiFi, mDNS, failover, etc.)
@@ -147,7 +147,7 @@ class TapStation:
                 self.logger.info("On-site manager initialized")
             except Exception as e:
                 self.logger.warning(
-                    f"Failed to initialize on-site manager: {e}"
+                    "Failed to initialize on-site manager: %s", e
                 )
 
         # State
@@ -195,7 +195,7 @@ class TapStation:
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
-        self.logger.info(f"Received signal {signum}, shutting down...")
+        self.logger.info("Received signal %s, shutting down...", signum)
         self.running = False
 
     def run(self):
@@ -208,7 +208,7 @@ class TapStation:
                 self.onsite_manager.startup()
             except Exception as e:
                 self.logger.error(
-                    f"On-site manager startup failed: {e}", exc_info=True
+                    "On-site manager startup failed: %s", e, exc_info=True
                 )
 
         # Start extensions
@@ -244,7 +244,7 @@ class TapStation:
 
         except Exception as e:
             self.logger.error(
-                f"Unexpected error in main loop: {e}", exc_info=True
+                "Unexpected error in main loop: %s", e, exc_info=True
             )
 
         finally:
@@ -258,7 +258,7 @@ class TapStation:
             uid: Card UID
             token_id: Token ID (may be UID-derived if not initialized)
         """
-        self.logger.info(f"Card tapped: UID={uid}, Token={token_id}")
+        self.logger.info("Card tapped: UID=%s, Token=%s", uid, token_id)
 
         # Determine stage (may be overridden in failover mode)
         stage = self.config.stage
@@ -282,9 +282,10 @@ class TapStation:
 
                 use_alternate_beep = True
                 self.logger.info(
-                    f"FAILOVER MODE: tap #{next_tap_number} → stage {stage} "
-                    f"(alternating between {failover_mgr.primary_stage} and "
-                    f"{failover_mgr.fallback_stages})"
+                    "FAILOVER MODE: tap #%s -> stage %s "
+                    "(alternating between %s and %s)",
+                    next_tap_number, stage, failover_mgr.primary_stage,
+                    failover_mgr.fallback_stages
                 )
 
         # Check if auto-initialization is enabled and card appears uninitialized
@@ -303,11 +304,11 @@ class TapStation:
 
             if is_new:
                 self.logger.info(
-                    f"Auto-initializing card UID={uid} with token ID {new_token_id}"
+                    "Auto-initializing card UID=%s with token ID %s", uid, new_token_id
                 )
             else:
                 self.logger.info(
-                    f"Reusing previously assigned token {new_token_id} for UID={uid}"
+                    "Reusing previously assigned token %s for UID=%s", new_token_id, uid
                 )
 
             # Try to write the new token ID to the card
@@ -315,7 +316,7 @@ class TapStation:
                 write_success = self.nfc.write_token_id(new_token_id)
                 if write_success:
                     self.logger.info(
-                        f"Successfully wrote token ID {new_token_id} to card"
+                        "Successfully wrote token ID %s to card", new_token_id
                     )
                     # Update mapping to record successful write
                     self.db.update_uid_token_mapping_write_success(
@@ -323,11 +324,11 @@ class TapStation:
                     )
                 else:
                     self.logger.warning(
-                        f"Failed to write token ID to card, will use auto-assigned ID anyway"
+                        "Failed to write token ID to card, will use auto-assigned ID anyway"
                     )
             except Exception as e:
                 self.logger.warning(
-                    f"Exception writing token ID to card: {e}, will use auto-assigned ID anyway"
+                    "Exception writing token ID to card: %s, will use auto-assigned ID anyway", e
                 )
 
             token_id = new_token_id
@@ -347,8 +348,8 @@ class TapStation:
                 # Logged but with sequence warning
                 self.feedback.warning()  # Use warning for out-of-order
                 self.logger.warning(
-                    f"Event logged with warning: {result['warning']}. "
-                    f"Suggestion: {result.get('suggestion', 'N/A')}"
+                    "Event logged with warning: %s. Suggestion: %s",
+                    result['warning'], result.get('suggestion', 'N/A')
                 )
             else:
                 # Success with no issues
@@ -364,12 +365,12 @@ class TapStation:
         elif result["duplicate"]:
             # Duplicate tap
             self.feedback.duplicate()  # Double beep + yellow flash
-            self.logger.info(f"Duplicate tap ignored: {result['warning']}")
+            self.logger.info("Duplicate tap ignored: %s", result['warning'])
         else:
             # Some other error
             self.feedback.error()  # Long beep + red flash
             self.logger.error(
-                f"Failed to log event: {result.get('warning', 'Unknown error')}"
+                "Failed to log event: %s", result.get('warning', 'Unknown error')
             )
 
         # Record tap in failover manager
@@ -469,15 +470,15 @@ def main():
             # Show stats and exit
             stats = station.get_stats()
             cli_logger.info("\nStation Statistics:")
-            cli_logger.info(f"  Device ID: {stats['device_id']}")
-            cli_logger.info(f"  Stage: {stats['stage']}")
-            cli_logger.info(f"  Session: {stats['session_id']}")
-            cli_logger.info(f"  Total Events: {stats['total_events']}")
+            cli_logger.info("  Device ID: %s", stats['device_id'])
+            cli_logger.info("  Stage: %s", stats['stage'])
+            cli_logger.info("  Session: %s", stats['session_id'])
+            cli_logger.info("  Total Events: %s", stats['total_events'])
             cli_logger.info("\nRecent Events:")
             for event in stats["recent_events"]:
                 cli_logger.info(
-                    f"  {event['timestamp']} - "
-                    f"Token {event['token_id']} at {event['stage']}"
+                    "  %s - Token %s at %s",
+                    event['timestamp'], event['token_id'], event['stage']
                 )
             return 0
 
@@ -486,12 +487,12 @@ def main():
         return 0
 
     except FileNotFoundError as e:
-        cli_logger.error(f"Error: {e}")
-        cli_logger.error(f"Please create a config file at: {args.config}")
+        cli_logger.error("Error: %s", e)
+        cli_logger.error("Please create a config file at: %s", args.config)
         return 1
 
     except Exception as e:
-        cli_logger.error(f"Fatal error: {e}", exc_info=True)
+        cli_logger.error("Fatal error: %s", e, exc_info=True)
         return 1
 
 

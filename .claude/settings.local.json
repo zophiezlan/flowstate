@@ -5,7 +5,17 @@
       "Bash(wc -l:*)",
       "Bash(find:*)",
       "Bash(git checkout:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(for module in anomaly_detector button_handler config constants database datetime_utils error_codes exceptions extension failover_manager feedback gpio_manager health help_text logging_config mdns_service ndef_writer nfc_cleanup nfc_reader onsite_manager path_utils peer_monitor registry sequence_validator service_config_loader service_integration status_leds transaction validation watchdog_runner watchdog_service web_server wifi_manager wifi_setup_button)",
+      "Bash(do echo \"=== Imports of tap_station.$module ===\")",
+      "Bash(done)",
+      "Bash(comm:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(while read file)",
+      "Bash(do if ! grep -q 'logger\\\\.\\\\\\(debug\\\\|info\\\\|warning\\\\|error\\\\|critical\\\\\\)\\(f\"\"' \"$file\")",
+      "Bash(then if grep -q 'logger\\\\.\\\\\\(debug\\\\|info\\\\|warning\\\\|error\\\\|critical\\\\\\)' \"$file\")",
+      "Bash(then echo \"$file\" fi fi done)"
     ]
   }
 }

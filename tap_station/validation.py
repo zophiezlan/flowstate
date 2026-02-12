@@ -118,7 +118,7 @@ class EventValidator:
                     warnings.extend(result.warnings)
             else:
                 invalid_count += 1
-                logger.warning(f"Invalid event at index {i}: {result.error}")
+                logger.warning("Invalid event at index %s: %s", i, result.error)
 
         if invalid_count > 0:
             warnings.append(f"{invalid_count} invalid event(s) skipped")

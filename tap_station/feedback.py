@@ -92,10 +92,10 @@ class FeedbackController:
 
         if self.buzzer_enabled:
             if self._gpio.setup_output(self.gpio_buzzer, initial_state=False):
-                logger.info(f"Buzzer enabled on GPIO {self.gpio_buzzer}")
+                logger.info("Buzzer enabled on GPIO %s", self.gpio_buzzer)
             else:
                 logger.warning(
-                    f"Failed to setup buzzer on GPIO {self.gpio_buzzer} - buzzer disabled"
+                    "Failed to setup buzzer on GPIO %s - buzzer disabled", self.gpio_buzzer
                 )
                 self.buzzer_enabled = False
 
@@ -108,11 +108,11 @@ class FeedbackController:
             )
             if green_ok and red_ok:
                 logger.info(
-                    f"LEDs enabled on GPIO {self.gpio_led_green}, {self.gpio_led_red}"
+                    "LEDs enabled on GPIO %s, %s", self.gpio_led_green, self.gpio_led_red
                 )
             else:
                 logger.warning(
-                    f"Failed to setup LEDs on GPIO {self.gpio_led_green}/{self.gpio_led_red} - LEDs disabled"
+                    "Failed to setup LEDs on GPIO %s/%s - LEDs disabled", self.gpio_led_green, self.gpio_led_red
                 )
                 self.led_enabled = False
 
@@ -219,7 +219,7 @@ class FeedbackController:
                 self.set_led_state(LEDState.SOLID_GREEN)
 
         except Exception as e:
-            logger.error(f"Error in LED pattern: {e}")
+            logger.error("Error in LED pattern: %s", e)
             # Ensure LEDs return to safe state
             self.set_led_state(LEDState.SOLID_GREEN)
 
@@ -247,7 +247,7 @@ class FeedbackController:
             )
             self._led_thread.start()
 
-        logger.debug(f"LED state set to: {state.value}")
+        logger.debug("LED state set to: %s", state.value)
 
     def set_ready_state(self):
         """Set LEDs to ready state (solid green)"""

@@ -120,11 +120,11 @@ class StatusLEDManager:
                 self.gpio_blue, initial_state=False
             )
             logger.info(
-                f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}, Blue={self.gpio_blue}"
+                "Status LEDs enabled: Green=%s, Red=%s, Blue=%s", self.gpio_green, self.gpio_red, self.gpio_blue
             )
         else:
             logger.info(
-                f"Status LEDs enabled: Green={self.gpio_green}, Red={self.gpio_red}"
+                "Status LEDs enabled: Green=%s, Red=%s", self.gpio_green, self.gpio_red
             )
 
         if not success:
@@ -154,7 +154,7 @@ class StatusLEDManager:
             )
             self._pattern_thread.start()
 
-        logger.debug(f"LED pattern set to: {pattern.value}")
+        logger.debug("LED pattern set to: %s", pattern.value)
 
     def stop_pattern(self):
         """Stop the current LED pattern"""
@@ -285,7 +285,7 @@ class StatusLEDManager:
                     time.sleep(0.25)
 
         except Exception as e:
-            logger.error(f"Error in LED pattern: {e}")
+            logger.error("Error in LED pattern: %s", e)
 
     def show_boot_sequence(self):
         """Show boot sequence pattern"""
