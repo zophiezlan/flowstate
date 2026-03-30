@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlowState v1 Dashboard</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1rem; }
+      .grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 0.75rem; }
+      .muted { color: #666; font-size: 0.9rem; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+      th, td { text-align: left; border-bottom: 1px solid #eee; padding: 0.4rem; }
+    </style>
+  </head>
+  <body>
+    <h1>FlowState v1 Dashboard</h1>
+    <p class="muted">Device: {{ device_id }} · Stage: {{ stage }} · Session: {{ session }}</p>
+
+    <div class="grid" id="stage-cards"></div>
+
+    <h2>Recent events</h2>
+    <table>
+      <thead><tr><th>Token</th><th>Stage</th><th>Time</th><th>Device</th></tr></thead>
+      <tbody id="recent-events"></tbody>
+    </table>
+
+    <script>
+      async function refresh() {
+        const response = await fetch('/api/dashboard');
+        const data = await response.json();
+
+        const cards = document.getElementById('stage-cards');
+        cards.innerHTML = '';
+        const active = document.createElement('div');
+        active.className = 'card';
+        active.innerHTML = `<strong>Active episodes</strong><div>${data.active_count}</div>`;
+        cards.appendChild(active);
+
+        Object.entries(data.counts_per_stage).forEach(([stage, count]) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `<strong>${stage}</strong><div>${count}</div>`;
+          cards.appendChild(card);
+        });
+
+        const rows = document.getElementById('recent-events');
+        rows.innerHTML = '';
+        (data.recent_events || []).slice(0, 15).forEach(evt => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${evt.token_id}</td><td>${evt.stage}</td><td>${evt.timestamp}</td><td>${evt.device_id}</td>`;
+          rows.appendChild(tr);
+        });
+      }
+
+      refresh();
+      setInterval(refresh, 5000);
+    </script>
+  </body>
+</html>

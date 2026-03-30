@@ -1,8 +1,7 @@
-"""Tests for database operations"""
+"""Tests for v1 database operations."""
 
 import os
 import tempfile
-from datetime import datetime, timezone
 
 import pytest
 
@@ -11,212 +10,91 @@ from tap_station.database import Database
 
 @pytest.fixture
 def test_db():
-    """Create a temporary test database"""
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
-
     db = Database(path, wal_mode=True)
     yield db
-
     db.close()
-    os.unlink(path)
-
-    # Clean up WAL files
-    for ext in ["-wal", "-shm"]:
-        wal_path = path + ext
-        if os.path.exists(wal_path):
-            os.unlink(wal_path)
+    for ext in ["", "-wal", "-shm"]:
+        p = path + ext
+        if os.path.exists(p):
+            os.unlink(p)
 
 
-def test_database_creation(test_db):
-    """Test database table creation"""
-    # Check that events table exists
-    cursor = test_db.conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='events'"
-    )
-    result = cursor.fetchone()
-    assert result is not None
-    assert result["name"] == "events"
+def test_database_creation_includes_correction_audit(test_db):
+    tables = {
+        row["name"]
+        for row in test_db.conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    assert "events" in tables
+    assert "correction_audit" in tables
 
 
-def test_log_event(test_db):
-    """Test logging an event"""
-    result = test_db.log_event(
-        token_id="001",
-        uid="1234567890ABCDEF",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
-    )
+def test_valid_v1_stage_progression(test_db):
+    session_id = "s1"
+    token_id = "001"
+    uid = "uid-001"
+    stages = [
+        "ENTERED",
+        "FIRST_CONTACT",
+        "SAMPLE_LOGGED",
+        "TESTING",
+        "RESULT_READY",
+        "COMPLETED",
+    ]
 
-    assert result["success"] is True
-
-    # Verify event was logged
-    count = test_db.get_event_count("test-session")
-    assert count == 1
-
-
-def test_duplicate_prevention(test_db):
-    """Test that duplicate events are prevented"""
-    # Log first event
-    result1 = test_db.log_event(
-        token_id="001",
-        uid="1234567890ABCDEF",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
-    )
-    assert result1["success"] is True
-
-    # Try to log duplicate (same token, same stage, same session)
-    # Within the grace period, this is detected as an out-of-order transition
-    # (QUEUE_JOIN -> QUEUE_JOIN is not a valid transition)
-    # The event is still logged for data collection but flagged for review
-    result2 = test_db.log_event(
-        token_id="001",
-        uid="1234567890ABCDEF",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
-    )
-    # Event is logged but flagged as out-of-order
-    assert result2["success"] is True
-    assert result2["out_of_order"] is True
-
-    # Both events exist (logged for data collection, flagged for review)
-    count = test_db.get_event_count("test-session")
-    assert count == 2
-
-
-def test_different_stages_allowed(test_db):
-    """Test that same token can log at different stages"""
-    # Queue join
-    result1 = test_db.log_event(
-        token_id="001",
-        uid="1234567890ABCDEF",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
-    )
-    assert result1["success"] is True
-
-    # Exit (different stage)
-    result2 = test_db.log_event(
-        token_id="001",
-        uid="1234567890ABCDEF",
-        stage="EXIT",
-        device_id="station2",
-        session_id="test-session",
-    )
-    assert result2["success"] is True
-
-    # Both events should exist
-    count = test_db.get_event_count("test-session")
-    assert count == 2
-
-
-def test_session_isolation(test_db):
-    """Test that sessions are isolated"""
-    # Log in session 1
-    test_db.log_event(
-        token_id="001",
-        uid="ABC",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="session1",
-    )
-
-    # Log same token/stage in session 2 (should succeed)
-    result = test_db.log_event(
-        token_id="001",
-        uid="ABC",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="session2",
-    )
-    assert result["success"] is True
-
-    # Each session should have 1 event
-    assert test_db.get_event_count("session1") == 1
-    assert test_db.get_event_count("session2") == 1
-
-
-def test_get_recent_events(test_db):
-    """Test retrieving recent events"""
-    # Log multiple events
-    for i in range(5):
-        test_db.log_event(
-            token_id=f"{i:03d}",
-            uid=f"UID{i}",
-            stage="QUEUE_JOIN",
-            device_id="station1",
-            session_id="test-session",
+    for idx, stage in enumerate(stages):
+        result = test_db.log_event(
+            token_id=token_id,
+            uid=uid,
+            stage=stage,
+            device_id=f"station-{idx}",
+            session_id=session_id,
         )
+        assert result["success"] is True
+        assert result["out_of_order"] is False
 
-    # Get recent events
-    recent = test_db.get_recent_events(limit=3)
-
-    assert len(recent) == 3
-    # Should be in reverse chronological order
-    assert recent[0]["token_id"] == "004"
-    assert recent[1]["token_id"] == "003"
-    assert recent[2]["token_id"] == "002"
+    assert test_db.get_event_count(session_id) == 6
 
 
-def test_export_to_csv(test_db):
-    """Test CSV export"""
-    # Log some events
-    test_db.log_event(
-        token_id="001",
-        uid="ABC",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
+def test_invalid_first_stage_is_flagged(test_db):
+    result = test_db.log_event(
+        token_id="002",
+        uid="uid-002",
+        stage="TESTING",
+        device_id="station-x",
+        session_id="s1",
     )
+    assert result["success"] is False
+    assert result["out_of_order"] is False
+
+
+def test_set_episode_stage_records_audit(test_db):
     test_db.log_event(
-        token_id="001",
-        uid="ABC",
-        stage="EXIT",
-        device_id="station2",
-        session_id="test-session",
+        token_id="003",
+        uid="uid-003",
+        stage="ENTERED",
+        device_id="station-entry",
+        session_id="s1",
     )
 
-    # Export to CSV
-    fd, csv_path = tempfile.mkstemp(suffix=".csv")
-    os.close(fd)
-
-    try:
-        row_count = test_db.export_to_csv(csv_path, session_id="test-session")
-        assert row_count == 2
-
-        # Verify CSV content
-        with open(csv_path, "r") as f:
-            lines = f.readlines()
-
-        # Should have header + 2 data rows
-        assert len(lines) == 3
-        assert "token_id" in lines[0]
-        assert "001" in lines[1]
-        assert "001" in lines[2]
-
-    finally:
-        os.unlink(csv_path)
-
-
-def test_custom_timestamp(test_db):
-    """Test logging with custom timestamp"""
-    custom_time = datetime(2025, 6, 15, 14, 30, 0, tzinfo=timezone.utc)
-
-    test_db.log_event(
-        token_id="001",
-        uid="ABC",
-        stage="QUEUE_JOIN",
-        device_id="station1",
-        session_id="test-session",
-        timestamp=custom_time,
+    result = test_db.set_episode_stage(
+        token_id="003",
+        target_stage="RESULT_READY",
+        session_id="s1",
+        corrected_by="operator-1",
     )
+    assert result["success"] is True
+    assert result["from_stage"] == "ENTERED"
+    assert result["to_stage"] == "RESULT_READY"
 
-    # Verify timestamp
-    recent = test_db.get_recent_events(1)
-    assert len(recent) == 1
-    assert custom_time.isoformat() in recent[0]["timestamp"]
+    audit = test_db.conn.execute(
+        "SELECT corrected_by, from_stage, to_stage FROM correction_audit WHERE token_id = ?",
+        ("003",),
+    ).fetchone()
+    assert audit is not None
+    assert audit["corrected_by"] == "operator-1"
+    assert audit["from_stage"] == "ENTERED"
+    assert audit["to_stage"] == "RESULT_READY"

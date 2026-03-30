@@ -6,16 +6,12 @@ import sys
 import threading
 import time
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 from tap_station.config import Config
 from tap_station.database import Database
 from tap_station.feedback import FeedbackController
-from tap_station.health import HealthMonitor
 from tap_station.nfc_reader import MockNFCReader, NFCReader
-from tap_station.onsite_manager import OnSiteManager
 from tap_station.path_utils import ensure_parent_dir
-from tap_station.registry import ExtensionRegistry
 from tap_station.validation import TokenValidator
 
 
@@ -99,21 +95,13 @@ class TapStation:
                     "Failed to initialize shutdown button: %s", e, exc_info=True
                 )
 
-        # Initialize extension registry
-        self.registry = ExtensionRegistry()
-        ext_names = self.config.extensions_enabled
-        if ext_names:
-            self.registry.load(ext_names)
-
         self.web_server = None
         self.web_thread = None
         if self.config.web_server_enabled:
             try:
                 from tap_station.web_server import StatusWebServer
 
-                self.web_server = StatusWebServer(
-                    self.config, self.db, self.registry
-                )
+                self.web_server = StatusWebServer(self.config, self.db)
                 self.web_thread = threading.Thread(
                     target=self.web_server.run,
                     kwargs={
@@ -132,23 +120,8 @@ class TapStation:
                     "Failed to start web server: %s", e, exc_info=True
                 )
 
-        # Initialize on-site manager (WiFi, mDNS, failover, etc.)
+        # Consolidated v1 runtime: disable on-site platform helpers.
         self.onsite_manager = None
-        if self.config.onsite_enabled:
-            try:
-                self.onsite_manager = OnSiteManager(
-                    device_id=self.config.device_id,
-                    stage=self.config.stage,
-                    web_port=self.config.web_server_port,
-                    peer_hostname=self.config.onsite_failover_peer_hostname,
-                    wifi_enabled=self.config.onsite_wifi_enabled,
-                    failover_enabled=self.config.onsite_failover_enabled,
-                )
-                self.logger.info("On-site manager initialized")
-            except Exception as e:
-                self.logger.warning(
-                    "Failed to initialize on-site manager: %s", e
-                )
 
         # State
         self.running = False
@@ -202,23 +175,6 @@ class TapStation:
         """Main service loop"""
         self.running = True
 
-        # Start on-site manager (WiFi, mDNS, peer monitoring, etc.)
-        if self.onsite_manager:
-            try:
-                self.onsite_manager.startup()
-            except Exception as e:
-                self.logger.error(
-                    "On-site manager startup failed: %s", e, exc_info=True
-                )
-
-        # Start extensions
-        self.registry.startup({
-            'db': self.db,
-            'config': self.config,
-            'nfc': self.nfc,
-            'app': self.web_server.app if self.web_server else None,
-        })
-
         # Startup feedback
         self.feedback.startup()
         self.logger.info("Station ready - waiting for cards...")
@@ -260,33 +216,8 @@ class TapStation:
         """
         self.logger.info("Card tapped: UID=%s, Token=%s", uid, token_id)
 
-        # Determine stage (may be overridden in failover mode)
+        # Fixed-stage station in consolidated v1 model.
         stage = self.config.stage
-        use_alternate_beep = False
-
-        # Check if in failover mode and determine appropriate stage
-        if self.onsite_manager and self.onsite_manager.failover_manager:
-            failover_mgr = self.onsite_manager.failover_manager
-
-            if failover_mgr.failover_active:
-                # Get participant's tap count to determine stage alternation
-                tap_count = self.db.get_participant_tap_count(
-                    token_id=token_id, session_id=self.config.session_id
-                )
-
-                # Next tap will be tap_count + 1 (since we're about to log it)
-                next_tap_number = tap_count + 1
-
-                # Get the appropriate stage for this tap based on alternation logic
-                stage = failover_mgr.get_stage_for_tap_number(next_tap_number)
-
-                use_alternate_beep = True
-                self.logger.info(
-                    "FAILOVER MODE: tap #%s -> stage %s "
-                    "(alternating between %s and %s)",
-                    next_tap_number, stage, failover_mgr.primary_stage,
-                    failover_mgr.fallback_stages
-                )
 
         # Check if auto-initialization is enabled and card appears uninitialized
         # Uninitialized cards will have token_id that looks like a UID (8+ hex chars)
@@ -333,11 +264,11 @@ class TapStation:
 
             token_id = new_token_id
 
-        # Log to database - use the determined stage (which may be from failover logic)
+        # Log to database using this station's fixed assigned stage.
         result = self.db.log_event(
             token_id=token_id,
             uid=uid,
-            stage=stage,  # Use failover-determined stage, not self.config.stage
+            stage=stage,
             device_id=self.config.device_id,
             session_id=self.config.session_id,
         )
@@ -345,23 +276,14 @@ class TapStation:
         # Provide feedback based on result
         if result["success"]:
             if result["out_of_order"]:
-                # Logged but with sequence warning
-                self.feedback.warning()  # Use warning for out-of-order
+                self.feedback.warning()
                 self.logger.warning(
                     "Event logged with warning: %s. Suggestion: %s",
                     result['warning'], result.get('suggestion', 'N/A')
                 )
             else:
-                # Success with no issues
-                # Use warning pattern in failover mode to distinguish from normal
-                if use_alternate_beep:
-                    self.feedback.warning()  # Yellow flash for failover mode
-                    self.logger.info(
-                        "Event logged successfully (FAILOVER MODE)"
-                    )
-                else:
-                    self.feedback.success()  # Green flash for normal
-                    self.logger.info("Event logged successfully")
+                self.feedback.success()
+                self.logger.info("Event logged successfully")
         elif result["duplicate"]:
             # Duplicate tap
             self.feedback.duplicate()  # Double beep + yellow flash
@@ -372,10 +294,6 @@ class TapStation:
             self.logger.error(
                 "Failed to log event: %s", result.get('warning', 'Unknown error')
             )
-
-        # Record tap in failover manager
-        if self.onsite_manager and self.onsite_manager.failover_manager:
-            self.onsite_manager.failover_manager.record_tap(stage)
 
     def _is_uninitialized_card(self, token_id: str) -> bool:
         """
@@ -393,13 +311,6 @@ class TapStation:
     def shutdown(self):
         """Cleanup and shutdown"""
         self.logger.info("Shutting down...")
-
-        # Stop extensions
-        self.registry.shutdown()
-
-        # Stop on-site manager
-        if self.onsite_manager:
-            self.onsite_manager.shutdown()
 
         # Stop button handler
         if self.button_handler:
@@ -431,10 +342,6 @@ class TapStation:
             "total_events": self.db.get_event_count(self.config.session_id),
             "recent_events": self.db.get_recent_events(5),
         }
-
-        # Add on-site manager status if available
-        if self.onsite_manager:
-            stats["onsite"] = self.onsite_manager.get_status()
 
         return stats
 

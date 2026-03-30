@@ -27,6 +27,7 @@ const nfcWarning = document.getElementById("nfc-warning");
 
 const SETTINGS_KEY = "nfc-mobile-settings-v1";
 const DEBOUNCE_MS = 1000;
+const MAX_RETRY_QUEUE = 200;
 
 let controller = null;
 let reader = null;
@@ -60,7 +61,19 @@ class MobileStore {
     const db = await this.dbPromise;
     return new Promise((resolve, reject) => {
       const tx = db.transaction("events", "readwrite");
-      tx.objectStore("events").add(event);
+      const store = tx.objectStore("events");
+      store.add(event);
+      const allRequest = store.getAll();
+      allRequest.onsuccess = () => {
+        const rows = (allRequest.result || []).sort(
+          (a, b) => a.timestampMs - b.timestampMs,
+        );
+        if (rows.length > MAX_RETRY_QUEUE) {
+          rows
+            .slice(0, rows.length - MAX_RETRY_QUEUE)
+            .forEach((row) => store.delete(row.id));
+        }
+      };
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => reject(tx.error);
     });
@@ -141,25 +154,23 @@ async function loadStagesFromAPI() {
   }
 
   try {
-    const configUrl = `${piUrl}/api/service-config`;
+    const configUrl = `${piUrl}/api/stages`;
     const response = await fetch(configUrl);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const config = await response.json();
 
-    // Update page title with service name
-    const serviceName = config.service_name || "FlowState";
-    document.querySelector("h1").textContent = `${serviceName} (Mobile)`;
+    document.querySelector("h1").textContent = "FlowState (Mobile)";
 
     // Populate stage dropdown dynamically
-    if (config.workflow_stages && config.workflow_stages.length > 0) {
+    if (config.stages && config.stages.length > 0) {
       const currentValue = stageSelect.value; // Save current selection
       stageSelect.innerHTML = ""; // Clear existing options
 
-      config.workflow_stages.forEach((stage) => {
+      config.stages.forEach((stageId) => {
         const option = document.createElement("option");
-        option.value = stage.id;
-        option.textContent = stage.label;
+        option.value = stageId;
+        option.textContent = stageId;
         stageSelect.appendChild(option);
       });
 
@@ -174,11 +185,11 @@ async function loadStagesFromAPI() {
       }
 
       console.log(
-        `Loaded ${config.workflow_stages.length} stages from ${serviceName}`,
+        `Loaded ${config.stages.length} v1 stages from Pi`,
       );
     }
   } catch (error) {
-    console.warn("Could not load service config from API:", error);
+    console.warn("Could not load stages from API:", error);
     // Keep default stages if API fails
   }
 }
@@ -519,13 +530,9 @@ manualForm.addEventListener("submit", async (e) => {
   manualDialog.close();
 });
 
-exportJsonBtn.addEventListener("click", exportJsonl);
-exportCsvBtn.addEventListener("click", exportCsv);
-markSyncedBtn.addEventListener("click", async () => {
-  const count = await store.markAllSynced();
-  showToast(`Marked ${count} as synced`);
-  updateStats();
-});
+if (exportJsonBtn) exportJsonBtn.style.display = "none";
+if (exportCsvBtn) exportCsvBtn.style.display = "none";
+if (markSyncedBtn) markSyncedBtn.style.display = "none";
 clearCacheBtn.addEventListener("click", async () => {
   await store.clearAll();
   lastSeen = new Map();

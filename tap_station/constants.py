@@ -31,24 +31,30 @@ class DeliveryStatus(Enum):
 
 
 class WorkflowStages:
-    """Standard workflow stage identifiers"""
+    """Fixed v1 workflow stage identifiers."""
 
-    # Core stages (always present)
-    QUEUE_JOIN = "QUEUE_JOIN"
-    EXIT = "EXIT"
+    ENTERED = "ENTERED"
+    FIRST_CONTACT = "FIRST_CONTACT"
+    SAMPLE_LOGGED = "SAMPLE_LOGGED"
+    TESTING = "TESTING"
+    RESULT_READY = "RESULT_READY"
+    COMPLETED = "COMPLETED"
 
-    # Optional intermediate stages
-    SERVICE_START = "SERVICE_START"
-    SUBSTANCE_RETURNED = "SUBSTANCE_RETURNED"
-
-    # All standard stages in typical order
-    ALL_STAGES = [QUEUE_JOIN, SERVICE_START, SUBSTANCE_RETURNED, EXIT]
-
-    # Minimum required stages
-    REQUIRED_STAGES = [QUEUE_JOIN, EXIT]
-
-    # Terminal stages (no transitions allowed after these)
-    TERMINAL_STAGES = {EXIT}
+    ALL_STAGES = [
+        ENTERED,
+        FIRST_CONTACT,
+        SAMPLE_LOGGED,
+        TESTING,
+        RESULT_READY,
+        COMPLETED,
+    ]
+    REQUIRED_STAGES = [ENTERED, COMPLETED]
+    TERMINAL_STAGES = {COMPLETED}
+    # Legacy aliases retained to reduce breakage in non-v1 code paths.
+    QUEUE_JOIN = ENTERED
+    SERVICE_START = FIRST_CONTACT
+    SUBSTANCE_RETURNED = SAMPLE_LOGGED
+    EXIT = COMPLETED
 
     @classmethod
     def is_terminal(cls, stage: str) -> bool:
@@ -76,19 +82,18 @@ class WorkflowStages:
         lowered = normalized.lower()
 
         # Handle common variations
-        if lowered in {"join", "queue_join", "queue-join", "queue join"}:
-            return cls.QUEUE_JOIN
-        if lowered in {"exit", "queue_exit", "queue-exit", "queue exit"}:
-            return cls.EXIT
-        if lowered in {
-            "service_start",
-            "service-start",
-            "service start",
-            "start",
-        }:
-            return cls.SERVICE_START
-        if lowered in {"substance_returned", "substance-returned", "returned"}:
-            return cls.SUBSTANCE_RETURNED
+        if lowered in {"entered", "enter", "queue_join", "queue join"}:
+            return cls.ENTERED
+        if lowered in {"first_contact", "first contact", "service_start", "start"}:
+            return cls.FIRST_CONTACT
+        if lowered in {"sample_logged", "sample logged"}:
+            return cls.SAMPLE_LOGGED
+        if lowered in {"testing", "test"}:
+            return cls.TESTING
+        if lowered in {"result_ready", "result ready"}:
+            return cls.RESULT_READY
+        if lowered in {"completed", "complete", "exit", "queue_exit"}:
+            return cls.COMPLETED
 
         return normalized.upper()
 
@@ -118,26 +123,16 @@ class WorkflowTransitions:
     # Default transition rules
     # Each stage maps to a list of valid next stages
     DEFAULT_TRANSITIONS: Dict[str, List[str]] = {
-        WorkflowStages.QUEUE_JOIN: [
-            WorkflowStages.SERVICE_START,
-            WorkflowStages.SUBSTANCE_RETURNED,
-            WorkflowStages.EXIT,
-        ],
-        WorkflowStages.SERVICE_START: [
-            WorkflowStages.SUBSTANCE_RETURNED,
-            WorkflowStages.EXIT,
-        ],
-        WorkflowStages.SUBSTANCE_RETURNED: [
-            WorkflowStages.EXIT,
-        ],
-        # EXIT is terminal - no valid transitions
+        WorkflowStages.ENTERED: [WorkflowStages.FIRST_CONTACT],
+        WorkflowStages.FIRST_CONTACT: [WorkflowStages.SAMPLE_LOGGED],
+        WorkflowStages.SAMPLE_LOGGED: [WorkflowStages.TESTING],
+        WorkflowStages.TESTING: [WorkflowStages.RESULT_READY],
+        WorkflowStages.RESULT_READY: [WorkflowStages.COMPLETED],
     }
 
     # Stages that can be the first tap (entry points)
     VALID_ENTRY_STAGES: Set[str] = {
-        WorkflowStages.QUEUE_JOIN,
-        WorkflowStages.SERVICE_START,  # Allows late entry
-        WorkflowStages.EXIT,  # Allows exit-only tracking
+        WorkflowStages.ENTERED,
     }
 
     def __init__(self, transitions: Optional[Dict[str, List[str]]] = None):
@@ -203,28 +198,22 @@ class WorkflowTransitions:
         """
         # No existing stages - check if valid entry point
         if not existing_stages:
-            if new_stage == WorkflowStages.EXIT:
+            if new_stage != WorkflowStages.ENTERED:
                 return {
-                    "valid": True,
-                    "reason": "Card tapped at EXIT without QUEUE_JOIN - possible missed entry tap",
-                    "suggestion": "Verify participant actually used service",
-                }
-            elif new_stage == WorkflowStages.SERVICE_START:
-                return {
-                    "valid": True,
-                    "reason": "Card tapped at SERVICE_START without QUEUE_JOIN - possible missed entry tap",
-                    "suggestion": "Add QUEUE_JOIN event if needed",
+                    "valid": False,
+                    "reason": f"Unknown token cannot start at {new_stage}; first stage must be ENTERED",
+                    "suggestion": "Use entry station or run minimal correction",
                 }
             return {"valid": True, "reason": "First tap for this card"}
 
         last_stage = existing_stages[-1]
 
         # Check if already exited
-        if WorkflowStages.EXIT in existing_stages:
+        if WorkflowStages.COMPLETED in existing_stages:
             return {
                 "valid": False,
-                "reason": "Card already exited - tapping again may indicate: reused card, or participant returned for second service",
-                "suggestion": "Check if this is a new visit (should use new card/session)",
+                "reason": "Episode is already completed",
+                "suggestion": "Start a new episode with a new token",
             }
 
         # Validate transition
@@ -253,10 +242,12 @@ class WorkflowTransitions:
 # =============================================================================
 
 DEFAULT_STAGE_LABELS: Dict[str, str] = {
-    WorkflowStages.QUEUE_JOIN: "In Queue",
-    WorkflowStages.SERVICE_START: "Being Served",
-    WorkflowStages.SUBSTANCE_RETURNED: "Substance Returned",
-    WorkflowStages.EXIT: "Completed",
+    WorkflowStages.ENTERED: "Entered",
+    WorkflowStages.FIRST_CONTACT: "First Contact",
+    WorkflowStages.SAMPLE_LOGGED: "Sample Logged",
+    WorkflowStages.TESTING: "Testing",
+    WorkflowStages.RESULT_READY: "Result Ready",
+    WorkflowStages.COMPLETED: "Completed",
 }
 
 

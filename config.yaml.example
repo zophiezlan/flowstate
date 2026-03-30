@@ -5,9 +5,9 @@ station:
   # Unique ID for this device (station1, station2, etc.)
   device_id: "station1"
 
-  # Which stage this station logs
-  # Options: QUEUE_JOIN, EXIT (or custom stages for future)
-  stage: "QUEUE_JOIN"
+  # Fixed v1 stage assigned to this station.
+  # Options: ENTERED, FIRST_CONTACT, SAMPLE_LOGGED, TESTING, RESULT_READY, COMPLETED
+  stage: "ENTERED"
 
   # Session ID for this deployment (e.g., festival name + date)
   # All events logged during this session will have this ID
@@ -103,31 +103,16 @@ web_server:
   host: "0.0.0.0"
   port: 8080
 
-  # Admin authentication for control panel
-  # Set a password to protect administrative functions
-  # All staff members can use this password during shift
+  # Admin authentication for minimal correction action
   admin:
-    # Password for accessing control panel
+    # Password for admin correction endpoints
     # IMPORTANT: Change this before deployment!
     # Use a strong password (min 12 characters, mix of letters/numbers/symbols)
     password: "CHANGE-ME-BEFORE-DEPLOYMENT"
-    
-    # Session timeout in minutes (auto-logout after inactivity)
+
+    # Session timeout in minutes
     session_timeout_minutes: 60
 
-# Extensions - modular features that can be enabled/disabled
-# Each extension adds specific functionality. Enable only what you need.
+# Extensions are removed from the active v1 runtime path.
 extensions:
-  enabled:
-    - notes                # Operational notes for staff during shifts
-    - export               # CSV/JSON data export
-    - shift_summary        # Shift handoff reports
-    - event_summary        # End-of-day summary with goals
-    - insights             # Service quality SLI/SLO metrics
-    - anomalies            # Real-time anomaly detection
-    - stuck_cards          # Detect and force-exit stuck cards
-    - manual_corrections   # Manual event add/remove for corrections
-    - hardware_monitor     # Raspberry Pi hardware status
-    - three_stage          # Queue wait vs service time breakdown
-    - smart_estimates      # Intelligent wait time predictions
-    - substance_tracking   # Substance return rate tracking
+  enabled: []
