@@ -48,6 +48,20 @@ FlowState v1 is intentionally small:
 - `POST /api/admin/login`
 - `POST /api/admin/correct-stage`
 
+## Admin correction (session-cookie auth)
+
+```bash
+curl -X POST http://<pi-ip>:8080/api/admin/login \
+  -c /tmp/flowstate-admin.cookies \
+  -H 'Content-Type: application/json' \
+  -d '{"password":"<admin-password>"}'
+
+curl -X POST http://<pi-ip>:8080/api/admin/correct-stage \
+  -b /tmp/flowstate-admin.cookies \
+  -H 'Content-Type: application/json' \
+  -d '{"token_id":"001","target_stage":"TESTING","corrected_by":"supervisor"}'
+```
+
 ## Quick start (Pi)
 
 1. Install:

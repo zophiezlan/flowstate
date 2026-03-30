@@ -74,6 +74,18 @@ def test_api_ingest_and_dashboard_and_export(server_and_db):
     assert "token_id,stage,timestamp,device_id,session_id" in export.get_data(as_text=True)
 
 
+def test_api_ingest_rejects_non_entry_first_scan(server_and_db):
+    client, _ = server_and_db
+    response = client.post(
+        "/api/ingest",
+        json={"token_id": "002", "uid": "u-002", "stage": "TESTING"},
+    )
+    assert response.status_code == 200
+    summary = response.get_json()["summary"]
+    assert summary["inserted"] == 0
+    assert summary["errors"] == 1
+
+
 def test_admin_login_and_correct_stage_records_audit(server_and_db):
     client, db = server_and_db
 

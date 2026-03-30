@@ -71,3 +71,21 @@ station:
         assert config.get("nonexistent.key", "default") == "default"
     finally:
         os.unlink(config_path)
+
+
+def test_invalid_station_stage_fails_fast():
+    config_path = _write_temp_config(
+        """
+station:
+  device_id: "test-station"
+  stage: "NOT_A_V1_STAGE"
+  session_id: "test-session"
+"""
+    )
+    try:
+        from tap_station.exceptions import ConfigurationError
+
+        with pytest.raises(ConfigurationError):
+            Config(config_path)
+    finally:
+        os.unlink(config_path)

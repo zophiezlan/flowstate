@@ -233,6 +233,27 @@ class Database:
                 token_id, stage, session_id
             )
             if not sequence_check["valid"]:
+                # v1 rule: new episodes can only start at ENTERED.
+                # Do not log non-entry first scans in active runtime path.
+                has_existing = self.conn.execute(
+                    """
+                    SELECT 1
+                    FROM events
+                    WHERE token_id = ? AND session_id = ?
+                    LIMIT 1
+                    """,
+                    (token_id, session_id),
+                ).fetchone()
+                if not has_existing:
+                    result["warning"] = sequence_check["reason"]
+                    result["suggestion"] = sequence_check.get("suggestion")
+                    logger.warning(
+                        "Rejected invalid first scan: token=%s stage=%s reason=%s",
+                        token_id,
+                        stage,
+                        sequence_check["reason"],
+                    )
+                    return result
                 logger.warning(
                     "Out-of-order tap detected: token=%s, "
                     "stage=%s, reason=%s", token_id, stage, sequence_check['reason']

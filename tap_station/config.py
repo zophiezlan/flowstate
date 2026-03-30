@@ -278,9 +278,10 @@ class Config:
         if stage:
             normalized_stage = WorkflowStages.normalize(stage)
             if normalized_stage not in WorkflowStages.ALL_STAGES:
-                config_warnings.append(
+                raise ConfigurationError(
                     f"Station stage '{stage}' is invalid for v1. "
-                    f"Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}"
+                    f"Valid stages: {', '.join(WorkflowStages.ALL_STAGES)}",
+                    config_key="station.stage",
                 )
 
         # Log all warnings

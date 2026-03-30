@@ -69,6 +69,7 @@ curl http://127.0.0.1:8080/api/stages
 
 ```bash
 curl -X POST http://<pi-ip>:8080/api/admin/login \
+  -c /tmp/flowstate-admin.cookies \
   -H 'Content-Type: application/json' \
   -d '{"password":"<admin-password>"}'
 ```
@@ -77,6 +78,7 @@ curl -X POST http://<pi-ip>:8080/api/admin/login \
 
 ```bash
 curl -X POST http://<pi-ip>:8080/api/admin/correct-stage \
+  -b /tmp/flowstate-admin.cookies \
   -H 'Content-Type: application/json' \
   -d '{"token_id":"001","target_stage":"TESTING","corrected_by":"supervisor"}'
 ```

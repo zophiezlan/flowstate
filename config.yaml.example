@@ -105,12 +105,12 @@ web_server:
 
   # Admin authentication for minimal correction action
   admin:
-    # Password for accessing control panel
+    # Password for admin correction endpoints
     # IMPORTANT: Change this before deployment!
     # Use a strong password (min 12 characters, mix of letters/numbers/symbols)
     password: "CHANGE-ME-BEFORE-DEPLOYMENT"
-    
-    # Session timeout in minutes (auto-logout after inactivity)
+
+    # Session timeout in minutes
     session_timeout_minutes: 60
 
 # Extensions are removed from the active v1 runtime path.

@@ -67,8 +67,8 @@ def test_invalid_first_stage_is_flagged(test_db):
         device_id="station-x",
         session_id="s1",
     )
-    assert result["success"] is True
-    assert result["out_of_order"] is True
+    assert result["success"] is False
+    assert result["out_of_order"] is False
 
 
 def test_set_episode_stage_records_audit(test_db):
