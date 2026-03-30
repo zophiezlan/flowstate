@@ -134,6 +134,21 @@ class Database:
             ON deleted_events(session_id, token_id)
         """)
 
+        # Minimal correction audit metadata for v1
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS correction_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                corrected_by TEXT NOT NULL,
+                corrected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                from_stage TEXT,
+                to_stage TEXT NOT NULL
+            )
+            """
+        )
+
         self.conn.commit()
         logger.info("Database tables initialized")
 
@@ -389,7 +404,7 @@ class Database:
                 HAVING MAX(CASE WHEN stage = ? THEN 1 ELSE 0 END) = 0
                 ORDER BY datetime(last_tap) DESC
             """
-            cursor = self.conn.execute(sql, (session_id, WorkflowStages.EXIT))
+            cursor = self.conn.execute(sql, (session_id, WorkflowStages.COMPLETED))
 
             for row in cursor.fetchall():
                 anomalies["incomplete_journeys"].append(
@@ -399,7 +414,7 @@ class Database:
                         "tap_count": row["tap_count"],
                         "last_tap": row["last_tap"],
                         "severity": "medium",
-                        "suggestion": "Journey incomplete - missing EXIT tap",
+                        "suggestion": "Journey incomplete - missing COMPLETED tap",
                     }
                 )
         except Exception as e:
@@ -486,6 +501,74 @@ class Database:
         anomalies["summary"] = summary
 
         return anomalies
+
+    @synchronized
+    def set_episode_stage(
+        self,
+        token_id: str,
+        target_stage: str,
+        session_id: str,
+        corrected_by: str,
+        uid: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Minimal admin correction action for v1.
+        Creates a correction event and writes basic audit metadata.
+        """
+        normalized = WorkflowStages.normalize(target_stage)
+        if normalized not in WorkflowStages.ALL_STAGES:
+            return {
+                "success": False,
+                "error": f"Invalid target stage '{target_stage}'",
+            }
+
+        cursor = self.conn.execute(
+            """
+            SELECT stage, uid
+            FROM events
+            WHERE token_id = ? AND session_id = ?
+            ORDER BY datetime(timestamp) DESC, id DESC
+            LIMIT 1
+            """,
+            (token_id, session_id),
+        )
+        latest = cursor.fetchone()
+        from_stage = latest["stage"] if latest else None
+        event_uid = uid or (latest["uid"] if latest else f"MANUAL_{token_id}")
+
+        timestamp = utc_now().isoformat()
+        self.conn.execute(
+            """
+            INSERT INTO events (token_id, uid, stage, timestamp, device_id, session_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                token_id,
+                event_uid,
+                normalized,
+                timestamp,
+                "manual_correction",
+                session_id,
+            ),
+        )
+        self.conn.execute(
+            """
+            INSERT INTO correction_audit (token_id, session_id, corrected_by, from_stage, to_stage)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (token_id, session_id, corrected_by, from_stage, normalized),
+        )
+        self.conn.commit()
+
+        return {
+            "success": True,
+            "token_id": token_id,
+            "session_id": session_id,
+            "from_stage": from_stage,
+            "to_stage": normalized,
+            "corrected_by": corrected_by,
+            "corrected_at": timestamp,
+        }
 
     @synchronized
     def get_event_count(self, session_id: Optional[str] = None) -> int:
